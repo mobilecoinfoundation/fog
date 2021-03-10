@@ -1,0 +1,21 @@
+[package]
+name = "fog-view-connection"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
+
+fog-api = { path = "../../api" }
+fog-enclave-connection = { path = "../../enclave_connection" }
+fog-types = { path = "../../fog_types" }
+fog-uri = { path = "../../uri" }
+fog-view-protocol = { path = "../protocol" }
+
+grpcio = "0.6.0"

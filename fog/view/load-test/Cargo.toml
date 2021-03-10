@@ -1,0 +1,28 @@
+[package]
+name = "fog-view-load-test"
+version = "0.10.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[[bin]]
+name = "fog-view-load-test"
+path = "src/main.rs"
+
+[dependencies]
+# third party
+grpcio = "0.6.0"
+structopt = "0.3"
+
+# # root
+mc-account-keys = { path = "../../../mobilecoin/account-keys" }
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-util-keyfile = { path = "../../../mobilecoin/util/keyfile" }
+
+# # fog
+fog-kex-rng = { path = "../../kex_rng" }
+fog-uri = { path = "../../uri" }
+fog-view-connection = { path = "../connection" }
+fog-view-enclave-measurement = { path = "../enclave/measurement" }
+fog-view-protocol = { path = "../protocol" }

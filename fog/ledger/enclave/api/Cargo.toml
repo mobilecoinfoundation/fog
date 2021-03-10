@@ -1,0 +1,28 @@
+[package]
+name = "fog-ledger-enclave-api"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+description = """
+The ECALL API declarations and API for operating a ledger enclave.
+"""
+license = "GPL-3.0"
+
+[dependencies]
+# public repo
+mc-attest-core = { path = "../../../../mobilecoin/attest/core", default-features = false }
+mc-attest-enclave-api = { path = "../../../../mobilecoin/attest/enclave-api", default-features = false }
+mc-common = { path = "../../../../mobilecoin/common", default-features = false }
+mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features = false }
+mc-util-serial = { path = "../../../../mobilecoin/util/serial", default-features = false }
+mc-util-encodings = { path = "../../../../mobilecoin/util/encodings" }
+mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat" }
+mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+mc-transaction-core = { path = "../../../../mobilecoin/transaction/core" }
+
+# fog
+fog-types = { path = "../../../fog_types" }
+
+# third-party
+displaydoc = { version = "0.1", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }

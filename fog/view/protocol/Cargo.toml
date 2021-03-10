@@ -1,0 +1,35 @@
+[package]
+name = "fog-view-protocol"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+readme = "README.md"
+license = "GPL-3.0"
+
+[dependencies]
+mc-account-keys = { path = "../../../mobilecoin/account-keys" }
+mc-common = { path = "../../../mobilecoin/common", default-features = false }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys", default-features = false }
+mc-crypto-box = { path = "../../../mobilecoin/crypto/box" }
+mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
+mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial", default-features = false }
+
+fog-kex-rng = { path = "../../kex_rng" }
+fog-types = { path = "../../fog_types" }
+
+displaydoc = { version = "0.1", default-features = false }
+rand_core = { version = "0.5", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+zeroize = "1.1"
+
+[target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]
+blake2 = { version = "0.9", default-features = false, features = ["simd"] }
+
+[target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dependencies]
+blake2 = { version = "0.9", default-features = false }
+
+[dev_dependencies]
+mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
+mc-watcher-api = { path = "../../../mobilecoin/watcher/api" }
+rand_hc = "0.2"

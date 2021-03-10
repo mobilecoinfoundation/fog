@@ -1,0 +1,30 @@
+[package]
+name = "fog-view-enclave-impl"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-crypto-ake-enclave = { path = "../../../../mobilecoin/crypto/ake/enclave" }
+mc-attest-core = { path = "../../../../mobilecoin/attest/core", default-features = false }
+mc-attest-enclave-api = { path = "../../../../mobilecoin/attest/enclave-api", default-features = false }
+mc-common = { path = "../../../../mobilecoin/common", default-features = false }
+mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features = false }
+mc-crypto-rand = { path = "../../../../mobilecoin/crypto/rand", default-features = false }
+mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat", default-features = false }
+mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+mc-util-serial = { path = "../../../../mobilecoin/util/serial", default-features = false }
+
+aligned-cmov = "1.0"
+mc-oblivious-map = "1.0"
+mc-oblivious-ram = "1.0"
+mc-oblivious-traits = "1.0"
+
+fog-recovery-db-iface = { path = "../../../recovery_db_iface" }
+fog-types = { path = "../../../fog_types" }
+
+fog-view-enclave-api = { path = "../api" }
+
+[dev-dependencies]
+mc-common = { path = "../../../../mobilecoin/common", features = ["loggers"] }

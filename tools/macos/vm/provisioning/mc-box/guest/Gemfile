@@ -1,0 +1,4 @@
+source 'https://rubygems.org' do
+  gem 'xcode-install', '~> 2.6'
+  gem 'fastlane', '~> 2.146'
+end

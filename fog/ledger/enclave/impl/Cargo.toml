@@ -1,0 +1,23 @@
+[package]
+name = "fog-ledger-enclave-impl"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+description = '''
+This crate contains the actual implementation of a ledger enclave.
+'''
+license = "GPL-3.0"
+
+[dependencies]
+# public
+mc-crypto-ake-enclave = { path = "../../../../mobilecoin/crypto/ake/enclave", default-features = false }
+mc-attest-core = { path = "../../../../mobilecoin/attest/core", default-features = false }
+mc-attest-enclave-api = { path = "../../../../mobilecoin/attest/enclave-api", default-features = false }
+mc-common = { path = "../../../../mobilecoin/common", default-features = false }
+mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features = false }
+mc-util-serial = { path = "../../../../mobilecoin/util/serial" }
+mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+
+# internal
+fog-types = { path = "../../../fog_types" }
+fog-ledger-enclave-api = { path = "../api", default-features = false }

@@ -1,0 +1,51 @@
+[package]
+name = "fog-view-enclave"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-attest-enclave-api = { path = "../../../mobilecoin/attest/enclave-api" }
+mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-crypto-rand = { path = "../../../mobilecoin/crypto/rand" }
+mc-enclave-boundary = { path = "../../../mobilecoin/enclave-boundary" }
+mc-sgx-debug-edl = { path = "../../../mobilecoin/sgx/debug-edl" }
+mc-sgx-panic-edl = { path = "../../../mobilecoin/sgx/panic-edl" }
+mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
+mc-sgx-slog = { path = "../../../mobilecoin/sgx/slog" }
+mc-sgx-slog-edl = { path = "../../../mobilecoin/sgx/slog-edl" }
+mc-sgx-types = { path = "../../../mobilecoin/sgx/types" }
+mc-sgx-urts = { path = "../../../mobilecoin/sgx/urts" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
+
+fog-ocall-oram-storage-edl = { path = "../../ocall_oram_storage/edl" }
+fog-ocall-oram-storage-untrusted = { path = "../../ocall_oram_storage/untrusted" }
+fog-recovery-db-iface = { path = "../../recovery_db_iface" }
+fog-types = { path = "../../fog_types" }
+fog-view-enclave-api = { path = "./api" }
+fog-view-enclave-edl = { path = "./edl" }
+fog-view-enclave-measurement = { path = "./measurement" }
+
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+
+[dev-dependencies]
+criterion = "0.3"
+tempdir = "0.3"
+
+mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
+fog-test-infra = { path = "../../test_infra" }
+
+[build-dependencies]
+mc-util-build-enclave = { path = "../../../mobilecoin/util/build/enclave" }
+mc-util-build-script = { path = "../../../mobilecoin/util/build/script" }
+mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }
+
+cargo-emit = "0.1.1"
+pkg-config = "0.3"
+
+[[bench]]
+name = "add_etxout"
+harness = false

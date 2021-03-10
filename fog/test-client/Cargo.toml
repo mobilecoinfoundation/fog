@@ -1,0 +1,26 @@
+[package]
+name = "fog-test-client"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+readme = "README.md"
+license = "GPL-3.0"
+
+[[bin]]
+name = "test_client"
+path = "src/bin/main.rs"
+
+[dependencies]
+mc-common = { path = "../../mobilecoin/common", features = ["log"] }
+mc-crypto-rand = { path = "../../mobilecoin/crypto/rand" }
+mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
+mc-util-keyfile = { path = "../../mobilecoin/util/keyfile" }
+mc-util-uri = { path = "../../mobilecoin/util/uri" }
+
+fog-sample-paykit = { path = "../sample-paykit" }
+
+more-asserts = "0.2"
+structopt = "0.3"
+
+[dev-dependencies]
+mc-common = { path = "../../mobilecoin/common", features = ["loggers"] }

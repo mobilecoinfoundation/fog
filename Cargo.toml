@@ -1,0 +1,100 @@
+cargo-features = ["resolver", "named-profiles"]
+
+[workspace]
+resolver = "2"
+members = [
+    "android-bindings",
+    "benchmarks",
+    "fog/api",
+    "fog/distribution",
+    "fog/fog_types",
+    "fog/ingest/client",
+    "fog/ingest/enclave",
+    "fog/ingest/enclave/api",
+    "fog/ingest/enclave/edl",
+    "fog/ingest/enclave/impl",
+    "fog/ingest/enclave/measurement",
+    "fog/ingest/server",
+    "fog/kex_rng",
+    "fog/ledger/connection",
+    "fog/ledger/enclave",
+    "fog/ledger/enclave/api",
+    "fog/ledger/enclave/edl",
+    "fog/ledger/enclave/impl",
+    "fog/ledger/enclave/measurement",
+    "fog/ledger/server",
+    "fog/load_testing",
+    "fog/ocall_oram_storage/edl",
+    "fog/ocall_oram_storage/testing",
+    "fog/ocall_oram_storage/trusted",
+    "fog/ocall_oram_storage/untrusted",
+    "fog/recovery_db_iface",
+    "fog/report/cli",
+    "fog/report/server",
+    "fog/sample-paykit",
+    "fog/sql_recovery_db",
+    "fog/test-client",
+    "fog/test_infra",
+    "fog/uri",
+    "fog/view/connection",
+    "fog/view/enclave",
+    "fog/view/enclave/api",
+    "fog/view/enclave/edl",
+    "fog/view/enclave/impl",
+    "fog/view/enclave/measurement",
+    "fog/view/load-test",
+    "fog/view/protocol",
+    "fog/view/server",
+    "generate_test_foundation_key",
+    "libmobilecoin",
+    "util/ffi",
+]
+exclude = [
+    "mobilecoin",
+    "fog/ingest/enclave/trusted",
+    "fog/ledger/enclave/trusted",
+    "fog/view/enclave/trusted",
+]
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+debug = true
+opt-level = 3
+rpath = false
+lto = false
+debug-assertions = false
+overflow-checks = false
+
+[profile.mobile]
+inherits = "release"
+debug = false
+lto = true
+
+[patch.crates-io]
+# grpcio patched with metadata
+grpcio = { git = "https://github.com/jcape/grpc-rs", rev = "2ad042e9e65ecb664a60e034d0a899a8760d81d3" }
+# Code gen patched with metadata
+grpcio-compiler = { git = "https://github.com/jcape/grpc-rs", rev = "2ad042e9e65ecb664a60e034d0a899a8760d81d3" }
+
+# prost is patched with no_std support (https://github.com/danburkert/prost/pull/319)
+# current revision is from jun 13 2020, waiting for a new prost release
+# https://github.com/danburkert/prost/issues/329
+prost = { git = "https://github.com/danburkert/prost", rev = "6113789f70b69709820becba4242824b4fb3ffec" }
+prost-derive = { git = "https://github.com/danburkert/prost", rev = "6113789f70b69709820becba4242824b4fb3ffec" }
+
+# Override lmdb-rkv for a necessary bugfix (see https://github.com/mozilla/lmdb-rs/pull/80)
+lmdb-rkv = { git = "https://github.com/mozilla/lmdb-rs", rev = "df1c2f5" }
+
+# Fix issue with serde/std
+serde_cbor = { git = "https://github.com/mobilecoinofficial/cbor", rev = "4c886a7c1d523aae1ec4aa7386f402cb2f4341b5" }
+
+# Not-yet-released version that depends on newer crates.
+bulletproofs = { git = "https://github.com/dalek-cryptography/bulletproofs", rev = "464acb72432ccc6c5131397fd811a5f01ec2454b" }
+
+# Patched to disable the cpuid instruction because that is incompatible with our sgx builds.
+cpuid-bool = { git = "https://github.com/eranrund/RustCrypto-utils", rev = "74f8e04e9d18d93fc6d05c72756c236dc88daa19" }
+
+# We need to patch aes-gcm so we can make some fields/functions/structs pub in order to have a constant time decrypt
+aes-gcm = { git = "https://github.com/mobilecoinofficial/AEADs", rev = "d1a8517d3dd867ed9c5794002add67992a42f6aa" }

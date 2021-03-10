@@ -1,0 +1,41 @@
+[package]
+name = "fog-distribution"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-account-keys = { path = "../../mobilecoin/account-keys" }
+mc-attest-core = { path = "../../mobilecoin/attest/core" }
+mc-common = { path = "../../mobilecoin/common", features = ["log"] }
+mc-connection = { path = "../../mobilecoin/connection" }
+mc-consensus-enclave-measurement = { path = "../../mobilecoin/consensus/enclave/measurement" }
+mc-crypto-keys = { path = "../../mobilecoin/crypto/keys" }
+mc-fog-report-connection = { path = "../../mobilecoin/fog/report/connection" }
+mc-fog-report-validation = { path = "../../mobilecoin/fog/report/validation" }
+mc-ledger-db = { path = "../../mobilecoin/ledger/db" }
+mc-mobilecoind = { path = "../../mobilecoin/mobilecoind" }
+mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
+mc-transaction-std = { path = "../../mobilecoin/transaction/std" }
+mc-util-keyfile = { path = "../../mobilecoin/util/keyfile" }
+mc-util-uri = { path = "../../mobilecoin/util/uri" }
+
+fog-ingest-enclave-measurement = { path = "../ingest/enclave/measurement" }
+
+crossbeam-channel = "0.5"
+grpcio = "0.6.0"
+lazy_static = "1.4"
+rand = "0.7"
+retry = "1.2"
+structopt = "0.3"
+tempfile = "3.0"
+
+[target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["simd_backend", "nightly"] }
+
+[target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["nightly", "u64_backend"] }
+
+[dev-dependencies]
+mc-common = { path = "../../mobilecoin/common", features = ["loggers"] }

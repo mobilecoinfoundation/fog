@@ -1,0 +1,12 @@
+[package]
+name = "fog-uri"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-util-uri = { path = "../../mobilecoin/util/uri" }
+
+[dev-dependencies]
+mc-common = { path = "../../mobilecoin/common" }

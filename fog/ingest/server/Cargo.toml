@@ -1,0 +1,72 @@
+[package]
+name = "fog-ingest-server"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[lib]
+name = "fog_ingest_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fog_ingest_server"
+path = "src/bin/main.rs"
+
+[dependencies]
+# third-party
+dirs = "2.0"
+displaydoc = { version = "0.1", default-features = false }
+futures = "0.3"
+grpcio = "0.6.0"
+hex = "0.4"
+itertools = "0.10"
+lazy_static = "1.4"
+protobuf = "2.12"
+retry = "1.2"
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde_json = "1.0"
+structopt = "0.3"
+
+# root
+mc-api = { path = "../../../mobilecoin/api" }
+mc-attest-api = { path = "../../../mobilecoin/attest/api" }
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-attest-enclave-api = { path = "../../../mobilecoin/attest/enclave-api" }
+mc-attest-net = { path = "../../../mobilecoin/attest/net" }
+mc-common = { path = "../../../mobilecoin/common", features = ["loggers"] }
+mc-connection = { path = "../../../mobilecoin/connection" }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys", default-features = false }
+mc-ledger-db = { path = "../../../mobilecoin/ledger/db" }
+mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
+mc-sgx-report-cache-untrusted = { path = "../../../mobilecoin/sgx/report-cache/untrusted" }
+mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
+mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
+mc-util-metrics = { path = "../../../mobilecoin/util/metrics" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
+mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+mc-watcher = { path = "../../../mobilecoin/watcher" }
+mc-watcher-api = { path = "../../../mobilecoin/watcher/api" }
+
+# fog
+fog-api = { path = "../../api" }
+fog-ingest-client = { path = "../client" }
+fog-ingest-enclave = { path = "../enclave" }
+fog-ingest-enclave-api = { path = "../enclave/api" }
+fog-ingest-enclave-measurement = { path = "../enclave/measurement" }
+fog-recovery-db-iface = { path = "../../recovery_db_iface" }
+fog-sql-recovery-db = { path = "../../sql_recovery_db" }
+fog-types = { path = "../../fog_types" }
+fog-uri = { path = "../../uri" }
+
+[dev-dependencies]
+mc-util-build-info = { path = "../../../mobilecoin/util/build/info" }
+mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
+mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
+
+fog-test-infra = { path = "../../test_infra" }
+
+rand_core = "0.5"
+rand_hc = "0.2"
+tempdir = "0.3"
+url = "2.1"

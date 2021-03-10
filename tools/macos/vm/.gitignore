@@ -1,0 +1,8 @@
+# Vagrant
+/.vagrant/
+
+# Homebrew bundle
+/Brewfile.lock.json
+
+# Build artifacts
+/out/

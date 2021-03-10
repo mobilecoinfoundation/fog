@@ -1,0 +1,23 @@
+[package]
+name = "fog-ledger-test-infra"
+version = "0.13.0"
+authors = ["Mobilecoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-attest-enclave-api = { path = "../../../mobilecoin/attest/enclave-api" }
+mc-common = { path = "../../../mobilecoin/common" }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-ledger-db = { path = "../../../mobilecoin/ledger/db" }
+mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
+mc-transaction-core = {  path = "../../../mobilecoin/transaction/core" }
+
+fog-ledger-enclave = {  path = "../enclave" }
+
+[target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["simd_backend", "nightly"] }
+
+[target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["nightly", "u64_backend"] }

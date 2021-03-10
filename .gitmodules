@@ -1,0 +1,3 @@
+[submodule "mobilecoin"]
+	path = mobilecoin
+	url = https://github.com/mobilecoinfoundation/mobilecoin.git

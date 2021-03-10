@@ -1,0 +1,44 @@
+cargo-features = ["resolver"]
+
+[package]
+name = "mc-android-bindings"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+resolver = "2"
+license = "GPL-3.0"
+
+[lib]
+name = "mobilecoin_android"
+crate-type = ["cdylib"]
+
+[dependencies]
+fog-kex-rng = { path = "../fog/kex_rng" }
+
+mc-account-keys = { path = "../mobilecoin/account-keys" }
+mc-attest-ake = { path = "../mobilecoin/attest/ake", default-features = false }
+mc-attest-core = { path = "../mobilecoin/attest/core", default-features = false }
+mc-crypto-box = { path = "../mobilecoin/crypto/box" }
+mc-crypto-keys = { path = "../mobilecoin/crypto/keys" }
+mc-crypto-noise = { path = "../mobilecoin/crypto/noise" }
+mc-crypto-rand = { path = "../mobilecoin/crypto/rand" }
+mc-common = { path = "../mobilecoin/common" }
+mc-fog-report-validation = { path = "../mobilecoin/fog/report/validation" }
+mc-fog-types = { path = "../mobilecoin/fog/types" }
+mc-transaction-core = { path = "../mobilecoin/transaction/core"}
+mc-transaction-std = { path = "../mobilecoin/transaction/std"}
+mc-util-encodings = { path = "../mobilecoin/util/encodings" }
+mc-util-from-random = { path = "../mobilecoin/util/from-random" }
+mc-util-serial = { path = "../mobilecoin/util/serial" }
+mc-util-uri = { path = "../mobilecoin/util/uri" }
+mc-api = { path = "../mobilecoin/api" }
+
+aes-gcm = { version = "0.6", default-features = false }
+bip39 = "1.0.0-rc1"
+displaydoc = { version = "0.1", default-features = false }
+jni = { version = "0.16.0", default-features = false }
+protobuf = "2.12"
+rand = { version = "0.7", default-features = false }
+sha2 = { version = "0.9", default-features = false }
+slip10_ed25519 = "0.1.3"
+zeroize = "1.1"

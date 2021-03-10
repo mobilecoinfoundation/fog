@@ -1,0 +1,59 @@
+#!/bin/bash
+set -e
+
+# Script parameters
+repo_dir="$1"
+
+# cd to the script's directory
+curdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$curdir"
+
+# Load environment variables
+[ -f "$curdir/.env" ] && source "$curdir/.env"
+
+echo "Installing: Homebrew, Xcode Command Line Tools"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+
+echo "Updating system Ruby Bundler"
+gem update bundler --user-install --no-document
+
+echo "Installing: fastlane, xcode-install"
+bundle install
+
+echo "Installing: Xcode"
+(
+    # Bash < v4 doesn't propagate `set -e` to subshells
+    set -e
+
+    # Prevents xcode-install from saving username/password to VM keychain
+    export FASTLANE_DONT_STORE_PASSWORD=1
+
+    # Use temp directory for cwd to prevent xcode-install from extracting into the NFS mount
+    temp_dir=/tmp/xcode-install
+    rm -rf "$temp_dir" || true
+    mkdir -p "$temp_dir"
+    cp Gemfile Gemfile.lock "$temp_dir"
+    cd "$temp_dir"
+
+    bundle exec xcversion install "$(< "$curdir/.xcode-version")" --no-show-release-notes
+
+    # Cleanup
+    bundle exec xcversion cleanup
+    rm -rf "$temp_dir" || true
+)
+
+echo "Running Xcode first launch"
+sudo xcodebuild -runFirstLaunch
+
+echo "Installing: Rustup, Rust"
+curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+echo "Installing macOS build dependencies"
+(cd "$repo_dir" && brew bundle --no-lock --no-upgrade)
+(cd "$repo_dir/src/testnet-client/macos" && make dependencies)
+
+echo "Disabling system sleep"
+sudo systemsetup -setcomputersleep Never
+
+echo "Disabling Spotlight"
+sudo mdutil -a -i off

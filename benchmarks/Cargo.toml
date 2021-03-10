@@ -1,0 +1,26 @@
+[package]
+name = "benchmarks"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-consensus-enclave = { path = "../mobilecoin/consensus/enclave" }
+mc-consensus-enclave-api = { path = "../mobilecoin/consensus/enclave/api" }
+mc-consensus-service = { path = "../mobilecoin/consensus/service" }
+mc-common = { path = "../mobilecoin/common", features = ["log"] }
+mc-util-keyfile = { path = "../mobilecoin/util/keyfile" }
+mc-crypto-keys = { path = "../mobilecoin/crypto/keys" }
+mc-ledger-db = { path = "../mobilecoin/ledger/db" }
+mc-transaction-core = { path = "../mobilecoin/transaction/core" }
+mc-transaction-std = { path = "../mobilecoin/transaction/std" }
+
+rand = "0.7"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "tx_validation"
+harness = false

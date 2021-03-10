@@ -1,0 +1,74 @@
+[package]
+name = "fog-ledger-server"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[lib]
+name = "fog_ledger_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ledger_server"
+path = "src/bin/main.rs"
+
+[dependencies]
+# mobilecoin.git
+mc-attest-api = { path = "../../../mobilecoin/attest/api" }
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-attest-enclave-api = { path = "../../../mobilecoin/attest/enclave-api" }
+mc-attest-net = { path = "../../../mobilecoin/attest/net" }
+mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-ledger-db = { path = "../../../mobilecoin/ledger/db" }
+mc-sgx-report-cache-untrusted = { path = "../../../mobilecoin/sgx/report-cache/untrusted" }
+mc-transaction-core = {  path = "../../../mobilecoin/transaction/core" }
+mc-util-encodings = { path = "../../../mobilecoin/util/encodings" }
+mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
+mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
+mc-util-metrics = { path = "../../../mobilecoin/util/metrics" }
+mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+mc-watcher = { path = "../../../mobilecoin/watcher" }
+mc-watcher-api = { path = "../../../mobilecoin/watcher/api" }
+
+fog-api = { path = "../../api" }
+fog-uri = { path = "../../uri" }
+fog-ledger-enclave = { path = "../enclave" }
+fog-ledger-enclave-api = { path = "../enclave/api" }
+
+displaydoc = { version = "0.1", default-features = false }
+futures = "0.3"
+grpcio = "0.6.0"
+hex = "0.4"
+lazy_static = "1.4"
+rand = "0.7"
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde_json = "1.0"
+structopt = "0.3"
+url = "2.1"
+
+[build-dependencies]
+mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }
+mc-util-build-script = { path = "../../../mobilecoin/util/build/script" }
+
+[dev-dependencies]
+mc-account-keys = { path = "../../../mobilecoin/account-keys" }
+mc-api = { path = "../../../mobilecoin/api" }
+mc-common = { path = "../../../mobilecoin/common", features = ["loggers"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
+mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+
+fog-test-infra = { path = "../../test_infra" }
+fog-ledger-test-infra = { path = "../test_infra" }
+fog-ledger-connection = { path = "../connection" }
+fog-ledger-enclave-measurement = { path = "../enclave/measurement" }
+
+tempdir = "0.3"
+
+[target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dev-dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["simd_backend", "nightly"] }
+
+[target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dev-dependencies]
+curve25519-dalek = { version = "3.0", default-features = false, features = ["nightly", "u64_backend"] }

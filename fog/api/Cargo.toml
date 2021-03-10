@@ -1,0 +1,38 @@
+[package]
+name = "fog-api"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+futures = "0.3"
+grpcio = "0.6.0"
+prost = { version = "0.6.1", default-features = false, features = ["prost-derive"] }
+protobuf = "2.12"
+
+fog-enclave-connection = { path = "../enclave_connection" }
+fog-uri = { path = "../uri" }
+
+mc-api = { path = "../../mobilecoin/api" }
+mc-attest-api = { path = "../../mobilecoin/attest/api" }
+mc-consensus-api = { path = "../../mobilecoin/consensus/api" }
+mc-fog-api = { path = "../../mobilecoin/fog/api" }
+mc-util-from-random = { path = "../../mobilecoin/util/from-random" }
+mc-util-grpc = { path = "../../mobilecoin/util/grpc" }
+mc-util-serial = { path = "../../mobilecoin/util/serial" }
+mc-watcher-api = { path = "../../mobilecoin/watcher/api" }
+
+[dev-dependencies]
+mc-fog-api-test-utils = { path = "../../mobilecoin/fog/api/test-utils" }
+mc-crypto-keys = { path = "../../mobilecoin/crypto/keys" }
+fog-kex-rng = { path = "../kex_rng" }
+fog-types = { path = "../fog_types" }
+mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
+mc-util-test-helper = { path = "../../mobilecoin/util/test-helper" }
+
+[build-dependencies]
+mc-util-build-grpc = { path = "../../mobilecoin/util/build/grpc" }
+mc-util-build-script = { path = "../../mobilecoin/util/build/script" }
+
+cargo-emit = "0.1.1"

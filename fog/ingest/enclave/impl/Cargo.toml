@@ -1,0 +1,42 @@
+[package]
+name = "fog-ingest-enclave-impl"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[dependencies]
+mc-attest-core = { path = "../../../../mobilecoin/attest/core", default-features = false }
+mc-attest-enclave-api = { path = "../../../../mobilecoin/attest/enclave-api", default-features = false }
+mc-attest-trusted = { path = "../../../../mobilecoin/attest/trusted", default-features = false }
+mc-common = { path = "../../../../mobilecoin/common", default-features = false }
+mc-crypto-ake-enclave = { path = "../../../../mobilecoin/crypto/ake/enclave" }
+mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features = false }
+mc-crypto-rand = { path = "../../../../mobilecoin/crypto/rand" }
+mc-crypto-box = { path = "../../../../mobilecoin/crypto/box" }
+mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat" }
+mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+mc-transaction-core = { path = "../../../../mobilecoin/transaction/core", default-features = false }
+mc-util-from-random = { path = "../../../../mobilecoin/util/from-random" }
+mc-util-serial = { path = "../../../../mobilecoin/util/serial" }
+
+aligned-cmov = "1.0"
+mc-oblivious-map = "1.0"
+mc-oblivious-ram = "1.0"
+mc-oblivious-traits = "1.0"
+
+fog-ingest-enclave-api = { path = "../api", default-features = false }
+fog-kex-rng = { path = "../../../kex_rng" }
+fog-types = { path = "../../../fog_types" }
+fog-recovery-db-iface = { path = "../../../recovery_db_iface", default-features = false }
+
+rand_core = { version = "0.5", default-features = false }
+zeroize = { version = "1.1", default-features = false }
+
+[dev-dependencies]
+fog-view-protocol = { path = "../../../view/protocol" }
+
+mc-account-keys = { path = "../../../../mobilecoin/account-keys" }
+mc-common = { path = "../../../../mobilecoin/common", features = ["loggers"] }
+mc-util-test-helper = { path = "../../../../mobilecoin/util/test-helper" }
+mc-util-logger-macros = { path = "../../../../mobilecoin/util/logger-macros" }

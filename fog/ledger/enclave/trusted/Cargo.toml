@@ -1,0 +1,80 @@
+cargo-features = ["resolver"]
+
+[package]
+name = "ledger_enclave_trusted"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+resolver = "2"
+
+# Declare as an empty workspace to not confuse cargo.
+[workspace]
+
+[lib]
+crate-type = ["staticlib"]
+
+[features]
+sgx-sim = [
+    "mc-attest-core/sgx-sim"
+]
+ias-dev = [
+    "mc-attest-core/ias-dev"
+]
+
+[dependencies]
+mc-attest-core = { path = "../../../../mobilecoin/attest/core", default-features = false }
+mc-enclave-boundary = { path = "../../../../mobilecoin/enclave-boundary" }
+mc-util-serial = { path = "../../../../mobilecoin/util/serial"}
+mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat", features = ["sgx"] }
+mc-sgx-debug-edl = { path = "../../../../mobilecoin/sgx/debug-edl" }
+mc-sgx-enclave-id = { path = "../../../../mobilecoin/sgx/enclave-id" }
+mc-sgx-panic-edl = { path = "../../../../mobilecoin/sgx/panic-edl" }
+mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+mc-sgx-slog = { path = "../../../../mobilecoin/sgx/slog", features = ["sgx"] }
+mc-sgx-slog-edl = { path = "../../../../mobilecoin/sgx/slog-edl" }
+mc-sgx-types = { path = "../../../../mobilecoin/sgx/types" }
+
+fog-ledger-enclave-api = { path = "../api", default-features = false }
+fog-ledger-enclave-edl = { path = "../edl" }
+fog-ledger-enclave-impl = { path = "../impl", default-features = false }
+
+lazy_static = "1.4"
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+
+[build-dependencies]
+mc-util-build-sgx = { path = "../../../../mobilecoin/util/build/sgx" }
+mc-util-build-script = { path = "../../../../mobilecoin/util/build/script" }
+
+cargo-emit = "0.1.1"
+pkg-config = "0.3"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+rpath = false
+lto = true
+debug-assertions = false
+overflow-checks = false
+
+[patch.crates-io]
+# prost is patched with no_std support (https://github.com/danburkert/prost/pull/319)
+# current revision is from jun 13 2020, waiting for a new prost release
+# https://github.com/danburkert/prost/issues/329
+prost = { git = "https://github.com/danburkert/prost", rev = "6113789f70b69709820becba4242824b4fb3ffec" }
+prost-derive = { git = "https://github.com/danburkert/prost", rev = "6113789f70b69709820becba4242824b4fb3ffec" }
+
+# Fixes the following:
+# * Allow enabling `serde/std` without also requiring `serde_cbor/std` to be enabled.
+#   See: https://github.com/pyfisch/cbor/pull/198
+serde_cbor = { git = "https://github.com/mobilecoinofficial/cbor", rev = "4c886a7c1d523aae1ec4aa7386f402cb2f4341b5" }
+
+# Not-yet-released version that depends on newer crates.
+bulletproofs = { git = "https://github.com/dalek-cryptography/bulletproofs", rev = "464acb72432ccc6c5131397fd811a5f01ec2454b" }
+
+# Patched to disable the cpuid instruction because that is incompatible with our sgx builds.
+cpuid-bool = { git = "https://github.com/eranrund/RustCrypto-utils", rev = "74f8e04e9d18d93fc6d05c72756c236dc88daa19" }
+
+# We need to patch aes-gcm so we can make some fields/functions/structs pub in order to have a constant time decrypt
+aes-gcm = { git = "https://github.com/mobilecoinofficial/AEADs", rev = "d1a8517d3dd867ed9c5794002add67992a42f6aa" }

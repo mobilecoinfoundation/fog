@@ -1,0 +1,13 @@
+Cargo.lock merge=theirs
+mobilecoin/.circleci merge=theirs
+mobilecoin/Cargo.lock merge=theirs
+mobilecoin/consensus/enclave/trusted/Cargo.lock merge=theirs
+fog/ledger/enclave/trusted/Cargo.lock merge=theirs
+fog/ingest/enclave/trusted/Cargo.lock merge=theirs
+fog/view/enclave/trusted/Cargo.lock merge=theirs
+*.pem binary
+*.der binary
+**/*.bin binary
+**/*.mdb binary
+**/*.pub binary
+mobilecoin/thirdparty/** -whitespace -text

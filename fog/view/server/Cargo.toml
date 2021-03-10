@@ -1,0 +1,69 @@
+[package]
+name = "fog-view-server"
+version = "0.13.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+[lib]
+name = "fog_view_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fog_view_server"
+path = "src/bin/main.rs"
+
+[dependencies]
+# third party
+displaydoc = { version = "0.1", default-features = false }
+futures = "0.3"
+grpcio = "0.6.0"
+hex = "0.4"
+lazy_static = "1.4"
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+serde_json = "1.0"
+structopt = "0.3"
+
+# root
+mc-attest-api = { path = "../../../mobilecoin/attest/api" }
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-attest-net = { path = "../../../mobilecoin/attest/net" }
+mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-sgx-report-cache-untrusted = { path = "../../../mobilecoin/sgx/report-cache/untrusted" }
+mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
+mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
+mc-util-metered-channel = { path = "../../../mobilecoin/util/metered-channel" }
+mc-util-metrics = { path = "../../../mobilecoin/util/metrics" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
+mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+
+# fog
+fog-api = { path = "../../api" }
+fog-kex-rng = { path = "../../kex_rng" }
+fog-recovery-db-iface = { path = "../../recovery_db_iface" }
+fog-sql-recovery-db = { path = "../../sql_recovery_db" }
+fog-types = { path = "../../fog_types" }
+fog-uri = { path = "../../uri" }
+fog-view-enclave = { path = "../enclave" }
+fog-view-enclave-api = { path = "../enclave/api" }
+
+[dev-dependencies]
+rand = "0.7"
+rand_core = "0.5"
+tempdir = "0.3"
+
+fog-view-enclave-measurement = { path = "../enclave/measurement" }
+fog-view-protocol = { path = "../protocol" }
+
+mc-attest-core = { path = "../../../mobilecoin/attest/core" }
+mc-common = { path = "../../../mobilecoin/common", features = ["loggers"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
+mc-util-encodings = { path = "../../../mobilecoin/util/encodings" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
+mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
+mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+
+fog-view-connection = { path = "../connection" }
+fog-test-infra = { path = "../../test_infra" }
+fog-types = { path = "../../fog_types" }

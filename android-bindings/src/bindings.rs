@@ -1500,8 +1500,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogReportResponses_add_1respons
 ) {
     jni_ffi_call(&env, |env| {
         let report_uri: String = env.get_string(report_uri)?.into();
-        let report_uri =
-            FogUri::from_str(&report_uri).expect("report_uri isn't a valid fog report uri");
+        let report_uri = FogUri::from_str(&report_uri)?;
         let report_uri = report_uri.to_string();
         let report_response: MutexGuard<ReportResponse> =
             env.get_rust_field(report_response, RUST_OBJ_FIELD)?;

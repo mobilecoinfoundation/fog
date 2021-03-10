@@ -46,6 +46,9 @@ pub enum IngestConfigCommand {
     /// Attempt to put an active server in the retiring mode, after which it will eventually become idle.
     Retire,
 
+    /// Attempt to take a retired server out of retirement.
+    Unretire,
+
     /// Report a range of missed blocks [start, end).
     ReportMissedBlockRange {
         /// The block index of the first missed block.

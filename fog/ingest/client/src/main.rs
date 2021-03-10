@@ -39,6 +39,7 @@ fn main() -> ClientResult<()> {
         }
         IngestConfigCommand::Activate => activate(&logger, &ingest_client),
         IngestConfigCommand::Retire => retire(&logger, &ingest_client),
+        IngestConfigCommand::Unretire => unretire(&logger, &ingest_client),
 
         IngestConfigCommand::ReportMissedBlockRange { start, end } => {
             report_missed_block_range(&logger, &ingest_client, start, end)
@@ -92,6 +93,12 @@ fn activate(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResul
 
 fn retire(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.retire().expect("rpc failed");
+    log::info!(logger, "Done, status: {:?}", status);
+    Ok(())
+}
+
+fn unretire(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
+    let status = ingest_client.unretire().expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
     Ok(())
 }

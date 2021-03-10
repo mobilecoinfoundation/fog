@@ -119,6 +119,14 @@ impl FogIngestGrpcClient {
         })
     }
 
+    pub fn unretire(&self) -> ClientResult<IngestSummary> {
+        retry(self.get_retries(), || -> Result<_, Error> {
+            Ok(self
+                .ingest_api_client
+                .unretire_opt(&Empty::default(), self.creds.call_option()?)?)
+        })
+    }
+
     pub fn report_missed_block_range(&self, start_index: u64, end_index: u64) -> ClientResult<()> {
         log::trace!(
             self.logger,

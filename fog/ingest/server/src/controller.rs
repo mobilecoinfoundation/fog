@@ -696,6 +696,28 @@ where
         Ok(self.get_ingest_summary())
     }
 
+    /// Attempt to mark our ingress public key as not retired in the database.
+    /// The use case for this is:
+    /// 1. We are trying to do ingest enclave upgrade
+    /// 2. We retire the old cluster and activate the new cluster
+    /// 3. Something goes wrong and the new cluster goes up in flames
+    /// 4. We want to unretire the old cluster key so that the old cluster starts publishing fog reports
+    ///    again and continues life as usual, and then continue debugging the new cluster and try again later.
+    pub fn unretire(&self) -> Result<IngestSummary, Error> {
+        log::info!(self.logger, "unretire");
+
+        let ingress_pubkey = CompressedRistrettoPublic::from(
+            &self
+                .enclave
+                .get_ingress_pubkey()
+                .expect("Failed to get ingress pubkey"),
+        );
+        self.recovery_db
+            .retire_ingress_key(&ingress_pubkey, false)?;
+
+        Ok(self.get_ingest_summary())
+    }
+
     /// Attempt to sync ingress keys from a remote server, which may be idle or active.
     /// We can only do this while we are idle.
     pub fn sync_keys_from_remote(&self, remote: &IngestPeerUri) -> Result<IngestSummary, Error> {

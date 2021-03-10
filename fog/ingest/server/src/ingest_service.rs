@@ -121,6 +121,14 @@ where
             .map_err(|err| rpc_database_err(err, logger))?)
     }
 
+    /// Logic of proto api
+    pub fn unretire_impl(&mut self, _: Empty, logger: &Logger) -> Result<IngestSummary, RpcStatus> {
+        Ok(self
+            .controller
+            .unretire()
+            .map_err(|err| rpc_database_err(err, logger))?)
+    }
+
     /// Report a missed block range
     pub fn report_missed_block_range_impl(
         &mut self,
@@ -232,6 +240,13 @@ where
         let _timer = SVC_COUNTERS.req(&ctx);
         mc_common::logger::scoped_global_logger(&rpc_logger(&ctx, &self.logger), |logger| {
             send_result(ctx, sink, self.retire_impl(request, &logger), &logger)
+        })
+    }
+
+    fn unretire(&mut self, ctx: RpcContext, request: Empty, sink: UnarySink<IngestSummary>) {
+        let _timer = SVC_COUNTERS.req(&ctx);
+        mc_common::logger::scoped_global_logger(&rpc_logger(&ctx, &self.logger), |logger| {
+            send_result(ctx, sink, self.unretire_impl(request, &logger), &logger)
         })
     }
 

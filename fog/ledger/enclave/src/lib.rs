@@ -102,7 +102,8 @@ impl LedgerSgxEnclave {
     }
 }
 
-/// Proxy API for talking to the corresponding implementation inside the enclave.
+/// Proxy API for talking to the corresponding implementation inside the
+/// enclave.
 impl LedgerEnclave for LedgerSgxEnclave {
     fn enclave_init(&self, self_id: &ResponderId) -> Result<()> {
         let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(self_id.clone()))?;

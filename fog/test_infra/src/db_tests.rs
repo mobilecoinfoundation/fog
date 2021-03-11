@@ -22,8 +22,10 @@ pub fn get_num_blocks(db: &impl RecoveryDb) -> u64 {
 }
 
 // Exercise new recovery db apis and check the results
-// - Add random blocks and get tx's using new get txs API, check for NotFound result with junk queries
-// - Also add random rng records for a random user, check that they see the new rng records as expected depending on cursor value
+// - Add random blocks and get tx's using new get txs API, check for NotFound
+//   result with junk queries
+// - Also add random rng records for a random user, check that they see the new
+//   rng records as expected depending on cursor value
 pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
     rng: &mut (impl RngCore + CryptoRng),
     db: &DB,
@@ -119,7 +121,8 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
             db,
         );
 
-        // Test that the user can still see those rng records at start_from_user_event_id.
+        // Test that the user can still see those rng records at
+        // start_from_user_event_id.
         {
             let (user_events, next_start_from_user_event_id) =
                 db.search_user_events(start_from_user_event_id).unwrap();
@@ -133,7 +136,8 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
             start_from_user_event_id = next_start_from_user_event_id;
         }
 
-        // Test that the user cannot see those rng records at the updated start_from_user_event_id
+        // Test that the user cannot see those rng records at the updated
+        // start_from_user_event_id
         {
             let (user_events, next_start_from_user_event_id) =
                 db.search_user_events(start_from_user_event_id).unwrap();
@@ -146,7 +150,8 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
         }
     }
 
-    // Test that if user tries full recovery (cursor = 0) they get 10 rounds worth of rng records
+    // Test that if user tries full recovery (cursor = 0) they get 10 rounds worth
+    // of rng records
     let (user_events, _next_start_from_user_event_id) = db.search_user_events(0).unwrap();
     let num_rng_events = user_events
         .iter()
@@ -176,7 +181,8 @@ pub fn recovery_db_missed_blocks_reporting(_rng: &mut impl RngCore, db: &impl Re
     let missed_block_ranges = db.get_missed_block_ranges().unwrap();
     assert_eq!(missed_block_ranges.len(), 0);
 
-    // Check that inserting an empty block range is rejected and doesn't change things
+    // Check that inserting an empty block range is rejected and doesn't change
+    // things
     assert!(!db.report_missed_block_range(&BlockRange::new(1, 1)).is_ok());
 
     let (user_events, _next_start_from_user_event_id) = db.search_user_events(0).unwrap();
@@ -287,7 +293,8 @@ pub fn recovery_db_rng_records_decommissioning<DB: RecoveryDb>(
         )
         .unwrap();
 
-    // Check that if starting at next_start_from_user_event_id we only see the second rng
+    // Check that if starting at next_start_from_user_event_id we only see the
+    // second rng
     let test_rows1 = vec![kex_rng_pubkey2];
 
     let (user_events, _next_start_from_user_event_id) = db
@@ -408,7 +415,8 @@ pub fn recovery_db_rng_records_decommissioning<DB: RecoveryDb>(
     );
     assert_eq!(1, decommissioned_invocs[0].last_ingested_block);
 
-    // Add some blocks to invoc_id2, decommission and test that we can see the data we expect.
+    // Add some blocks to invoc_id2, decommission and test that we can see the data
+    // we expect.
     for block_index in 10..13 {
         let (meta, test_rows) = random_block(rng, block_index, 10);
         db.add_block_data(&invoc_id2, &meta, 0, &test_rows).unwrap();
@@ -481,7 +489,8 @@ pub fn recovery_db_rng_records_decommissioning<DB: RecoveryDb>(
     assert_eq!(12, decommissioned_invocs[1].last_ingested_block);
 }
 
-// Basic tests that creating, checking on, and retiring ingress keys works as expected
+// Basic tests that creating, checking on, and retiring ingress keys works as
+// expected
 pub fn test_recovery_db_ingress_keys<DB: RecoveryDb>(
     mut rng: &mut (impl RngCore + CryptoRng),
     db: &DB,

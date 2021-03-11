@@ -10,7 +10,6 @@ pub struct FfiRefPtr<'a, T: 'a + ?Sized>(*const T, marker::PhantomData<&'a T>);
 
 impl<'a, T: ?Sized> FfiRefPtr<'a, T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *const T) -> Self {
         // This panic indicates a violation of a precondition to this function.
@@ -20,8 +19,8 @@ impl<'a, T: ?Sized> FfiRefPtr<'a, T> {
 
     #[inline]
     pub fn as_raw(&self) -> *const T {
-        // This panic is considered a precondition violation of the struct, either from misuse in
-        // unsafe Rust, in C, or a bug in the library.
+        // This panic is considered a precondition violation of the struct, either from
+        // misuse in unsafe Rust, in C, or a bug in the library.
         assert!(!self.0.is_null(), "Pointer cannot be null");
         self.0
     }
@@ -72,7 +71,6 @@ pub struct FfiMutPtr<'a, T: 'a + ?Sized>(*mut T, marker::PhantomData<&'a mut T>)
 
 impl<'a, T: 'a + ?Sized> FfiMutPtr<'a, T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut T) -> Self {
         // This panic indicates a violation of a precondition to this function.
@@ -82,8 +80,8 @@ impl<'a, T: 'a + ?Sized> FfiMutPtr<'a, T> {
 
     #[inline]
     pub fn as_raw(&self) -> *mut T {
-        // This panic is considered a precondition violation, either from misuse in unsafe Rust,
-        // in C, or a bug in the library.
+        // This panic is considered a precondition violation, either from misuse in
+        // unsafe Rust, in C, or a bug in the library.
         assert!(!self.0.is_null(), "Pointer cannot be null");
         self.0
     }
@@ -147,7 +145,6 @@ pub struct FfiOptRefPtr<'a, T: 'a + ?Sized>(*const T, marker::PhantomData<&'a T>
 
 impl<'a, T: 'a + ?Sized> FfiOptRefPtr<'a, T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *const T) -> Self {
         Self(ptr, Default::default())
@@ -237,7 +234,6 @@ pub struct FfiOptMutPtr<'a, T: 'a + ?Sized>(*mut T, marker::PhantomData<&'a mut 
 
 impl<'a, T: 'a + ?Sized> FfiOptMutPtr<'a, T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut T) -> Self {
         Self(ptr, Default::default())

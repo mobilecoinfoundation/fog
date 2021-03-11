@@ -400,15 +400,16 @@ fn test_view_sql_1mil(logger: Logger) {
     std::thread::sleep(std::time::Duration::from_millis(1000));
 }
 
-/// Ensure that all provided ETxOutRecords are in the enclave, and that non-existing ones aren't.
+/// Ensure that all provided ETxOutRecords are in the enclave, and that
+/// non-existing ones aren't.
 fn assert_e_tx_out_records_sanity(
     client: &mut FogViewGrpcClient,
     records: &[ETxOutRecord],
 
     logger: &Logger,
 ) {
-    // Construct an array of expected results that includes both records we expect to find and
-    // records we expect not to find.
+    // Construct an array of expected results that includes both records we expect
+    // to find and records we expect not to find.
     let mut expected_results = Vec::new();
     for record in records {
         expected_results.push(TxOutSearchResult {
@@ -472,8 +473,9 @@ fn test_overlapping_ingest_ranges(logger: Logger) {
         .new_ingest_invocation(None, &ingress_key2, &random_kex_rng_pubkey(&mut rng), 10)
         .unwrap();
 
-    // Add 5 blocks to both invocations. This will add blocks 0-4 to invoc1 and blocks
-    // 10-14 to invoc2. Since we're missing blocks 5-9, we should only see blocks 0-4 for now.
+    // Add 5 blocks to both invocations. This will add blocks 0-4 to invoc1 and
+    // blocks 10-14 to invoc2. Since we're missing blocks 5-9, we should only
+    // see blocks 0-4 for now.
     let mut expected_records = Vec::new();
     for i in 0..5 {
         let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
@@ -516,8 +518,8 @@ fn test_overlapping_ingest_ranges(logger: Logger) {
     assert_eq!(result.highest_processed_block_count, 5);
     assert_eq!(result.last_known_block_count, 15); // The last known block is not tied to the serial processing of blocks.
 
-    // Add blocks 5-19 to invoc_id1. This will allow us to query blocks 0-14, since invoc_id2 only
-    // has blocks 10-14.
+    // Add blocks 5-19 to invoc_id1. This will allow us to query blocks 0-14, since
+    // invoc_id2 only has blocks 10-14.
     for i in 5..20 {
         let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
         db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
@@ -620,8 +622,8 @@ fn test_overlapping_ingest_ranges(logger: Logger) {
     assert_e_tx_out_records_sanity(&mut view_client, &expected_records, &logger);
 }
 
-/// Test that view server behaves correctly when there is a missing range before any ingest
-/// invocations.
+/// Test that view server behaves correctly when there is a missing range before
+/// any ingest invocations.
 #[test_with_logger]
 fn test_start_with_missing_range(logger: Logger) {
     let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
@@ -685,8 +687,8 @@ fn test_start_with_missing_range(logger: Logger) {
     assert_eq!(server.highest_processed_block_count(), 15);
 }
 
-/// Test that view server behaves correctly when there is a missing range between two ingest
-/// invocations.
+/// Test that view server behaves correctly when there is a missing range
+/// between two ingest invocations.
 #[test_with_logger]
 fn test_middle_missing_range_with_decommission(logger: Logger) {
     let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
@@ -728,8 +730,8 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         expected_records.extend(records);
     }
 
-    // At this point invoc_id1 is still active, so we should still be at highest processed block 10
-    // but the last known block should be 15.
+    // At this point invoc_id1 is still active, so we should still be at highest
+    // processed block 10 but the last known block should be 15.
     let mut allowed_tries = 60usize;
     loop {
         let result = view_client.request(0, 0, Default::default()).unwrap();
@@ -745,8 +747,8 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
     }
     assert_eq!(server.highest_processed_block_count(), 10);
 
-    // Adding block 10 to invoc_id1 should push us forward by one block (since invoc_id2 has
-    // processed that block as well).
+    // Adding block 10 to invoc_id1 should push us forward by one block (since
+    // invoc_id2 has processed that block as well).
     let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 10, 5); // 5 outputs per block
     db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
     expected_records.extend(records);
@@ -766,8 +768,8 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
     }
     assert_eq!(server.highest_processed_block_count(), 11);
 
-    // Decommissioning invoc_id1 should allow us to advance to the last block invoc_id2 has
-    // processed.
+    // Decommissioning invoc_id1 should allow us to advance to the last block
+    // invoc_id2 has processed.
     db.decommission_ingest_invocation(&invoc_id1).unwrap();
 
     let mut allowed_tries = 60usize;

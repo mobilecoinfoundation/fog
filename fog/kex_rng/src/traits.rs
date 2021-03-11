@@ -7,11 +7,12 @@ use mc_crypto_keys::Kex;
 use mc_util_repr_bytes::ReprBytes;
 use rand_core::{CryptoRng, RngCore};
 
-/// Trait representing an object that can be created from a key exchange message,
-/// which might also contain versioning info.
+/// Trait representing an object that can be created from a key exchange
+/// message, which might also contain versioning info.
 /// All KexRng and KexRngCore structs implement this.
 pub trait NewFromKex<KexAlgo: Kex>: Sized {
-    /// Create self by ephemeral-static key exchange, using a new random private key
+    /// Create self by ephemeral-static key exchange, using a new random private
+    /// key
     fn new_from_ephemeral_static<T: RngCore + CryptoRng>(
         rng: &mut T,
         pubkey: &KexAlgo::Public,
@@ -23,8 +24,8 @@ pub trait NewFromKex<KexAlgo: Kex>: Sized {
         pubkey: &KexAlgo::Public,
     ) -> (KexRngPubkey, Self);
 
-    /// Try to create self by key exchange against the ephemeral nonce and the static private key
-    /// Might fail due to versioning or parsing mismatch
+    /// Try to create self by key exchange against the ephemeral nonce and the
+    /// static private key Might fail due to versioning or parsing mismatch
     fn try_from_kex_pubkey(
         pubkey: &KexRngPubkey,
         private_key: &KexAlgo::Private,
@@ -39,8 +40,8 @@ pub trait NewFromKex<KexAlgo: Kex>: Sized {
 ///
 /// For a discussion of plausible implementations, see README
 ///
-/// Implementation must provide an Output size in bytes as a compile-time constant,
-/// and a VERSION_ID number, which should be unique across this crate.
+/// Implementation must provide an Output size in bytes as a compile-time
+/// constant, and a VERSION_ID number, which should be unique across this crate.
 pub trait KexRngCore<KexAlgo: Kex> {
     /// The number of bytes in an output
     type OutputSize: ArrayLength<u8>;
@@ -52,7 +53,8 @@ pub trait KexRngCore<KexAlgo: Kex> {
 
     /// Given a secret curve point, and counter, produce output bytes
     ///
-    /// For a random key, the consecutive outputs of this prf should be pseudorandom.
+    /// For a random key, the consecutive outputs of this prf should be
+    /// pseudorandom.
     fn prf(
         secret: &GenericArray<u8, <KexAlgo::Public as ReprBytes>::Size>,
         counter: &u64,
@@ -60,8 +62,8 @@ pub trait KexRngCore<KexAlgo: Kex> {
 }
 
 /// Trait representing a type-erased KexRngCore with attached counter and buffer
-/// It may support one or several versions, but must have a notion of a version tag.
-/// The multiple versions might have different state or output sizes.
+/// It may support one or several versions, but must have a notion of a version
+/// tag. The multiple versions might have different state or output sizes.
 /// This is ultimately implemented by both the buffered wrapper of KexRngCore,
 /// and the Versioned object that the clients use.
 pub trait BufferedRng: Clone + Into<StoredRng> + TryFrom<StoredRng> {
@@ -76,6 +78,6 @@ pub trait BufferedRng: Clone + Into<StoredRng> + TryFrom<StoredRng> {
 }
 
 /// Trait representing a buffered Rng initializable by key exchange
-/// We cannot hope to derive NewFromKex here, because versioning strategy is involved,
-/// and the VersionedKexRng could dynamically have different versions.
+/// We cannot hope to derive NewFromKex here, because versioning strategy is
+/// involved, and the VersionedKexRng could dynamically have different versions.
 pub trait KexRng<KexAlgo: Kex>: BufferedRng + NewFromKex<KexAlgo> {}

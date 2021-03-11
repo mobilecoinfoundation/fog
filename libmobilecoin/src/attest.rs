@@ -305,8 +305,10 @@ pub extern "C" fn mc_attest_ake_get_binding(
 
 /// # Preconditions
 ///
-/// * `responder_id` - must be a nul-terminated C string containing a valid responder ID.
-/// * `out_auth_request` - must be null or else length must be >= auth_request_output.len.
+/// * `responder_id` - must be a nul-terminated C string containing a valid
+///   responder ID.
+/// * `out_auth_request` - must be null or else length must be >=
+///   auth_request_output.len.
 #[no_mangle]
 pub extern "C" fn mc_attest_ake_get_auth_request(
     attest_ake: FfiMutPtr<McAttestAke>,
@@ -373,7 +375,8 @@ pub extern "C" fn mc_attest_ake_process_auth_response(
 /// # Preconditions
 ///
 /// * `attest_ake` - must be in the attested state.
-/// * `out_ciphertext` - must be null or else length must be >= `ciphertext.len`.
+/// * `out_ciphertext` - must be null or else length must be >=
+///   `ciphertext.len`.
 ///
 /// # Errors
 ///

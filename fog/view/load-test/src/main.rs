@@ -25,7 +25,8 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 struct Config {
     /// Path to root identity file to use
-    /// Note: This contains the fog-url which is the same as the report-server uri
+    /// Note: This contains the fog-url which is the same as the report-server
+    /// uri
     #[structopt(long)]
     pub keyfile: PathBuf,
 

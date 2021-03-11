@@ -49,8 +49,8 @@ pub struct EnclaveConnection<U: ConnectionUri, G: EnclaveGrpcChannel> {
     attest_cipher: Option<Ready<Aes256Gcm>>,
     /// An object which can verify a fog node's provided IAS report
     verifier: Verifier,
-    /// Credentials to use for all GRPC calls (this allows authentication username/password to go
-    /// through, if provided).
+    /// Credentials to use for all GRPC calls (this allows authentication
+    /// username/password to go through, if provided).
     creds: BasicCredentials,
     /// Logger
     logger: Logger,

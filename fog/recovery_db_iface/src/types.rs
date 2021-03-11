@@ -20,10 +20,11 @@ pub enum FogUserEvent {
     MissingBlocks(fog_types::common::BlockRange),
 }
 
-/// An ingest invocation begins consuming the blockchain at some particular block index, and eventually stops.
-/// The IngestableRange tracks the start block, what the last scanned block is,
-/// and whether it has stopped.
-/// Clients use this information, for example, to avoid making unnecessary fog-view queries.
+/// An ingest invocation begins consuming the blockchain at some particular
+/// block index, and eventually stops. The IngestableRange tracks the start
+/// block, what the last scanned block is, and whether it has stopped.
+/// Clients use this information, for example, to avoid making unnecessary
+/// fog-view queries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IngestableRange {
     /// The ingest invocation id this range is tied to.
@@ -32,7 +33,8 @@ pub struct IngestableRange {
     /// The first block index that will be ingested by this invocation.
     pub start_block: u64,
 
-    /// Whether this ingest invocation has been decommissioned or is still active.
+    /// Whether this ingest invocation has been decommissioned or is still
+    /// active.
     pub decommissioned: bool,
 
     /// The last block ingested by this invocation, if any.
@@ -40,14 +42,16 @@ pub struct IngestableRange {
 }
 
 impl IngestableRange {
-    /// Is, or will this IngestableRange be able to provide data for a given block index.
+    /// Is, or will this IngestableRange be able to provide data for a given
+    /// block index.
     pub fn can_provide_block(&self, block: u64) -> bool {
-        // If this ingestable range starts after the desired block, it is not going to provide it.
+        // If this ingestable range starts after the desired block, it is not going to
+        // provide it.
         if block < self.start_block {
             false
         } else {
-            // If this ingestable range is decomissioned, it will only provide blocks up until the
-            // last ingested block
+            // If this ingestable range is decomissioned, it will only provide blocks up
+            // until the last ingested block
             if self.decommissioned {
                 if let Some(last_ingested_block) = self.last_ingested_block {
                     last_ingested_block >= block
@@ -62,8 +66,9 @@ impl IngestableRange {
     }
 }
 
-/// A globally unique identifier for ingest invocations. This ID should be unique for each instance
-/// of an ingest enclave, and allows identifying that enclave during its lifetime.
+/// A globally unique identifier for ingest invocations. This ID should be
+/// unique for each instance of an ingest enclave, and allows identifying that
+/// enclave during its lifetime.
 #[derive(Default, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct IngestInvocationId(i64);

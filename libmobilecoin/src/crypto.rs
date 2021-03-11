@@ -89,7 +89,8 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for Signature {
 /// # Preconditions
 ///
 /// * `public_key` - must be a valid 32-byte compressed Ristretto point.
-/// * `out_ciphertext` - must be null or else length must be >= `ciphertext.len`.
+/// * `out_ciphertext` - must be null or else length must be >=
+///   `ciphertext.len`.
 ///
 /// # Errors
 ///

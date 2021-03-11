@@ -7,15 +7,17 @@ use std::{
     os::raw::c_char,
 };
 
-/// A wrapper struct with a memory layout equivalent to a raw `*mut c_char` pointer, meant to be
-/// used as the return type of C-compatible FFI Rust function, signaling a transfer of ownership of
-/// the underlying memory of a raw `CString` from Rust to the caller.
+/// A wrapper struct with a memory layout equivalent to a raw `*mut c_char`
+/// pointer, meant to be used as the return type of C-compatible FFI Rust
+/// function, signaling a transfer of ownership of the underlying memory of a
+/// raw `CString` from Rust to the caller.
 ///
-/// The point of this structure is to encapsulate the unsafety of `CString::from_raw` within a
-/// C-compatible struct to allow for safe manipulation within safe Rust code.
+/// The point of this structure is to encapsulate the unsafety of
+/// `CString::from_raw` within a C-compatible struct to allow for safe
+/// manipulation within safe Rust code.
 ///
-/// The caller of the above-mentioned C-FFI Rust function is responsible for later calling
-/// `mc_string_free`, otherwise the underlying memory will leak.
+/// The caller of the above-mentioned C-FFI Rust function is responsible for
+/// later calling `mc_string_free`, otherwise the underlying memory will leak.
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct FfiOwnedStr(*mut c_char);
@@ -29,7 +31,6 @@ impl FfiOwnedStr {
 
 impl FfiOwnedStr {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut c_char) -> Self {
         // This panic indicates a violation of a precondition to this function.
@@ -51,8 +52,8 @@ impl FfiOwnedStr {
 impl Drop for FfiOwnedStr {
     #[inline]
     fn drop(&mut self) {
-        // This panic is considered a precondition violation of the struct, either from misuse in
-        // unsafe Rust, in C, or a bug in the library.
+        // This panic is considered a precondition violation of the struct, either from
+        // misuse in unsafe Rust, in C, or a bug in the library.
         debug_assert!(!self.0.is_null());
         unsafe {
             drop(CString::from_raw(self.0));
@@ -81,21 +82,21 @@ impl<'a> From<&'a FfiOwnedStr> for FfiOptStr<'a> {
     }
 }
 
-/// This is a sibling type of `FfiOwnedStr` where the only semantic difference is that this type is
-/// allowed to contain `null`.
+/// This is a sibling type of `FfiOwnedStr` where the only semantic difference
+/// is that this type is allowed to contain `null`.
 ///
-/// This wrapper struct has a memory layout equivalent to a raw `*mut c_char` pointer and is meant
-/// to be used as the return type of C-compatible FFI Rust function.
+/// This wrapper struct has a memory layout equivalent to a raw `*mut c_char`
+/// pointer and is meant to be used as the return type of C-compatible FFI Rust
+/// function.
 ///
-/// This type signals a transfer of ownership of the underlying memory of a raw `CString` from Rust
-/// to the caller, unless the contained pointer is `null`.
+/// This type signals a transfer of ownership of the underlying memory of a raw
+/// `CString` from Rust to the caller, unless the contained pointer is `null`.
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct FfiOptOwnedStr(*mut c_char);
 
 impl FfiOptOwnedStr {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut c_char) -> Self {
         Self(ptr)
@@ -139,9 +140,10 @@ impl Drop for FfiOptOwnedStr {
                 drop(CString::from_raw(self.0));
             }
 
-            // Not needed for correctness, but since this type is allowed to hold `null` and as such
-            // code accessing this memory location will be written in a way to expect `null`, so we
-            // set it here to help prevent use-after-free and double freeing.
+            // Not needed for correctness, but since this type is allowed to hold `null` and
+            // as such code accessing this memory location will be written in a
+            // way to expect `null`, so we set it here to help prevent
+            // use-after-free and double freeing.
             self.0 = ptr::null_mut();
         }
     }
@@ -189,17 +191,18 @@ impl<'a> From<&'a FfiOptOwnedStr> for Option<FfiStr<'a>> {
     }
 }
 
-/// A wrapper struct with a memory layout equivalent to a raw `*const c_char` pointer to a C-style
-/// string, meant to be used as a parameter type of a C-compatible FFI Rust function.
+/// A wrapper struct with a memory layout equivalent to a raw `*const c_char`
+/// pointer to a C-style string, meant to be used as a parameter type of a
+/// C-compatible FFI Rust function.
 ///
-/// This type does *not* signal a transfer of ownership of the underlying memory.
+/// This type does *not* signal a transfer of ownership of the underlying
+/// memory.
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct FfiStr<'a>(FfiRefPtr<'a, c_char>, marker::PhantomData<&'a str>);
 
 impl<'a> FfiStr<'a> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *const c_char) -> Self {
         Self(FfiRefPtr::from_raw(ptr), Default::default())
@@ -243,13 +246,15 @@ impl<'a> fmt::Display for FfiStr<'a> {
     }
 }
 
-/// This is a sibling type of `FfiStr` where the only semantic difference is that this type is
-/// allowed to contain `null`.
+/// This is a sibling type of `FfiStr` where the only semantic difference is
+/// that this type is allowed to contain `null`.
 ///
-/// This wrapper struct has a memory layout equivalent to a raw `*const c_char` pointer and is meant
-/// to be used as a parameter type of a C-compatible FFI Rust function.
+/// This wrapper struct has a memory layout equivalent to a raw `*const c_char`
+/// pointer and is meant to be used as a parameter type of a C-compatible FFI
+/// Rust function.
 ///
-/// This type does *not* signal a transfer of ownership of the underlying memory.
+/// This type does *not* signal a transfer of ownership of the underlying
+/// memory.
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct FfiOptStr<'a>(
@@ -259,7 +264,6 @@ pub struct FfiOptStr<'a>(
 
 impl<'a> FfiOptStr<'a> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *const c_char) -> Self {
         Self(FfiOptRefPtr::from_raw(ptr), Default::default())

@@ -55,7 +55,8 @@ pub extern "C" fn mc_bip39_entropy_to_mnemonic(entropy: FfiRefPtr<McBuffer>) -> 
 /// # Preconditions
 ///
 /// * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
-/// * `passphrase` - must be a nul-terminated C string containing valid UTF-8. Can be empty.
+/// * `passphrase` - must be a nul-terminated C string containing valid UTF-8.
+///   Can be empty.
 /// * `out_seed` - length must be >= 64.
 ///
 /// # Errors

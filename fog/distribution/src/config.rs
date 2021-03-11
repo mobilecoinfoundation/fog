@@ -51,7 +51,8 @@ pub struct Config {
     #[structopt(long, default_value = "0")]
     pub account_offset: usize,
 
-    /// Number of threads with which to submit transactions (threadpool uses min with cpu)
+    /// Number of threads with which to submit transactions (threadpool uses min
+    /// with cpu)
     #[structopt(long, default_value = "32")]
     pub max_threads: usize,
 

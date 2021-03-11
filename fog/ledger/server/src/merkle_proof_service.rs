@@ -224,7 +224,8 @@ mod test {
 
     /// Creates a number of TxOuts.
     ///
-    /// All TxOuts are created as part of the same transaction, with the same recipient.
+    /// All TxOuts are created as part of the same transaction, with the same
+    /// recipient.
     fn get_tx_outs(num_tx_outs: u32) -> Vec<TxOut> {
         let mut rng: StdRng = SeedableRng::from_seed([1u8; 32]);
         let mut tx_outs: Vec<TxOut> = Vec::new();

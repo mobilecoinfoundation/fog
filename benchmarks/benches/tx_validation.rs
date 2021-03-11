@@ -116,13 +116,16 @@ criterion_main!(benches);
 
 // Utility methods
 
-/// Creates a transaction that sends the full value of `tx_out` to a single recipient.
+/// Creates a transaction that sends the full value of `tx_out` to a single
+/// recipient.
 ///
 /// # Arguments:
 /// * `ledger` - A ledger containing `tx_out`.
 /// * `tx_out` - The TxOut that will be spent.
-/// * `tx_public_key` - The public key of the transaction that encloses `tx_out`.
-/// * `tx_output_index` - The index of `tx_out` within its enclosing transaction.
+/// * `tx_public_key` - The public key of the transaction that encloses
+///   `tx_out`.
+/// * `tx_output_index` - The index of `tx_out` within its enclosing
+///   transaction.
 /// * `sender` - The owner of `tx_out`.
 /// * `recipient` - The recipient of the new transaction.
 /// * `tombstone_block` - The tombstone block for the new transaction.

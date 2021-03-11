@@ -6,17 +6,20 @@ use core::{convert::TryFrom, marker, ops, slice};
 use libc::{size_t, ssize_t};
 use mc_util_ffi::{FfiMutPtr, FfiRefPtr};
 
-/// This type is meant to be used as a parameter (or field of an another parameter, etc) to C-FFI
-/// functions to code written in Rust. Objects of this type are typically allocated on the foreign
-/// side of the FFI boundary and are passed in to Rust via an `extern fn`-style function.
+/// This type is meant to be used as a parameter (or field of an another
+/// parameter, etc) to C-FFI functions to code written in Rust. Objects of this
+/// type are typically allocated on the foreign side of the FFI boundary and are
+/// passed in to Rust via an `extern fn`-style function.
 ///
-/// The purpose of this type is to encapsulate unsafety within a type, such that if this type were
-/// to be created solely in safe Rust, that it would contain no unsafety. This is to say that, while
-/// this type performs unsafe operations internally, in order for those unsafe operations to
-/// actually cause unsafety, this type must have been created or otherwise manipulated from unsafe
-/// code (typically either unsafe Rust or unsafe-by-definition foreign code). Therefore, care must
-/// be taken when using this type from unsafe code (and indeed it is intended to be used from unsafe
-/// code), but the same care does not need to be taken in order to otherwise use it from safe code,
+/// The purpose of this type is to encapsulate unsafety within a type, such that
+/// if this type were to be created solely in safe Rust, that it would contain
+/// no unsafety. This is to say that, while this type performs unsafe operations
+/// internally, in order for those unsafe operations to actually cause unsafety,
+/// this type must have been created or otherwise manipulated from unsafe
+/// code (typically either unsafe Rust or unsafe-by-definition foreign code).
+/// Therefore, care must be taken when using this type from unsafe code (and
+/// indeed it is intended to be used from unsafe code), but the same care does
+/// not need to be taken in order to otherwise use it from safe code,
 /// with the assumption that no preconditions were violated from unsafe code.
 #[repr(C)]
 pub struct McBuffer<'a> {

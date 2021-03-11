@@ -79,7 +79,8 @@ where
 {
     fn init(&self, params: ViewEnclaveInitParams) -> Result<()> {
         // Note: eid is passed to sgx_enclave_id crate earlier in the system, because
-        // that crate is not under sgx_compat and isn't meant to be used outside of enclave
+        // that crate is not under sgx_compat and isn't meant to be used outside of
+        // enclave
         self.ake.init(Default::default(), params.self_client_id)?;
         {
             let mut lk = self.e_tx_out_store.lock()?;

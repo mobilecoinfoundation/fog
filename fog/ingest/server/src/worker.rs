@@ -27,15 +27,16 @@ pub struct IngestWorker {
 impl IngestWorker {
     /// Poll for new data every 10 ms
     const POLLING_FREQUENCY: Duration = Duration::from_millis(10);
-    /// If a database invariant is violated, e.g. we get block but not block contents,
-    /// it typically will not be fixed and so we won't be able to proceed. But bringing
-    /// the server down is costly from ops POV because we will lose all the user rng's.
+    /// If a database invariant is violated, e.g. we get block but not block
+    /// contents, it typically will not be fixed and so we won't be able to
+    /// proceed. But bringing the server down is costly from ops POV because
+    /// we will lose all the user rng's.
     ///
     /// So instead, if this happens, we log an error, and retry in 1s.
-    /// This avoids logging at > 1hz when there is this error, which would be very spammy.
-    /// But the retries are unlikely to eventually lead to progress.
-    /// Another strategy might be for the server to enter a "paused" state and signal
-    /// for intervention.
+    /// This avoids logging at > 1hz when there is this error, which would be
+    /// very spammy. But the retries are unlikely to eventually lead to
+    /// progress. Another strategy might be for the server to enter a
+    /// "paused" state and signal for intervention.
     const ERROR_RETRY_FREQUENCY: Duration = Duration::from_millis(1000);
 
     /// Create a new IngestWorker thread
@@ -202,7 +203,8 @@ impl Drop for IngestWorker {
     }
 }
 
-// Helper struct: Keeps track of when we last logged about a block that was not found
+// Helper struct: Keeps track of when we last logged about a block that was not
+// found
 struct LastNotFound {
     block_index: BlockIndex,
     time: Instant,
@@ -218,8 +220,8 @@ impl LastNotFound {
 }
 
 /// The peer checkup worker is a thread responsible for periodically checking up
-/// on our peers, if we are active, and making sure they are functioning as backups.
-/// This is a separate thread so that it can be on a time-based
+/// on our peers, if we are active, and making sure they are functioning as
+/// backups. This is a separate thread so that it can be on a time-based
 /// schedule, so it will happen even if there are few blocks.
 pub struct PeerCheckupWorker {
     stop_requested: Arc<AtomicBool>,

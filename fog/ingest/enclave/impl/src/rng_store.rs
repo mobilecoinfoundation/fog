@@ -22,10 +22,11 @@ type KexRngAlgo = KexRng20201124;
 // We must choose an oblivious map algorithm that can support that
 type KeySize = U32;
 type ValueSize = U8;
-// BlockSize is a tuning parameter for OMap which must become the ValueSize of the selected ORAM
+// BlockSize is a tuning parameter for OMap which must become the ValueSize of
+// the selected ORAM
 type BlockSize = U1024;
-// This selects an oblivious ram algorithm which can support queries of size BlockSize
-// The ORAMStorageCreator type is a generic parameter to RngStore
+// This selects an oblivious ram algorithm which can support queries of size
+// BlockSize The ORAMStorageCreator type is a generic parameter to RngStore
 type ObliviousRAMAlgo<OSC> = PathORAM4096Z4Creator<McRng, OSC>;
 
 // These are the requirements on the storage, this is imposed by the choice of
@@ -37,7 +38,8 @@ pub type StorageDataSize = U4096;
 pub type StorageMetaSize = U64;
 
 // This is the stash size we will construct the ORAM with
-// TODO: FOG-298 This should be a runtime configurable parameter with a build-time lower bound.
+// TODO: FOG-298 This should be a runtime configurable parameter with a
+// build-time lower bound.
 const STASH_SIZE: usize = 32;
 
 // This selects the oblivious map algorithm
@@ -80,10 +82,11 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> RngStore<OSC> {
     /// This must coincide with rotating the egress key and publishing
     /// a new KexRngPubkey.
     pub fn clear(&mut self) {
-        // Force destruction of self.omap and release of its resources before recreating it,
-        // otherwise we cannot assign more than 50% of memory resources to it.
-        // TODO: It might be more efficient to add a clear function to ObliviousMap object,
-        // so that we only clear memory instead of deallocating and reallocating.
+        // Force destruction of self.omap and release of its resources before recreating
+        // it, otherwise we cannot assign more than 50% of memory resources to
+        // it. TODO: It might be more efficient to add a clear function to
+        // ObliviousMap object, so that we only clear memory instead of
+        // deallocating and reallocating.
         self.omap = None;
         // Recreate the map, it will now be in the empty state.
         self.omap = Some(Box::new(<ObliviousMapCreator<OSC> as OMapCreator<
@@ -106,29 +109,32 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> RngStore<OSC> {
     /// produced from key exchange with the egress key.
     ///
     /// Arguments: shared_secret bytes, success_decrypting bytes.
-    /// - shared_secret: Bytes of shared secret after key exchange with egress key
-    /// - success_decrypting: Indicates that this shared secret came from fake data
-    ///   after we failed to decrypt a fog hint. In this case we don't want to have
-    ///   side-effects on the counter table, so we don't increment the counter value.
+    /// - shared_secret: Bytes of shared secret after key exchange with egress
+    ///   key
+    /// - success_decrypting: Indicates that this shared secret came from fake
+    ///   data after we failed to decrypt a fog hint. In this case we don't want
+    ///   to have side-effects on the counter table, so we don't increment the
+    ///   counter value.
     ///
     /// Returns: (overflowed, fog_search_key bytes)
     ///
     /// overflowed is false if the operation completed successfully
     /// overflowed is true if the map has overflowed
     ///
-    /// Note: This function is constant-time up until the first time the map overflows,
-    /// but after the map has overflowed,
-    /// the table must be cleared before this function is called again, or we risk generating
-    /// duplicate fog_search_key bytes for a single user, which is a security problem.
+    /// Note: This function is constant-time up until the first time the map
+    /// overflows, but after the map has overflowed,
+    /// the table must be cleared before this function is called again, or we
+    /// risk generating duplicate fog_search_key bytes for a single user,
+    /// which is a security problem.
     pub fn next_rng_output(&mut self, shared_secret: &[u8; 32]) -> (bool, GenericArray<u8, U16>) {
         // Get aligned shared_secret
         let mut aligned_shared_secret =
             Aligned(*GenericArray::<u8, U32>::from_slice(shared_secret));
-        // Flip the first byte of shared secret, when used as a key in the oblivious map.
-        // This is because we will use shared_secret as a key in the map, but the map
-        // does not support all zeroes as a key. All zeroes is a valid curve point.
-        // But if we flip the first byte, it turns out that isn't a valid curve point,
-        // in the Ristretto group.
+        // Flip the first byte of shared secret, when used as a key in the oblivious
+        // map. This is because we will use shared_secret as a key in the map,
+        // but the map does not support all zeroes as a key. All zeroes is a
+        // valid curve point. But if we flip the first byte, it turns out that
+        // isn't a valid curve point, in the Ristretto group.
         // So this prevents the OMAP_INVALID_KEY error path.
         aligned_shared_secret[0] = !aligned_shared_secret[0];
 

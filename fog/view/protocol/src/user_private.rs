@@ -67,7 +67,8 @@ impl UserPrivate {
         FogHint::new(self.get_view_pubkey())
     }
 
-    /// Extract a TxOutRecord from an encrypted TxOutRecord from the view server, or return an error
+    /// Extract a TxOutRecord from an encrypted TxOutRecord from the view
+    /// server, or return an error
     #[inline]
     pub fn decrypt_tx_out_result(
         &self,
@@ -88,12 +89,13 @@ impl UserPrivate {
 }
 
 /// For fog users, we expect that the default subaddress is the public address
-/// that they will distribute to be paid at. Then, when talking to fog, they need
-/// to get the private view key corresponding to that public address that they distributed.
+/// that they will distribute to be paid at. Then, when talking to fog, they
+/// need to get the private view key corresponding to that public address that
+/// they distributed.
 ///
-/// We need to calculate the private key `c` corresponding to the public view key 'C'
-/// Before subaddresses, this was simply `a`, which is part of the account key.  Now it is
-/// `c = a(b + m)` where `m = Hs(a || subaddress_index)`
+/// We need to calculate the private key `c` corresponding to the public view
+/// key 'C' Before subaddresses, this was simply `a`, which is part of the
+/// account key.  Now it is `c = a(b + m)` where `m = Hs(a || subaddress_index)`
 impl From<&AccountKey> for UserPrivate {
     fn from(src: &AccountKey) -> UserPrivate {
         UserPrivate {

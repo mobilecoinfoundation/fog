@@ -8,7 +8,8 @@ use mc_attest_enclave_api::{ClientAuthRequest, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
 use serde::{Deserialize, Serialize};
 
-/// An enumeration of API calls and their arguments for use across serialization boundaries.
+/// An enumeration of API calls and their arguments for use across serialization
+/// boundaries.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum EnclaveCall {
     /// The [LedgerEnclave::enclave_init()] method.
@@ -43,8 +44,10 @@ pub enum EnclaveCall {
 
     /// The [LedgerEnclave::verify_ias_report()] method.
     ///
-    /// * Verifies the signed report from IAS matches the previously received quote,
-    /// * Caches the signed report. This cached report may be overwritten by later calls.
+    /// * Verifies the signed report from IAS matches the previously received
+    ///   quote,
+    /// * Caches the signed report. This cached report may be overwritten by
+    ///   later calls.
     VerifyReport(VerificationReport),
 
     /// The [LedgerEnclave::get_ias_report()] method.

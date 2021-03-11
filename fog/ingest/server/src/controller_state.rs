@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-//! IngestControllerState represents what the ingest server is currently trying to do
+//! IngestControllerState represents what the ingest server is currently trying
+//! to do
 
 use crate::{counters, server::IngestServerConfig, SeqDisplay};
 use displaydoc::Display;
@@ -13,13 +14,15 @@ use std::{collections::BTreeSet, fmt::Display};
 
 /// The ingest server is, at any time, in one of two modes:
 ///
-/// Idle: Not currently consuming TxOut's from the blockchain, nor publishing fog reports
-/// Active: Currently consuming TxOut's from consecutive blocks of the blockchain and publishing fog reports
+/// Idle: Not currently consuming TxOut's from the blockchain, nor publishing
+/// fog reports Active: Currently consuming TxOut's from consecutive blocks of
+/// the blockchain and publishing fog reports
 ///
-/// Idle -> Active: This transition happens when the server is asked to start via grpc
-/// Active -> Idle: This transition happens when we try to publish a report after scanning a block,
-///                 and learn that the key is marked "retired" and the pubkey_expiry block has already
-///                 been scanned, so there is nothing more to do with this key.
+/// Idle -> Active: This transition happens when the server is asked to start
+/// via grpc Active -> Idle: This transition happens when we try to publish a
+/// report after scanning a block,                 and learn that the key is
+/// marked "retired" and the pubkey_expiry block has already                 
+/// been scanned, so there is nothing more to do with this key.
 #[derive(Copy, Clone, Display, Debug, PartialEq, Eq)]
 pub enum IngestMode {
     /// Idle
@@ -31,33 +34,42 @@ pub enum IngestMode {
 /// State controlling the operation of the ingest controller.
 ///
 /// This data is set from the server configuration initially, but then can be
-/// changed via admin API etc. The next_block_index is incremented every time a block is processed.
+/// changed via admin API etc. The next_block_index is incremented every time a
+/// block is processed.
 ///
-/// This class permits shared access to the data and contains some synchronziation primitives,
-/// but doesn't expose that to the caller for simplicity.
+/// This class permits shared access to the data and contains some
+/// synchronziation primitives, but doesn't expose that to the caller for
+/// simplicity.
 ///
-/// This class enforces some rules like, next_block_index cannot be changed while the
-/// server is actively scanning for blocks.
+/// This class enforces some rules like, next_block_index cannot be changed
+/// while the server is actively scanning for blocks.
 ///
 /// This state includes
 /// - what mode are we in: idle, active, retiring
 /// - what is the next block that should be processed
-/// - what is the pubkey_expiry_window (the number of blocks for which a fog report is valid)
+/// - what is the pubkey_expiry_window (the number of blocks for which a fog
+///   report is valid)
 ///
-/// Most of the values in here will be Atomic to allow shared access to the controller state,
-/// but we provide nicer API so that we don't expose the user to the Atomic API directly.
+/// Most of the values in here will be Atomic to allow shared access to the
+/// controller state, but we provide nicer API so that we don't expose the user
+/// to the Atomic API directly.
 ///
-/// Note: When locking, if both mode and peers are needed, mode should be locked first.
+/// Note: When locking, if both mode and peers are needed, mode should be locked
+/// first.
 pub struct IngestControllerState {
-    /// Whether the server is idling, actively scanning the blockchain and publishing reports, or retiring
+    /// Whether the server is idling, actively scanning the blockchain and
+    /// publishing reports, or retiring
     mode: IngestMode,
     /// The next block index to scan from
     next_block_index: u64,
-    /// The value we add to the current block index to compute the pubkey expiry value in fog reports
+    /// The value we add to the current block index to compute the pubkey expiry
+    /// value in fog reports
     pubkey_expiry_window: u64,
-    /// The ingest invocation id we got from the database, which tracks our kex rng pubkey
+    /// The ingest invocation id we got from the database, which tracks our kex
+    /// rng pubkey
     ingest_invocation_id: Option<IngestInvocationId>,
-    /// Our current set of known peers. Only one should be active at a time, the others should be backups in idle state.
+    /// Our current set of known peers. Only one should be active at a time, the
+    /// others should be backups in idle state.
     peers: BTreeSet<IngestPeerUri>,
     /// Logger
     logger: Logger,
@@ -71,7 +83,8 @@ impl IngestControllerState {
         peers.insert(config.peer_listen_uri.clone());
         Self {
             mode: IngestMode::Idle,
-            next_block_index: 0, // Note: this is reset when the server actually activates, based on DB's
+            next_block_index: 0, /* Note: this is reset when the server actually activates, based
+                                  * on DB's */
             pubkey_expiry_window: config.pubkey_expiry_window,
             ingest_invocation_id: None,
             peers,
@@ -94,8 +107,8 @@ impl IngestControllerState {
     /// Move the server to the active mode.
     /// This is allowed from any mode.
     ///
-    /// Note: The caller should ensure that the private key is backed up among peers
-    /// successfully before calling this.
+    /// Note: The caller should ensure that the private key is backed up among
+    /// peers successfully before calling this.
     pub fn set_active(&mut self) {
         match self.mode {
             IngestMode::Active => {
@@ -162,7 +175,8 @@ impl IngestControllerState {
     }
 
     /// Set the pubkey expiry window
-    /// If the server is not idle, this can only be increased, or an error will occur.
+    /// If the server is not idle, this can only be increased, or an error will
+    /// occur.
     pub fn set_pubkey_expiry_window(&mut self, val: u64) -> Result<(), StateChangeError> {
         if self.mode == IngestMode::Idle {
             log::info!(self.logger, "pubkey_expiry_window set to {}", val);
@@ -263,7 +277,8 @@ impl IngestControllerState {
 pub enum StateChangeError {
     /// Cannot set next_block_index unless server is idling: {0}
     CannotSetNextBlockIndex(IngestMode),
-    /// Cannot reduce pubkey_expiry_window unless server is idling: {0}, old_val = {1}, proposed_val = {2}
+    /// Cannot reduce pubkey_expiry_window unless server is idling: {0}, old_val
+    /// = {1}, proposed_val = {2}
     CannotReducePubkeyExpiry(IngestMode, u64, u64),
 }
 

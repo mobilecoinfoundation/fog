@@ -6,8 +6,8 @@
 //! and then use them in the fog conformance test to create fog TxOuts.
 //!
 //! At time of writing, it takes the public address of a user (.pub keyfile),
-//! since the FogPubkeyResolver API fully validates the fog report and the user's
-//! signature over the cert chain.
+//! since the FogPubkeyResolver API fully validates the fog report and the
+//! user's signature over the cert chain.
 //! In the future if needed we could make this take only the fog report url
 //! and report id, and not fully validate the pubkey, but that would require
 //! code changes in the GrpcFogPubkeyResolver object. It might make this a more

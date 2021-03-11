@@ -14,14 +14,16 @@ use mc_util_serial::{
 use retry::Error as RetryError;
 use std::result::Result as StdResult;
 
-/// A convenience wrapper for a [std::result::Result] object which contains a peer [Error].
+/// A convenience wrapper for a [std::result::Result] object which contains a
+/// peer [Error].
 pub type Result<T> = StdResult<T, Error>;
 
-/// A convenience wrapper for an [std::result::Result] which contains a [RetryError] for a peer
-/// [Error].
+/// A convenience wrapper for an [std::result::Result] which contains a
+/// [RetryError] for a peer [Error].
 //pub type RetryResult<T> = StdResult<T, RetryError<Error>>;
 
-/// An enumeration of errors which can occur as the result of a peer connection issue
+/// An enumeration of errors which can occur as the result of a peer connection
+/// issue
 #[derive(Debug, Display)]
 pub enum Error {
     /// There was an eror during attestation: {0}

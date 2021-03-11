@@ -15,10 +15,12 @@ use mc_util_serial::{
 };
 use serde::{Deserialize, Serialize};
 
-/// An enumeration of errors which can occur when rotating keys in the ingest enclave
+/// An enumeration of errors which can occur when rotating keys in the ingest
+/// enclave
 #[derive(Clone, Debug, Deserialize, Display, PartialEq, PartialOrd, Serialize)]
 pub enum RotateKeysError {
-    /// We tried to rotate keys when there was an existing rotated key that hasn't expired
+    /// We tried to rotate keys when there was an existing rotated key that
+    /// hasn't expired
     AlreadyExists,
     /// Error parsing key: {0}
     Key(KeyError),
@@ -62,9 +64,9 @@ pub enum Error {
     Poison,
 
     /// The method call was not valid for the state machine for the data.
-    ///
-    /// This indicates a bug in the calling code, typically attempting to
-    /// re-submit an already-verified quote or IAS report.
+    //
+    // This indicates a bug in the calling code, typically attempting to
+    // re-submit an already-verified quote or IAS report.
     InvalidState,
 
     /// No IAS report has been verified yet
@@ -76,7 +78,8 @@ pub enum Error {
     /// Error parsing key: {0}
     Key(KeyError),
 
-    /// ChunkTooBig: Failed processing {0} txouts, overflowed {1} times in a row: capacity was {2}
+    /// ChunkTooBig: Failed processing {0} txouts, overflowed {1} times in a
+    /// row: capacity was {2}
     ChunkTooBig(usize, usize, u64),
 
     /// Error when rotating keys: {0}

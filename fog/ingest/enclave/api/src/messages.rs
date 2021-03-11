@@ -17,13 +17,14 @@ pub struct IngestEnclaveInitParams {
     pub responder_id: ResponderId,
     /// The sealed fog private key to reload this ingest enclave with
     pub sealed_key: Option<SealedIngestKey>,
-    /// The desired capcacity for users of the oblivious map. Must be a power of two.
-    /// This will be the capacity if the hashtable achieved a 100% load-factor,
-    /// a more realistic maximum capacity is 70-75%.
+    /// The desired capcacity for users of the oblivious map. Must be a power of
+    /// two. This will be the capacity if the hashtable achieved a 100%
+    /// load-factor, a more realistic maximum capacity is 70-75%.
     pub desired_capacity: u64,
 }
 
-/// An enumeration of API calls and their arguments for use across serialization boundaries.
+/// An enumeration of API calls and their arguments for use across serialization
+/// boundaries.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum EnclaveCall {
     /// The [IngestEnclave::enclave_init()] method.
@@ -45,22 +46,26 @@ pub enum EnclaveCall {
 
     /// The [IngestEnclave::get_private_key()] method.
     ///
-    /// Retrieves the peer-encrypted ingress private key (as attest::Message) of this service.
+    /// Retrieves the peer-encrypted ingress private key (as attest::Message) of
+    /// this service.
     GetIngressPrivateKey(PeerSession),
 
     /// The [IngestEnclave::set_private_key()] method.
     ///
-    /// Sets the ingress private key (passed as attest::Message from attested peer) of this service.
+    /// Sets the ingress private key (passed as attest::Message from attested
+    /// peer) of this service.
     SetIngressPrivateKey(EnclaveMessage<PeerSession>),
 
     /// The [IngestEnclave::get_kex_rng_pubkey()] method.
     ///
-    /// Retrieves the KexRngPubkey object, containing public key of egress key and the rng algo version.
+    /// Retrieves the KexRngPubkey object, containing public key of egress key
+    /// and the rng algo version.
     GetKexRngPubkey,
 
     /// The [IngestEnclave::ingest_txs()] method.
     ///
-    /// Consumes transactions and emits corresponding rows for the recovery database.
+    /// Consumes transactions and emits corresponding rows for the recovery
+    /// database.
     IngestTxs(TxsForIngest),
 
     /// The [IngestEnclave::get_identity()] method.
@@ -82,8 +87,10 @@ pub enum EnclaveCall {
 
     /// The [IngestEnclave::verify_ias_report()] method.
     ///
-    /// * Verifies the signed report from IAS matches the previously received quote,
-    /// * Caches the signed report. This cached report may be overwritten by later calls.
+    /// * Verifies the signed report from IAS matches the previously received
+    ///   quote,
+    /// * Caches the signed report. This cached report may be overwritten by
+    ///   later calls.
     VerifyReport(VerificationReport),
 
     /// The [IngestEnclave::get_ias_report()] method.

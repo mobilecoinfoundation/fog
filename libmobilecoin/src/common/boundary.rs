@@ -8,10 +8,11 @@ use std::{
     process::abort,
 };
 
-/// This function should be used as the outer-most "layer" protecting Rust code from unwinding
-/// across the FFI boundary in the event of a panic. All Rust code in FFI functions (e.g.
-/// `extern "C"` functions) should be executed within the closure passed as parameter `f`. This
-/// function ensures FFI safety by catching unwind panics, logging the panic, and returning the
+/// This function should be used as the outer-most "layer" protecting Rust code
+/// from unwinding across the FFI boundary in the event of a panic. All Rust
+/// code in FFI functions (e.g. `extern "C"` functions) should be executed
+/// within the closure passed as parameter `f`. This function ensures FFI safety
+/// by catching unwind panics, logging the panic, and returning the
 /// sentinel error value returned by a call to `R::error_value()`.
 pub(crate) fn ffi_boundary<R, I>(f: impl (FnOnce() -> R) + UnwindSafe) -> I
 where
@@ -27,12 +28,13 @@ where
     })
 }
 
-/// This function should be used as the outer-most "layer" protecting Rust code from unwinding
-/// across the FFI boundary in the event of a panic. All Rust code in FFI functions (e.g.
-/// `extern "C"` functions) should be executed within the closure passed as parameter `f`. This
-/// function ensures FFI safety by catching unwind panics, saving the panic as a `LibMcError` to the
-/// `out_error` (if `out_error` is non-null), and returning the sentinel error value returned by a
-/// call to `R::error_value()`.
+/// This function should be used as the outer-most "layer" protecting Rust code
+/// from unwinding across the FFI boundary in the event of a panic. All Rust
+/// code in FFI functions (e.g. `extern "C"` functions) should be executed
+/// within the closure passed as parameter `f`. This function ensures FFI safety
+/// by catching unwind panics, saving the panic as a `LibMcError` to the
+/// `out_error` (if `out_error` is non-null), and returning the sentinel error
+/// value returned by a call to `R::error_value()`.
 pub(crate) fn ffi_boundary_with_error<R, I>(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
     f: impl (FnOnce() -> Result<R, LibMcError>) + UnwindSafe,
@@ -58,8 +60,9 @@ fn ffi_boundary_impl<R>(
         // Return a `LibMcError` if we panic. However, we still need to be mindful of panics while
         // formatting the panic error so that we don't accidentally unwind across the FFI boundary.
         .unwrap_or_else(|panic_error| {
-            // We assert `panic_error` is unwind safe because, since we won't be modifying it, we
-            // know that no harm will come if we panic while trying to process it.
+            // We assert `panic_error` is unwind safe because, since we won't be modifying
+            // it, we know that no harm will come if we panic while trying to
+            // process it.
             let panic_error = AssertUnwindSafe(panic_error);
             catch_unwind(|| Err(LibMcError::Panic(format!("{:?}", panic_error.0))))
                 // If this also panics then we just abort because at this point it's likely
@@ -96,8 +99,8 @@ fn error_handling_ffi_boundary(f: impl FnOnce() + UnwindSafe) {
         // guard against panics while printing
         let _ = catch_unwind(|| {
             let panic_error = panic_error.0;
-            // In theory, we should still have the original err at this point, but move semantics
-            // make it difficult to hold onto if we panicked.
+            // In theory, we should still have the original err at this point, but move
+            // semantics make it difficult to hold onto if we panicked.
             eprintln!(
                 "LibMobileCoin panicked during error handling: {}",
                 panic_error

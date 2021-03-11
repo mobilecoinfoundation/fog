@@ -11,7 +11,8 @@ use std::str::FromStr;
 const NUM_TRIALS: usize = 3;
 const OMAP_CAP: u64 = 256;
 
-/// Test that we can create and destroy the Ingest enclave repeatedly without crashing
+/// Test that we can create and destroy the Ingest enclave repeatedly without
+/// crashing
 #[test_with_logger]
 fn ingest_enclave_graceful_teardown(logger: Logger) {
     for reps in 0..NUM_TRIALS {

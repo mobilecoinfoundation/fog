@@ -18,16 +18,17 @@ use std::{
 /// Time to wait between database fetch attempts.
 pub const DB_POLL_INTERNAL: Duration = Duration::from_millis(100);
 
-/// Approximate maximum number of ETxOutRecords we will collect inside fetched_records
-/// before blocking and waiting for the enclave thread to pick them up.
-/// Since DB fetching is significantlly faster than enclave insertion we need a mechanism that
-/// prevents fetched_records from growing indefinitely. This essentially caps the memory usage of
-/// the fetched_records array.
-/// Assuming each ETxOutRecord is <256 bytes, this gives a worst case scenario of 128MB.
+/// Approximate maximum number of ETxOutRecords we will collect inside
+/// fetched_records before blocking and waiting for the enclave thread to pick
+/// them up. Since DB fetching is significantlly faster than enclave insertion
+/// we need a mechanism that prevents fetched_records from growing indefinitely.
+/// This essentially caps the memory usage of the fetched_records array.
+/// Assuming each ETxOutRecord is <256 bytes, this gives a worst case scenario
+/// of 128MB.
 pub const MAX_QUEUED_RECORDS: usize = (128 * 1024 * 1024) / 256;
 
-/// A single block of fetched ETxOutRecords, together with information identifying where it came
-/// from.
+/// A single block of fetched ETxOutRecords, together with information
+/// identifying where it came from.
 pub struct FetchedRecords {
     /// The Ingest Invocation ID that produced these ETxOutRecords
     pub ingest_invocation_id: IngestInvocationId,
@@ -39,8 +40,8 @@ pub struct FetchedRecords {
     pub records: Vec<ETxOutRecord>,
 }
 
-/// Container for data that is shared between the worker thread and the holder of the DbFetcher
-/// object.
+/// Container for data that is shared between the worker thread and the holder
+/// of the DbFetcher object.
 #[derive(Default)]
 struct DbFetcherSharedState {
     /// Information about ingestable ranges we are aware of.
@@ -50,9 +51,10 @@ struct DbFetcherSharedState {
     missing_block_ranges: Vec<BlockRange>,
 
     /// A queue of ETxOutRecords we have fetched from the database.
-    /// This is periodically polled by an external thread which grabs this data and feeds it into
-    /// the enclave.
-    /// The queue is limited to approximately MAX_QUEUED_RECORDS ETxOutRecords total.
+    /// This is periodically polled by an external thread which grabs this data
+    /// and feeds it into the enclave.
+    /// The queue is limited to approximately MAX_QUEUED_RECORDS ETxOutRecords
+    /// total.
     fetched_records: Vec<FetchedRecords>,
 }
 
@@ -67,8 +69,9 @@ pub struct DbFetcher {
     /// State shared with the worker thread.
     shared_state: Arc<Mutex<DbFetcherSharedState>>,
 
-    /// A tuple containing a mutex that holds the number of ETxOutRecords we have queued inside
-    /// fetched_records so far, and a condition variable to signal when the count resets to zero.
+    /// A tuple containing a mutex that holds the number of ETxOutRecords we
+    /// have queued inside fetched_records so far, and a condition variable
+    /// to signal when the count resets to zero.
     num_queued_records_limiter: Arc<(Mutex<usize>, Condvar)>,
 }
 
@@ -78,7 +81,8 @@ impl DbFetcher {
 
         let shared_state = Arc::new(Mutex::new(DbFetcherSharedState::default()));
 
-        // Clippy suggests to use AtomicUSize but we need a mutex for the conditional variable.
+        // Clippy suggests to use AtomicUSize but we need a mutex for the conditional
+        // variable.
         #[allow(clippy::mutex_atomic)]
         let num_queued_records_limiter = Arc::new((Mutex::new(0), Condvar::new()));
 
@@ -130,9 +134,10 @@ impl DbFetcher {
         self.shared_state().missing_block_ranges.clone()
     }
 
-    /// Get the list of FetchedRecords that were obtained by the worker thread. This also clears
-    /// the queue so that more records could be fetched by the worker thread.
-    /// This updates over time by the background worker thread.
+    /// Get the list of FetchedRecords that were obtained by the worker thread.
+    /// This also clears the queue so that more records could be fetched by
+    /// the worker thread. This updates over time by the background worker
+    /// thread.
     pub fn get_pending_fetched_records(&self) -> Vec<FetchedRecords> {
         // First grab all the records queued so far.
         let records = self.shared_state().fetched_records.split_off(0);
@@ -171,8 +176,8 @@ struct DbFetcherThread<DB: RecoveryDb + Clone + Send + Sync + 'static> {
     logger: Logger,
 }
 
-/// Background worker thread implementation that takes care of periodically polling data out of the
-/// database.
+/// Background worker thread implementation that takes care of periodically
+/// polling data out of the database.
 impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
     pub fn start(
         db: DB,
@@ -205,18 +210,18 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
             self.load_missing_block_ranges();
 
             // Each call to load_block_data attempts to load one block for each known ingest
-            // invocation. We want to keep loading blocks as long as we have data to load, but that
-            // could take some time which is why the loop is also gated on the stop trigger in case
-            // a stop is requested during loading.
+            // invocation. We want to keep loading blocks as long as we have data to load,
+            // but that could take some time which is why the loop is also gated
+            // on the stop trigger in case a stop is requested during loading.
             while self.load_block_data() && !self.stop_requested.load(Ordering::SeqCst) {}
 
             sleep(DB_POLL_INTERNAL);
         }
     }
 
-    /// Sync ingestable ranges from the database. This allows us to learn which ingest invocations
-    /// are currently alive, which block ranges they are able to cover, and which blocks have they
-    /// ingested so far.
+    /// Sync ingestable ranges from the database. This allows us to learn which
+    /// ingest invocations are currently alive, which block ranges they are
+    /// able to cover, and which blocks have they ingested so far.
     fn load_ingestable_ranges(&self) {
         let _metrics_timer = counters::LOAD_INGESTABLE_RANGES_TIME.start_timer();
 
@@ -237,13 +242,14 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
         }
     }
 
-    /// Sync missing block ranges from the database. This allows us to learn which block ranges are
-    /// not going to be fulfilled by any ingest invocations.
+    /// Sync missing block ranges from the database. This allows us to learn
+    /// which block ranges are not going to be fulfilled by any ingest
+    /// invocations.
     fn load_missing_block_ranges(&self) {
         let _metrics_timer = counters::LOAD_MISSING_BLOCK_RANGES_TIME.start_timer();
 
-        // TODO this is a very inefficient implementation since it continously reloades ranges we
-        // are already aware of.
+        // TODO this is a very inefficient implementation since it continously reloades
+        // ranges we are already aware of.
         match self.db.get_missed_block_ranges() {
             Ok(missing_ranges) => {
                 let mut state = self.shared_state();
@@ -261,13 +267,14 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
         }
     }
 
-    /// Attempt to load the next block for each of the ingest invocations we are aware of and
-    /// tracking.
+    /// Attempt to load the next block for each of the ingest invocations we are
+    /// aware of and tracking.
     /// Returns true if we might have more block data to load.
     fn load_block_data(&mut self) -> bool {
         let mut has_more_work = false;
 
-        // See whats the next block number we need to load for each invocation we are aware of.
+        // See whats the next block number we need to load for each invocation we are
+        // aware of.
         let (ingestable_ranges, missing_block_ranges) = {
             let shared_state = self.shared_state();
             (
@@ -290,7 +297,8 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
                 self.block_tracker
                     .block_processed(ingest_invocation_id, block_index);
 
-                // This ensures we do not have holes in the blocks processed by the enclave thread.
+                // This ensures we do not have holes in the blocks processed by the enclave
+                // thread.
                 self.shared_state().fetched_records.push(FetchedRecords {
                     ingest_invocation_id,
                     block_index,
@@ -443,8 +451,8 @@ mod tests {
         assert!(db_fetcher.known_missing_block_ranges().is_empty());
         assert!(db_fetcher.get_pending_fetched_records().is_empty());
 
-        // Add some blocks, they should get picked up and find their way into pending fetched
-        // records.
+        // Add some blocks, they should get picked up and find their way into pending
+        // fetched records.
         let mut blocks_and_records = Vec::new();
         for i in 0..10 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
@@ -502,8 +510,9 @@ mod tests {
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
 
-        // Add more blocks but this time leave a hole between the previous blocks and the new ones.
-        // They should not get picked up untill a missed blocks range is reported.
+        // Add more blocks but this time leave a hole between the previous blocks and
+        // the new ones. They should not get picked up untill a missed blocks
+        // range is reported.
         let mut blocks_and_records = Vec::new();
         for i in 30..40 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block

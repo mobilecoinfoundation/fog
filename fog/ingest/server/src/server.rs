@@ -39,10 +39,11 @@ pub struct IngestServerConfig {
     /// determined by SGX memory allocation limits, so it must be configurable
     pub max_transactions: usize,
 
-    /// Number of transactions that can be processed before oblivious map overflows.
-    /// When overflow occurs, the server continues operating as normal, but egress key
-    /// must be rotated. This will cause the users to each have an additional RNG
-    /// and download some additional data from fog-view
+    /// Number of transactions that can be processed before oblivious map
+    /// overflows. When overflow occurs, the server continues operating as
+    /// normal, but egress key must be rotated. This will cause the users to
+    /// each have an additional RNG and download some additional data from
+    /// fog-view
     ///
     /// This should be a bit less than total available memory / 40 bytes
     /// Overflow will occur at ~70% utilization
@@ -65,16 +66,19 @@ pub struct IngestServerConfig {
     /// It is not require to include or omit peer_listen_uri in this set.
     pub peers: BTreeSet<IngestPeerUri>,
 
-    /// The number of blocks after which we check up on each of our peer backups if we are active
+    /// The number of blocks after which we check up on each of our peer backups
+    /// if we are active
     ///
     /// If omitted then peer checkups don't happen
     pub peer_checkup_period: Option<Duration>,
 
-    /// The amount we add to current block height to compute pubkey_expiry in reports
+    /// The amount we add to current block height to compute pubkey_expiry in
+    /// reports
     pub pubkey_expiry_window: u64,
 
-    /// The amount of time we wait for the watcher db to catchup if it falls behind
-    /// If this timeout is exceeded then the ETxOut's will have no timestamp
+    /// The amount of time we wait for the watcher db to catchup if it falls
+    /// behind If this timeout is exceeded then the ETxOut's will have no
+    /// timestamp
     pub watcher_timeout: Duration,
 
     /// report_id associated the reports produced by this ingest service.
@@ -87,11 +91,13 @@ pub struct IngestServerConfig {
 
     /// Enclave path
     /// This should generally be, next to current exe, in production.
-    /// During cargo tests we use a helper that searches the target/ dir for the enclave.so file.
+    /// During cargo tests we use a helper that searches the target/ dir for the
+    /// enclave.so file.
     pub enclave_path: PathBuf,
 }
 
-/// All of the state and grpcio objects and threads associated to the ingest server
+/// All of the state and grpcio objects and threads associated to the ingest
+/// server
 pub struct IngestServer<
     R: RaClient + Send + Sync + 'static,
     DB: RecoveryDb + ReportDb + Clone + Send + Sync + 'static,
@@ -116,7 +122,8 @@ impl<
 where
     IngestServiceError: From<<DB as RecoveryDb>::Error>,
 {
-    /// Create a new ingest server from config object, enclave, and a series of db's
+    /// Create a new ingest server from config object, enclave, and a series of
+    /// db's
     pub fn new(
         config: IngestServerConfig,
         ra_client: R,
@@ -165,8 +172,8 @@ where
         Ok(())
     }
 
-    /// Attest to another ingest node and store the private key from its enclave in our enclave
-    /// This is called directly by some tests
+    /// Attest to another ingest node and store the private key from its enclave
+    /// in our enclave This is called directly by some tests
     pub fn sync_keys_from_remote(
         &mut self,
         remote_peer_uri: &IngestPeerUri,
@@ -297,7 +304,8 @@ where
     }
 
     /// Stop the servers and threads
-    /// They cannot be restarted, so this should normally be done only just before tearing down the whole server.
+    /// They cannot be restarted, so this should normally be done only just
+    /// before tearing down the whole server.
     pub fn stop(&mut self) {
         // This blocks on teardown of ingest_worker
         self.ingest_worker = None;

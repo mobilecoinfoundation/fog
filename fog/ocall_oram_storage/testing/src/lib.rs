@@ -4,7 +4,8 @@
 pub use fog_ocall_oram_storage_untrusted::{
     allocate_oram_storage, checkin_oram_storage, checkout_oram_storage, release_oram_storage,
 };
-// TODO: this test should ideally be generic over ORAMStorage trait, and part of mc-oblivious repo
+// TODO: this test should ideally be generic over ORAMStorage trait, and part of
+// mc-oblivious repo
 #[cfg(test)]
 mod testing {
     use aligned_cmov::{typenum, A64Bytes, A8Bytes, ArrayLength};

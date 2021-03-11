@@ -103,8 +103,8 @@ criterion_group! {
 }
 criterion_main!(
     view_capacity_1mil,
-    // FIXME: This requires enclave heap size which is too large and harms CI times
-    // Hold off on this until FOG-145, FOG-146, etc. to use untrusted storage
-    //view_capacity_4mil,
-    //view_capacity_8mil
+    /* FIXME: This requires enclave heap size which is too large and harms CI times
+     * Hold off on this until FOG-145, FOG-146, etc. to use untrusted storage
+     *view_capacity_4mil,
+     *view_capacity_8mil */
 );

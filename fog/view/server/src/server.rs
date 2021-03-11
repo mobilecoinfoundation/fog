@@ -1,7 +1,8 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 //! Server object containing a view node
-//! Constructible from config (for testability) and with a mechanism for stopping it
+//! Constructible from config (for testability) and with a mechanism for
+//! stopping it
 
 use crate::{
     block_tracker::BlockTracker, config::MobileAcctViewConfig, counters, db_fetcher::DbFetcher,
@@ -152,7 +153,8 @@ where
         block_on(self.server.shutdown()).expect("Could not stop grpc server");
     }
 
-    /// Get the highest block count for which we can guarantee we have loaded all available data.
+    /// Get the highest block count for which we can guarantee we have loaded
+    /// all available data.
     pub fn highest_processed_block_count(&self) -> u64 {
         let state = self.db_poll_thread.get_shared_state();
         let locked_state = state.lock().expect("mutex poisoned");
@@ -174,7 +176,8 @@ where
 /// State that we want to expose from the db poll thread
 #[derive(Debug, Default)]
 pub struct DbPollSharedState {
-    /// The highest block count for which we can guarantee we have loaded all available data.
+    /// The highest block count for which we can guarantee we have loaded all
+    /// available data.
     pub highest_processed_block_count: u64,
 
     /// A block signature timestamp for the highest processed block
@@ -336,8 +339,8 @@ where
     /// Shared state.
     shared_state: Arc<Mutex<DbPollSharedState>>,
 
-    /// Database fetcher - a background thread that attempts to fetch as much data from the
-    /// database as possible.
+    /// Database fetcher - a background thread that attempts to fetch as much
+    /// data from the database as possible.
     db_fetcher: DbFetcher,
 
     /// Keeps track of which blocks we have fed into the enclave.
@@ -403,7 +406,8 @@ where
             );
         }
 
-        // Figure out the higehst fully processed block count and put that in the shared state.
+        // Figure out the higehst fully processed block count and put that in the shared
+        // state.
         let ingestable_ranges = self.db_fetcher.known_ingestable_ranges();
         let missing_block_ranges = self.db_fetcher.known_missing_block_ranges();
 
@@ -423,8 +427,8 @@ where
             shared_state.highest_processed_block_signature_timestamp = timestamp;
         }
 
-        // Figure out if the highest known block count has changed, and if so update it + the txo
-        // count in the shared state.
+        // Figure out if the highest known block count has changed, and if so update it
+        // + the txo count in the shared state.
         let cur_highest_known_block_count = self.enclave_block_tracker.highest_known_block_count();
         if shared_state.last_known_block_count != cur_highest_known_block_count {
             // We should only move forward.
@@ -521,10 +525,10 @@ where
         }
     }
 
-    // The client needs a timestamp for the highest processed block, because the highest processed
-    // block lets them know up to when they have accurate balance information, and they may want
-    // to tell the user e.g. this was your balance at 8:45 PM.
-    // So, ask the database.
+    // The client needs a timestamp for the highest processed block, because the
+    // highest processed block lets them know up to when they have accurate
+    // balance information, and they may want to tell the user e.g. this was
+    // your balance at 8:45 PM. So, ask the database.
     // If it doesn't work, hopefully it will work next time.
     fn get_block_signature_timestamp_for_block_count(&self, block_count: u64) -> Option<u64> {
         if block_count == 0 {

@@ -4,25 +4,27 @@
 #![deny(missing_docs)]
 
 //! ORAM storage is arranged as a complete balanced binary tree, with each node
-//! holding a fixed-size block of size roughly a linux page. Each node also has an associated
-//! fixed-size metadata block, about 100 times smaller.
+//! holding a fixed-size block of size roughly a linux page. Each node also has
+//! an associated fixed-size metadata block, about 100 times smaller.
 //!
-//! It is possible to store all of this on the heap inside of SGX, up to the limits
-//! of the enclave heap size. There are also performance consequences of exceeding
-//! the EPC size (enclave page cache).
+//! It is possible to store all of this on the heap inside of SGX, up to the
+//! limits of the enclave heap size. There are also performance consequences of
+//! exceeding the EPC size (enclave page cache).
 //!
-//! In ORAM implementations such as ZeroTrace, OCALL's are used to allow the enclave
-//! to store this data outside of SGX. This data must be encrypted when it leaves,
-//! and decrypted and authenticated when it returns. From trusted's point of view,
-//! it doesn't matter much how untrusted chooses to actually store the blocks,
-//! as long as it returns the correct ones -- if authentication fails, the enclave
-//! is expected to panic.
+//! In ORAM implementations such as ZeroTrace, OCALL's are used to allow the
+//! enclave to store this data outside of SGX. This data must be encrypted when
+//! it leaves, and decrypted and authenticated when it returns. From trusted's
+//! point of view, it doesn't matter much how untrusted chooses to actually
+//! store the blocks, as long as it returns the correct ones -- if
+//! authentication fails, the enclave is expected to panic.
 //!
 //! Tree-top caching means that the top of the tree is on the heap in SGX and
-//! only the bottom part is across the OCALL boundary. This can result in significant
-//! perf improvements especially when using a recursive ORAM strategy.
+//! only the bottom part is across the OCALL boundary. This can result in
+//! significant perf improvements especially when using a recursive ORAM
+//! strategy.
 //!
-//! In this impementation, the tree-top caching size is configurable via a global variable.
+//! In this impementation, the tree-top caching size is configurable via a
+//! global variable.
 //!
 //! For an overview and analysis of the authentication scheme implemented here,
 //! the reader is directed to README.md for this crate.
@@ -94,7 +96,8 @@ lazy_static! {
     static ref OCALL_REENTRANCY_MUTEX: Mutex<()> = Mutex::new(());
 }
 
-/// Cipher type. Anything implementing StreamCipher and NewStreamCipher at 128 bit security should be acceptable
+/// Cipher type. Anything implementing StreamCipher and NewStreamCipher at 128
+/// bit security should be acceptable
 type CipherType = Aes128Ctr;
 /// Parameters of the cipher as typedefs (which eases syntax)
 type NonceSize = <CipherType as NewStreamCipher>::NonceSize;
@@ -109,7 +112,8 @@ fn make_aes_nonce(block_idx: u64, block_ctr: u64) -> CipherGenericArray<u8, Nonc
 }
 
 /// An ORAMStorage type which stores data with untrusted storage, over an OCALL.
-/// This must encrypt the data which is stored, and authenticate the data when it returns.
+/// This must encrypt the data which is stored, and authenticate the data when
+/// it returns.
 pub struct OcallORAMStorage<DataSize, MetaSize>
 where
     DataSize: ArrayLength<u8> + PowerOfTwo + PartialDiv<U8>,
@@ -118,7 +122,8 @@ where
 {
     // The id returned from untrusted for the untrusted-side storage if any, or 0 if none.
     allocation_id: u64,
-    // The size of the binary tree the caller asked us to provide storage for, must be a power of two
+    // The size of the binary tree the caller asked us to provide storage for, must be a power of
+    // two
     count: u64,
     // The maximum count for the treetop storage,
     // based on what we loaded from TREETOP_CACHING_THRESHOLD_LOG2 at construction time
@@ -159,7 +164,8 @@ where
             // eprintln!("count = {} <= TREETOP_MAX_COUNT = {}", count, treetop_max_count);
             HeapORAMStorage::new(count)
         } else {
-            // eprintln!("count = {} > TREETOP_MAX_COUNT = {}, we must allocate in untrusted", count, treetop_max_count);
+            // eprintln!("count = {} > TREETOP_MAX_COUNT = {}, we must allocate in
+            // untrusted", count, treetop_max_count);
             unsafe {
                 allocate_oram_storage(
                     count - treetop_max_count,
@@ -279,12 +285,14 @@ where
                     &mut self.meta_scratch_buffer,
                 );
             }
-            // Add treetop_max_count back to indices so that our calculations will be correct
+            // Add treetop_max_count back to indices so that our calculations will be
+            // correct
             for idx in &mut indices[..first_treetop_index] {
                 *idx += self.treetop_max_count;
             }
 
-            // We have to decrypt, checking the macs in the meta scratch buffer, and ultimately set dest_meta[idx]
+            // We have to decrypt, checking the macs in the meta scratch buffer, and
+            // ultimately set dest_meta[idx]
             let mut last_hash: Option<(u64, Hash)> = None;
             for idx in 0..first_treetop_index {
                 // If untrusted gave us all 0's for the metadata, then the result is all zeroes
@@ -307,7 +315,8 @@ where
                         self.meta_scratch_buffer[idx].split_at_mut(MetaSize::USIZE);
                     let extra_meta = ExtraMeta::from(&*extra_meta);
 
-                    // If this block has a child, check if its hash that we computed before matches metadata
+                    // If this block has a child, check if its hash that we computed before matches
+                    // metadata
                     if let Some((last_idx, last_hash)) = last_hash {
                         if last_idx & 1 == 0 {
                             if last_hash != extra_meta.left_child_hash {
@@ -379,7 +388,8 @@ where
             // then compute and store hash for next round.
             let mut last_hash: Option<(u64, Hash)> = None;
             for idx in 0..first_treetop_index {
-                // Update the metadata field and extract the new block_ctr value so that we can encrypt
+                // Update the metadata field and extract the new block_ctr value so that we can
+                // encrypt
                 let block_ctr = {
                     // Split extra_meta out of scratch buffer
                     let (meta, extra_meta) =
@@ -391,7 +401,8 @@ where
                     // Update the extra_meta
                     let mut extra_meta_val = ExtraMeta::from(&*extra_meta);
 
-                    // If this block has a child, update extra_meta check if its hash that we computed before matches metadata
+                    // If this block has a child, update extra_meta check if its hash that we
+                    // computed before matches metadata
                     if let Some((last_idx, last_hash)) = last_hash {
                         if last_idx & 1 == 0 {
                             extra_meta_val.left_child_hash = last_hash;

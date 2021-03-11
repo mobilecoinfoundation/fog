@@ -17,7 +17,8 @@ use mc_util_from_random::FromRandom;
 use mc_util_test_helper::{run_with_several_seeds, CryptoRng, RngCore};
 use mc_watcher_api::TimestampResultCode;
 
-/// Test that many random instances of prosty QueryRequest round trip with protobufy QueryRequest
+/// Test that many random instances of prosty QueryRequest round trip with
+/// protobufy QueryRequest
 #[test]
 fn fog_view_query_request_round_trip() {
     {
@@ -36,7 +37,8 @@ fn fog_view_query_request_round_trip() {
     });
 }
 
-/// Test that many random instances of protobufy QueryRequest round trip with prosty QueryRequesty
+/// Test that many random instances of protobufy QueryRequest round trip with
+/// prosty QueryRequesty
 #[test]
 fn fog_view_query_request_protobuf_round_trip() {
     run_with_several_seeds(|mut rng| {
@@ -52,7 +54,8 @@ fn fog_view_query_request_protobuf_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty QueryRequestAAD round trip with protobufy QueryRequestAAD
+/// Test that many random instances of prosty QueryRequestAAD round trip with
+/// protobufy QueryRequestAAD
 #[test]
 fn fog_view_query_request_aad_round_trip() {
     {
@@ -73,7 +76,8 @@ fn fog_view_query_request_aad_round_trip() {
     });
 }
 
-/// Test that many random instances of protobufy QueryRequestAAD round trip with prosty QueryRequestAADy
+/// Test that many random instances of protobufy QueryRequestAAD round trip with
+/// prosty QueryRequestAADy
 #[test]
 fn fog_view_query_request_aad_protobuf_round_trip() {
     run_with_several_seeds(|mut rng| {
@@ -98,7 +102,8 @@ fn fog_view_query_request_aad_protobuf_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty QueryResponse round trip with protobufy QueryResponse
+/// Test that many random instances of prosty QueryResponse round trip with
+/// protobufy QueryResponse
 #[test]
 fn fog_view_query_response_round_trip() {
     {
@@ -182,7 +187,8 @@ fn fog_view_query_response_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty TxOutRecord round trip with protobufy TxOutRecord
+/// Test that many random instances of prosty TxOutRecord round trip with
+/// protobufy TxOutRecord
 #[test]
 fn tx_out_record_round_trip() {
     {
@@ -208,7 +214,8 @@ fn tx_out_record_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty FogTxOut round trip with protobufy FogTxOut
+/// Test that many random instances of prosty FogTxOut round trip with protobufy
+/// FogTxOut
 #[test]
 fn fog_tx_out_round_trip() {
     {
@@ -223,7 +230,8 @@ fn fog_tx_out_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty GetOutputsResponse round trip with protobufy GetOutputResponse
+/// Test that many random instances of prosty GetOutputsResponse round trip with
+/// protobufy GetOutputResponse
 #[test]
 fn get_output_response_round_trip() {
     {
@@ -249,7 +257,8 @@ fn get_output_response_round_trip() {
     });
 }
 
-/// Test that many random instances of prosty CheckKeyImagesResponse round trip with protobufy CheckKeyImagesResponse
+/// Test that many random instances of prosty CheckKeyImagesResponse round trip
+/// with protobufy CheckKeyImagesResponse
 #[test]
 fn check_key_images_response_round_trip() {
     {
@@ -277,7 +286,8 @@ fn check_key_images_response_round_trip() {
     });
 }
 
-/// Test that .proto enum values match what is in src/fog/recovery_db_iface/src/types.rs
+/// Test that .proto enum values match what is in
+/// src/fog/recovery_db_iface/src/types.rs
 #[test]
 fn test_tx_out_search_result_enum_values() {
     assert_eq!(
@@ -370,12 +380,13 @@ fn test_stored_kex_rng_round_trip_protobuf() {
     });
 }
 
-/// These sampling functions are used specifically for these tests, for generating
-/// random proto instances to try to round trip.
-/// They should not be shipped to production or to customers as part of libmobilecoin
-/// They are not done using the mc_crypto_keys::FromRandom trait because we don't need to ship them,
-/// and not all of these sampling distributions e.g. Amount::from_random really make sense
-/// for any other use-case, we are just generating fuzz data basically.
+/// These sampling functions are used specifically for these tests, for
+/// generating random proto instances to try to round trip.
+/// They should not be shipped to production or to customers as part of
+/// libmobilecoin They are not done using the mc_crypto_keys::FromRandom trait
+/// because we don't need to ship them, and not all of these sampling
+/// distributions e.g. Amount::from_random really make sense for any other
+/// use-case, we are just generating fuzz data basically.
 trait Sample {
     fn sample<T: RngCore + CryptoRng>(rng: &mut T) -> Self;
 }

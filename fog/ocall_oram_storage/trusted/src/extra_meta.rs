@@ -8,8 +8,8 @@ use aligned_cmov::{
 use blake2::{digest::Digest, Blake2b};
 use core::convert::TryInto;
 
-/// The ExtraMeta is additional bytes we stick onto the end of user-provided metadata, in
-/// order to authenticate responses from untrusted
+/// The ExtraMeta is additional bytes we stick onto the end of user-provided
+/// metadata, in order to authenticate responses from untrusted
 pub type ExtraMetaSize = U40; // 8 + 16 + 16
 
 // The additional metadata that is stored with untrusted, and not provided to us

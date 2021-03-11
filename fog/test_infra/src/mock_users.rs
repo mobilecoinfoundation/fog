@@ -49,8 +49,9 @@ type Checkpoint = HashMap<UserPrivate, usize>;
 // we accept. If not we retry a few times, and then eventually fail.
 type Delta = HashMap<UserPrivate, HashSet<TxOutRecord>>;
 
-// Take a test block, order the TxOuts arbitrarily, compute their global tx out indices,
-// and finally compute what we expect the users to see on the other end.
+// Take a test block, order the TxOuts arbitrarily, compute their global tx out
+// indices, and finally compute what we expect the users to see on the other
+// end.
 //
 pub fn test_block_to_inputs_and_expected_outputs(
     block_index: u64,
@@ -59,7 +60,8 @@ pub fn test_block_to_inputs_and_expected_outputs(
     timestamp: u64,
 ) -> (Vec<TxOut>, Delta) {
     let pairs = test_block_to_pairs(test_block);
-    // TODO(Chris): It would be nice to take an RNG and shuffle pairs right here for better coverage
+    // TODO(Chris): It would be nice to take an RNG and shuffle pairs right here for
+    // better coverage
 
     let result_block: Vec<TxOut> = pairs.iter().map(|(_key, val)| val.clone()).collect();
 

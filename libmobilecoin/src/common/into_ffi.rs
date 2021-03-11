@@ -3,18 +3,20 @@
 use libc::ssize_t;
 use mc_util_ffi::{FfiOptOwnedStr, FfiOptRefPtr, FfiOptStr, FfiOwnedStr, FfiStr};
 
-/// This trait facilitates converting one type into another when returning a value from an FFI
-/// function. This could be either a return value or an out parameter.
+/// This trait facilitates converting one type into another when returning a
+/// value from an FFI function. This could be either a return value or an out
+/// parameter.
 ///
-/// In the event of an `Result`-style error or a caught panic, the value returned from a call to
-/// `error_value()` will be used. This value is often a sentinel value that foreign code can use
-/// to differentiate between a successful return and a failure, such as `null` in the case of a
-/// pointer, or `-1` in the case of an `int`.
+/// In the event of an `Result`-style error or a caught panic, the value
+/// returned from a call to `error_value()` will be used. This value is often a
+/// sentinel value that foreign code can use to differentiate between a
+/// successful return and a failure, such as `null` in the case of a pointer, or
+/// `-1` in the case of an `int`.
 ///
-/// This provides the most benefit when the error value does not also represent a valid success
-/// value, but that in itself is not a requirement, as long as there is another way to detect that
-/// an error has occurred (such as an error out-parameter that's only set to a non-null value if
-/// an error has occurred).
+/// This provides the most benefit when the error value does not also represent
+/// a valid success value, but that in itself is not a requirement, as long as
+/// there is another way to detect that an error has occurred (such as an error
+/// out-parameter that's only set to a non-null value if an error has occurred).
 pub(crate) trait IntoFfi<T>: Sized {
     fn error_value() -> T;
 

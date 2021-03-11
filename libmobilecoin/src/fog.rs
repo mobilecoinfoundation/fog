@@ -38,7 +38,8 @@ pub extern "C" fn mc_fog_resolver_free(fog_resolver: FfiOptOwnedPtr<McFogResolve
 
 /// # Preconditions
 ///
-/// * `report_url` - must be a nul-terminated C string containing a valid Fog report uri.
+/// * `report_url` - must be a nul-terminated C string containing a valid Fog
+///   report uri.
 ///
 /// # Errors
 ///
@@ -73,7 +74,8 @@ impl_into_ffi!(VersionedKexRng);
 
 /// # Preconditions
 ///
-/// * `subaddress_view_private_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `subaddress_view_private_key` - must be a valid 32-byte Ristretto-format
+///   scalar.
 ///
 /// # Errors
 ///
@@ -116,7 +118,8 @@ pub extern "C" fn mc_fog_rng_clone(fog_rng: FfiRefPtr<McFogRng>) -> FfiOptOwnedP
 
 /// # Preconditions
 ///
-/// * `out_fog_rng_proto_bytes` - must be null or else length must be >= `encoded.len`.
+/// * `out_fog_rng_proto_bytes` - must be null or else length must be >=
+///   `encoded.len`.
 #[no_mangle]
 pub extern "C" fn mc_fog_rng_serialize_proto(
     fog_rng: FfiRefPtr<McFogRng>,

@@ -23,12 +23,12 @@ impl McError {
     }
 }
 
-/// All non-null owned pointers of type `McError *` that are returned from a Rust FFI function to a
-/// foreign caller must call this function in order to free the underlying memory pointed to by the
-/// pointer.
+/// All non-null owned pointers of type `McError *` that are returned from a
+/// Rust FFI function to a foreign caller must call this function in order to
+/// free the underlying memory pointed to by the pointer.
 ///
-/// It is undefined behavior for foreign code to dereference the pointer after it has called this
-/// method.
+/// It is undefined behavior for foreign code to dereference the pointer after
+/// it has called this method.
 #[no_mangle]
 pub extern "C" fn mc_error_free(error: FfiOptOwnedPtr<McError>) {
     ffi_boundary(move || {

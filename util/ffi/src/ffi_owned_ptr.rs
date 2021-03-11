@@ -2,18 +2,21 @@
 
 use core::{mem, ops, ptr};
 
-/// `FfiOwnedPtr` is a wrapper around an "owned" pointer which allows manipulation in safe Rust.
-/// This type has a memory layout exactly equivalent to `*mut T` and is intended for use in C FFI
-/// Rust functions for both return types and parameter types.
+/// `FfiOwnedPtr` is a wrapper around an "owned" pointer which allows
+/// manipulation in safe Rust. This type has a memory layout exactly equivalent
+/// to `*mut T` and is intended for use in C FFI Rust functions for both return
+/// types and parameter types.
 ///
-/// `FfiOwnedPtr` is not allowed to be `null` in safe Rust, but `null` isn't considered a forbidden
-/// (a.k.a niche) value, unlike `core::ptr::NonNull`. This means that there are no forbidden values
-/// that the caller could pass that would cause undefined behavior, which allows us to check for
-/// `null` and panic instead.
+/// `FfiOwnedPtr` is not allowed to be `null` in safe Rust, but `null` isn't
+/// considered a forbidden (a.k.a niche) value, unlike `core::ptr::NonNull`.
+/// This means that there are no forbidden values that the caller could pass
+/// that would cause undefined behavior, which allows us to check for `null` and
+/// panic instead.
 ///
-/// The inner value of `FfiOwnedPtr` is a "raw" pointer to a `Box`, created using `Box::into_raw`.
-/// `FfiOwnedPtr` still implements the `Drop` trait, but it stores it's inner value as a "raw"
-/// pointer so that it can be safely transferred across the C FFI boundary.
+/// The inner value of `FfiOwnedPtr` is a "raw" pointer to a `Box`, created
+/// using `Box::into_raw`. `FfiOwnedPtr` still implements the `Drop` trait, but
+/// it stores it's inner value as a "raw" pointer so that it can be safely
+/// transferred across the C FFI boundary.
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct FfiOwnedPtr<T: ?Sized>(*mut T);
@@ -27,7 +30,6 @@ impl<T> FfiOwnedPtr<T> {
 
 impl<T: ?Sized> FfiOwnedPtr<T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut T) -> Self {
         // This panic indicates a violation of a precondition to this function.
@@ -49,8 +51,8 @@ impl<T: ?Sized> FfiOwnedPtr<T> {
 impl<T: ?Sized> Drop for FfiOwnedPtr<T> {
     #[inline]
     fn drop(&mut self) {
-        // This panic is considered a precondition violation of the struct, either from misuse in
-        // unsafe Rust, in C, or a bug in the library.
+        // This panic is considered a precondition violation of the struct, either from
+        // misuse in unsafe Rust, in C, or a bug in the library.
         debug_assert!(!self.0.is_null());
         unsafe {
             Box::from_raw(self.0);
@@ -97,8 +99,9 @@ impl<T: ?Sized> ops::DerefMut for FfiOwnedPtr<T> {
 unsafe impl<T: Send + ?Sized> Send for FfiOwnedPtr<T> {}
 unsafe impl<T: Send + Sync + ?Sized> Sync for FfiOwnedPtr<T> {}
 
-/// `FfiOptOwnedPtr` is exactly the same as `FfiOwnedPtr` except that `null` is considered a valid
-/// value. It has the exact same memory layout as `FfiOwnedPtr`.
+/// `FfiOptOwnedPtr` is exactly the same as `FfiOwnedPtr` except that `null` is
+/// considered a valid value. It has the exact same memory layout as
+/// `FfiOwnedPtr`.
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct FfiOptOwnedPtr<T: ?Sized>(*mut T);
@@ -120,7 +123,6 @@ impl<T> FfiOptOwnedPtr<T> {
 
 impl<T: ?Sized> FfiOptOwnedPtr<T> {
     /// # Safety
-    ///
     #[inline]
     pub unsafe fn from_raw(ptr: *mut T) -> Self {
         Self(ptr)

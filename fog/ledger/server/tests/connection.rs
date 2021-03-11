@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-//! Integration tests at the level of the fog ledger connection / fog ledger grpc API
+//! Integration tests at the level of the fog ledger connection / fog ledger
+//! grpc API
 
 use fog_api::ledger::TxOutResultCode;
 use fog_ledger_connection::{
@@ -44,8 +45,8 @@ fn setup_watcher_db(logger: Logger) -> (WatcherDB, String) {
     (watcher, watcher_dir)
 }
 
-// Test that a fog ledger connection is able to get valid merkle proofs by hitting
-// a fog ledger server
+// Test that a fog ledger connection is able to get valid merkle proofs by
+// hitting a fog ledger server
 #[test_with_logger]
 fn fog_ledger_merkle_proofs_test(logger: Logger) {
     let base_port = 3230;
@@ -224,8 +225,8 @@ fn fog_ledger_key_images_test(logger: Logger) {
         .add_block_signature(&url1, 1, signed_block_a1, filename.clone())
         .unwrap();
 
-    // Update last synced to block 2, to indicate that this URL did not participate in consensus
-    // for block 2.
+    // Update last synced to block 2, to indicate that this URL did not participate
+    // in consensus for block 2.
     watcher.update_last_synced(&url1, 2).unwrap();
 
     {
@@ -606,8 +607,8 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
 }
 
 // Infra
-// This is like mobilecoind::test_utils::generate_ledger_db, which is unfortunately not pub
-// FIXME MC-1528
+// This is like mobilecoind::test_utils::generate_ledger_db, which is
+// unfortunately not pub FIXME MC-1528
 fn generate_ledger_db(path: &str) -> LedgerDB {
     // DELETE the old database if it already exists.
     let _ = std::fs::remove_file(format!("{}/data.mdb", path));
@@ -616,10 +617,11 @@ fn generate_ledger_db(path: &str) -> LedgerDB {
     db
 }
 
-// This is like mobilecoind::test_utils::generate_ledger_db, which is unfortunately not pub
-// FIXME MC-1528
+// This is like mobilecoind::test_utils::generate_ledger_db, which is
+// unfortunately not pub FIXME MC-1528
 
-/// Adds a block containing one txo for each provided recipient and returns new block height.
+/// Adds a block containing one txo for each provided recipient and returns new
+/// block height.
 ///
 /// # Arguments
 /// * `ledger_db`

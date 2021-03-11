@@ -36,7 +36,8 @@ pub struct FogIngestGrpcClient {
     logger: Logger,
 }
 
-// The error exposed from this module is RetryError wrapping the lower-level error
+// The error exposed from this module is RetryError wrapping the lower-level
+// error
 pub type ClientResult<T> = core::result::Result<T, RetryError<Error>>;
 
 impl FogIngestGrpcClient {
@@ -178,8 +179,8 @@ impl FogIngestGrpcClient {
     }
 
     // The retry crate works by taking an iterator over durations, and a closure
-    // This function returns the iterator over durations consistent with configured policy,
-    // which is then used to implement retries for all the grpc calls
+    // This function returns the iterator over durations consistent with configured
+    // policy, which is then used to implement retries for all the grpc calls
     fn get_retries(&self) -> Box<dyn Iterator<Item = Duration>> {
         Box::new(
             retry::delay::Fixed::from_millis(100).take(self.retry_duration.as_secs() as usize * 10),

@@ -37,11 +37,12 @@ use mc_transaction_std::{InputCredentials, TransactionBuilder};
 use mc_util_uri::{ConnectionUri, FogUri};
 use rand::Rng;
 
-/// Default number of blocks used for calculating transaction tombstone block number.
-/// See `new_tx_block_attempts` below.
+/// Default number of blocks used for calculating transaction tombstone block
+/// number. See `new_tx_block_attempts` below.
 const DEFAULT_NEW_TX_BLOCK_ATTEMPTS: u16 = 50;
 
-/// Represents the entire sample paykit object, capable of balance checks and sending transactions
+/// Represents the entire sample paykit object, capable of balance checks and
+/// sending transactions
 pub struct Client {
     consensus_service_conn: ThickClient<HardcodedCredentialsProvider>,
     fog_view: FogViewGrpcClient,
@@ -54,8 +55,9 @@ pub struct Client {
     account_key: AccountKey,
     tx_data: CachedTxData,
 
-    /// Number of blocks for which to try and get the new transaction to be included in the ledger.
-    /// This value is used to calculate the tombstone block when generating a new transaction.
+    /// Number of blocks for which to try and get the new transaction to be
+    /// included in the ledger. This value is used to calculate the
+    /// tombstone block when generating a new transaction.
     new_tx_block_attempts: u16,
 
     logger: Logger,
@@ -102,14 +104,15 @@ impl Client {
         self.consensus_service_conn.uri().addr()
     }
 
-    /// This allows to set the tombstone block limit for newly-created transactions.
+    /// This allows to set the tombstone block limit for newly-created
+    /// transactions.
     ///
-    /// The tombstone block value is a number attached to a submitted transaction,
-    /// after which it should fail if it has not been processed yet.
-    /// This sets how many blocks after the current block we should wait.
-    /// Since current block is an approximate notion, this should not be too small.
-    /// If it is too large then it will take a long time to determine if a transaction
-    /// was successful.
+    /// The tombstone block value is a number attached to a submitted
+    /// transaction, after which it should fail if it has not been processed
+    /// yet. This sets how many blocks after the current block we should
+    /// wait. Since current block is an approximate notion, this should not
+    /// be too small. If it is too large then it will take a long time to
+    /// determine if a transaction was successful.
     pub fn set_new_tx_block_attempts(&mut self, new_tx_block_attempts: u16) {
         self.new_tx_block_attempts = new_tx_block_attempts;
     }
@@ -118,7 +121,8 @@ impl Client {
     ///
     /// Returns:
     /// * Balance (in picomob)
-    /// * Number of blocks in the chain at the time that this was the correct balance
+    /// * Number of blocks in the chain at the time that this was the correct
+    ///   balance
     pub fn check_balance(&mut self) -> Result<(u64, BlockCount)> {
         mc_common::trace_time!(self.logger, "MobileCoinClient.get_balance");
         self.tx_data.poll_fog(
@@ -134,7 +138,8 @@ impl Client {
     ///
     /// Returns:
     /// * Balance (in picomob)
-    /// * Number of blocks in the chain at the time that this was the correct balance
+    /// * Number of blocks in the chain at the time that this was the correct
+    ///   balance
     pub fn compute_balance(&mut self) -> (u64, BlockCount) {
         self.tx_data.get_balance()
     }
@@ -148,27 +153,32 @@ impl Client {
     ///
     /// To get a transaction, call build_transaction.
     ///
-    /// This should usually be followed by doing a polling loop on "is_transaction_accepted".
-    /// Then, perform another balance check to get refreshed key image data
-    /// before attempting to create another transaction.
+    /// This should usually be followed by doing a polling loop on
+    /// "is_transaction_accepted". Then, perform another balance check to
+    /// get refreshed key image data before attempting to create another
+    /// transaction.
     pub fn send_transaction(&mut self, transaction: &Tx) -> Result<()> {
         self.consensus_service_conn.propose_tx(transaction)?;
         Ok(())
     }
 
-    /// Check if a transaction has appeared in the ledger, by checking if one of its output TxOut's did.
-    /// Returns either Appeared (one of the outputs appeared), Expired (tombstone block has passed), or Unknown (neither).
+    /// Check if a transaction has appeared in the ledger, by checking if one of
+    /// its output TxOut's did. Returns either Appeared (one of the outputs
+    /// appeared), Expired (tombstone block has passed), or Unknown (neither).
     ///
-    /// Typically this is called in a polling loop to determine if a submitted transaction settled successfully.
+    /// Typically this is called in a polling loop to determine if a submitted
+    /// transaction settled successfully.
     ///
     /// Arguments:
     /// * Transaction to check for. Must have at least one output TxOut.
     ///
     /// Returns:
-    /// * A transaction status for the transaction: its output tx out appeared (in a particular block), it expired, or neither has happened yet
+    /// * A transaction status for the transaction: its output tx out appeared
+    ///   (in a particular block), it expired, or neither has happened yet
     /// * Error if there is a network error or error response from server
     ///
-    /// Note: If the call returns Appeared(block_count), then the transaction appeared in block_count.
+    /// Note: If the call returns Appeared(block_count), then the transaction
+    /// appeared in block_count.
     pub fn is_transaction_present(&mut self, transaction: &Tx) -> Result<TransactionStatus> {
         assert!(
             !transaction.prefix.outputs.is_empty(),
@@ -208,7 +218,8 @@ impl Client {
                                         return Ok(TransactionStatus::Unknown);
                                     }
                                     NOT_FOUND => {
-                                        // Note: A transaction must appear BEFORE the tombstone_block,
+                                        // Note: A transaction must appear BEFORE the
+                                        // tombstone_block,
                                         // it cannot appear in the tombstone block.
                                         if result.num_blocks >= transaction.prefix.tombstone_block {
                                             return Ok(TransactionStatus::Expired);
@@ -241,13 +252,16 @@ impl Client {
         }
     }
 
-    /// Builds a transaction that transfers `amount` from this account to `target_address`, returning any "change" to ourself.
+    /// Builds a transaction that transfers `amount` from this account to
+    /// `target_address`, returning any "change" to ourself.
     ///
-    /// This reaches out to the fog merkle proof server to get merkle proofs for the inputs and mixins.
-    /// It also reaches out to the report server to get the current fog public key, if anyone here has fog.
+    /// This reaches out to the fog merkle proof server to get merkle proofs for
+    /// the inputs and mixins. It also reaches out to the report server to
+    /// get the current fog public key, if anyone here has fog.
     ///
     /// # Arguments
-    /// * `amount` - The amount that will be sent, not including the transaction fee.
+    /// * `amount` - The amount that will be sent, not including the transaction
+    ///   fee.
     /// * `target_address` - the recipient's address.
     /// * `rng` - Randomness.
     pub fn build_transaction<T: RngCore + CryptoRng>(
@@ -278,7 +292,8 @@ impl Client {
         let tombstone_block = self.compute_tombstone_block()?;
 
         // Make fog resolver
-        // TODO: This should be the change subaddress, not the default subaddress, for self.account_key
+        // TODO: This should be the change subaddress, not the default subaddress, for
+        // self.account_key
         let fog_uris = (&[&self.account_key.default_subaddress(), target_address])
             .iter()
             .filter_map(|addr| addr.fog_report_url())
@@ -310,11 +325,12 @@ impl Client {
     /// * inputs: The OwnedTxOut records to get proofs for
     ///
     /// Returns
-    /// * A sequence of OwnedTxOut records with corresponding proofs of membership
+    /// * A sequence of OwnedTxOut records with corresponding proofs of
+    ///   membership
     ///
-    /// Note: The TxOut object returned by this function is the TxOut returned from
-    /// from ledger, not the one passed in. This is because the TxOut's from
-    /// fog view won't have the hint field, to save storage space.
+    /// Note: The TxOut object returned by this function is the TxOut returned
+    /// from from ledger, not the one passed in. This is because the TxOut's
+    /// from fog view won't have the hint field, to save storage space.
     /// Submitting those TxOuts to consensus will cause the transaction to be
     /// rejected, because the merkle proof check will fail.
     fn get_proofs(
@@ -323,7 +339,8 @@ impl Client {
     ) -> Result<Vec<(OwnedTxOut, TxOutMembershipProof)>> {
         mc_common::trace_time!(self.logger, "MobileCoinClient.get_proofs");
 
-        // Use the indices from the new TXOs to get corresponding merkle proofs of membership
+        // Use the indices from the new TXOs to get corresponding merkle proofs of
+        // membership
         let indices: Vec<u64> = inputs.iter().map(|input| input.global_index).collect();
 
         // FIXME: We are not sure whether this is a necessary parameter under ORAM.
@@ -372,14 +389,16 @@ impl Client {
 
     /// Gets several rings' worth of mixin TxOuts, with proofs of membership.
     ///
-    /// TODO: In discussions, some think the mixin distribution should eventually be made
-    /// "relatively close" to the global index of the true input, but that is not implemented yet.
+    /// TODO: In discussions, some think the mixin distribution should
+    /// eventually be made "relatively close" to the global index of the
+    /// true input, but that is not implemented yet.
     ///
     /// # Arguments
     /// *`num_rings` - The number of rings of TxOuts to request.
     ///
     /// # Returns
-    /// Returns a collection of "rings", where each "ring" contains self.ring_size elements.
+    /// Returns a collection of "rings", where each "ring" contains
+    /// self.ring_size elements.
     fn get_rings<T: RngCore + CryptoRng>(
         &mut self,
         num_rings: usize,
@@ -443,8 +462,9 @@ impl Client {
         Ok(rings_with_proofs)
     }
 
-    /// Gets the approximate number of blocks in the ledger and adds self.new_tx_block_attempts value,
-    /// to compute an appropriate tombstone block value
+    /// Gets the approximate number of blocks in the ledger and adds
+    /// self.new_tx_block_attempts value, to compute an appropriate
+    /// tombstone block value
     fn compute_tombstone_block(&mut self) -> Result<BlockIndex> {
         mc_common::trace_time!(self.logger, "MobileCoinClient.get_num_blocks");
         // Use the key images endpoint with an empty vec
@@ -458,8 +478,8 @@ impl Client {
     }
 }
 
-/// Builds a transaction that spends `inputs`, sends `amount` to the recipient, and returns
-/// the remainder to the sender minus the transaction fee.
+/// Builds a transaction that spends `inputs`, sends `amount` to the recipient,
+/// and returns the remainder to the sender minus the transaction fee.
 ///
 /// # Arguments
 /// * `inputs` - Inputs that will be spent by the transaction.
@@ -469,7 +489,8 @@ impl Client {
 /// * `source_acct_server_pubkey` - The sender's account server key, if any.
 /// * `target_address` - The recipient's public key.
 /// * `target_acct_server_pubkey` - The recipient's account server key, if any.
-/// * `tombstone_block` - The block index after which this transaction is no longer valid.
+/// * `tombstone_block` - The block index after which this transaction is no
+///   longer valid.
 /// * `rng` -
 fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
     inputs: Vec<(OwnedTxOut, TxOutMembershipProof)>,
@@ -535,8 +556,8 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
                     ring[0] = input_txo.tx_out.clone();
                     membership_proofs[0] = input_proof.clone();
                 }
-                // The real input is always the first element. This is safe because TransactionBuilder
-                // sorts each ring.
+                // The real input is always the first element. This is safe because
+                // TransactionBuilder sorts each ring.
                 0
             }
         };
@@ -576,7 +597,8 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
         );
     }
 
-    // Resolve account server key if the receiver specifies an account service in their public address
+    // Resolve account server key if the receiver specifies an account service in
+    // their public address
     tx_builder
         .add_output(amount, target_address, rng)
         .map_err(Error::AddOutput)?;
@@ -623,8 +645,8 @@ mod test_build_transaction_helper {
         }
     }
 
-    // `build_transaction_helper` should return a Tx when `rings` contains TxOuts that do not
-    // appear in `inputs`.
+    // `build_transaction_helper` should return a Tx when `rings` contains TxOuts
+    // that do not appear in `inputs`.
     #[test_with_logger]
     fn test_build_transaction_helper_rings_disjoint_from_inputs(logger: Logger) {
         let mut rng: StdRng = SeedableRng::from_seed([1u8; 32]);
@@ -721,8 +743,8 @@ mod test_build_transaction_helper {
         // The transaction should contain the correct number of inputs.
         assert_eq!(tx.prefix.inputs.len(), num_inputs);
 
-        // Each TxIn should contain a ring of `ring_size` elements. If `ring_size` is zero, the
-        // ring will have size 1 after the input is included.
+        // Each TxIn should contain a ring of `ring_size` elements. If `ring_size` is
+        // zero, the ring will have size 1 after the input is included.
         for tx_in in tx.prefix.inputs {
             assert_eq!(tx_in.ring.len(), ring_size);
         }

@@ -6,7 +6,8 @@ use fog_view_protocol::FogViewConnection;
 // A structure that wraps recovery db reader and implements FogViewConnection,
 // bypassing view node grpc and view enclave entirely.
 // This is useful for integration tests.
-// This allows to validate acct_crypto::polling module against fog ingest directly.
+// This allows to validate acct_crypto::polling module against fog ingest
+// directly.
 pub struct PassThroughViewClient<R: RecoveryDb> {
     db: R,
 }
@@ -42,7 +43,8 @@ impl<R: RecoveryDb> FogViewConnection for PassThroughViewClient<R> {
             0
         };
 
-        // Prepare the untrusted part of the response - duplicated from the view enclave code.
+        // Prepare the untrusted part of the response - duplicated from the view enclave
+        // code.
         let mut missed_block_ranges = Vec::new();
         let mut rng_records = Vec::new();
         let mut decommissioned_ingest_invocations = Vec::new();

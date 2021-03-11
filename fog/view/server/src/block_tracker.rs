@@ -5,12 +5,13 @@ use fog_types::common::BlockRange;
 use mc_common::logger::{log, Logger};
 use std::collections::HashMap;
 
-/// A utility object that keeps track of which block number was processed for every known ingest
-/// invocation. This provides utilities such as:
-/// - Finding out what is the next block that needs processing for any of the ingest invocations.
+/// A utility object that keeps track of which block number was processed for
+/// every known ingest invocation. This provides utilities such as:
+/// - Finding out what is the next block that needs processing for any of the
+///   ingest invocations.
 /// - Finding out what is the highest block index we have encountered so far.
-/// - Finding out for which block index have we processed data for all ingest invocations, while
-///   taking into account missed blocks.
+/// - Finding out for which block index have we processed data for all ingest
+///   invocations, while taking into account missed blocks.
 pub struct BlockTracker {
     processed_block_per_invocation: HashMap<IngestInvocationId, u64>,
     last_highest_processed_block_count: u64,
@@ -26,8 +27,8 @@ impl BlockTracker {
         }
     }
 
-    // Given a list of ingestable ranges and the current state, calculate which block
-    // index needs to be processed next for each ingest invocation.
+    // Given a list of ingestable ranges and the current state, calculate which
+    // block index needs to be processed next for each ingest invocation.
     pub fn next_blocks(
         &self,
         ingestable_ranges: &[IngestableRange],
@@ -40,8 +41,8 @@ impl BlockTracker {
                 .get(&ingestable_range.id)
             {
                 // A block has previously been processed for this ingest invocation. See if the
-                // next one can be provided by it, and if so add it to the list of next blocks we
-                // would like to process.
+                // next one can be provided by it, and if so add it to the list of next blocks
+                // we would like to process.
                 let next_block = last_processed_block + 1;
                 if ingestable_range.can_provide_block(next_block) {
                     next_blocks.insert(ingestable_range.id, next_block);
@@ -70,9 +71,10 @@ impl BlockTracker {
         }
     }
 
-    /// Given a list of ingestable ranges, missing blocks and current state, calculate the highest
-    /// processed block count number. The highest processed block count number is the block count
-    /// for which we know we have loaded all available data.
+    /// Given a list of ingestable ranges, missing blocks and current state,
+    /// calculate the highest processed block count number. The highest
+    /// processed block count number is the block count for which we know we
+    /// have loaded all available data.
     pub fn highest_fully_processed_block_count(
         &mut self,
         ingestable_ranges: &[IngestableRange],
@@ -90,8 +92,8 @@ impl BlockTracker {
                 next_block_count,
             );
 
-            // If the block has been reported as missing, we can advance since we don't need to do
-            // any processing for it.
+            // If the block has been reported as missing, we can advance since we don't need
+            // to do any processing for it.
             if Self::is_missing_block(missing_block_ranges, next_block_index) {
                 log::trace!(
                     self.logger,
@@ -103,8 +105,9 @@ impl BlockTracker {
                 continue;
             }
 
-            // Go over all known ingestable ranges and ensure we have processed next_block_index
-            // in all the ranges that are able to provide that block index.
+            // Go over all known ingestable ranges and ensure we have processed
+            // next_block_index in all the ranges that are able to provide that
+            // block index.
             let mut block_can_be_provided = false;
 
             for ingestable_range in ingestable_ranges.iter() {
@@ -133,8 +136,8 @@ impl BlockTracker {
 
             if !block_can_be_provided {
                 if !ingestable_ranges.is_empty() {
-                    // next_block_index is neither missing nor can it be provided by any ingest invocation.
-                    // This is fishy so stop here.
+                    // next_block_index is neither missing nor can it be provided by any ingest
+                    // invocation. This is fishy so stop here.
                     log::warn!(self.logger, "block index {} is not reported missing but cannot be fulfiled by any of the ingest invocation ranges {:?}", next_block_index, ingestable_ranges);
                 }
 
@@ -477,8 +480,8 @@ mod tests {
         );
     }
 
-    // A missing range that does start at block 0 should advance the count to the end of the
-    // range.
+    // A missing range that does start at block 0 should advance the count to the
+    // end of the range.
     #[test_with_logger]
     fn highest_fully_processed_block_count_starts_with_missing_blocks(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -539,7 +542,8 @@ mod tests {
         );
     }
 
-    // Check with an ingestable range that hasn't yet processed anything but has missing blocks.
+    // Check with an ingestable range that hasn't yet processed anything but has
+    // missing blocks.
     #[test_with_logger]
     fn highest_fully_processed_block_missing_blocks_consecutivie_nothing_processed2(
         logger: Logger,
@@ -562,8 +566,8 @@ mod tests {
         );
     }
 
-    // A block tracker with a single ingestable range tracks it properly as blocks are
-    // processed when the start block is 0.
+    // A block tracker with a single ingestable range tracks it properly as blocks
+    // are processed when the start block is 0.
     #[test_with_logger]
     fn highest_fully_processed_block_tracks_block_processed1(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -590,8 +594,8 @@ mod tests {
         }
     }
 
-    // A block tracker with a single ingestable range ignores it if the start block is higher than
-    // 0.
+    // A block tracker with a single ingestable range ignores it if the start block
+    // is higher than 0.
     #[test_with_logger]
     fn highest_fully_processed_block_tracks_block_processed2(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -618,8 +622,8 @@ mod tests {
         }
     }
 
-    // A block tracker with a single ingestable range respects missing ranges before the processed
-    // blocks.
+    // A block tracker with a single ingestable range respects missing ranges before
+    // the processed blocks.
     #[test_with_logger]
     fn highest_fully_processed_block_tracks_with_missing_blocks_before(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -654,8 +658,8 @@ mod tests {
         }
     }
 
-    // A block tracker with a single ingestable range respects missing ranges after the processed
-    // blocks.
+    // A block tracker with a single ingestable range respects missing ranges after
+    // the processed blocks.
     #[test_with_logger]
     fn highest_fully_processed_block_tracks_with_missing_blocks_after(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -670,7 +674,8 @@ mod tests {
         let missing_ranges = vec![
             BlockRange::new(10, 20),
             BlockRange::new(20, 30),
-            BlockRange::new(32, 40), // This range skips blocks 31 and 32 so we will not advance automatically to them.
+            BlockRange::new(32, 40), /* This range skips blocks 31 and 32 so we will not advance
+                                      * automatically to them. */
         ];
 
         for i in 0..10 {
@@ -704,8 +709,8 @@ mod tests {
             }
         }
 
-        // Proccess blocks 10-29, this should not change anything since they were reported as
-        // missing.
+        // Proccess blocks 10-29, this should not change anything since they were
+        // reported as missing.
         for i in 10..30 {
             block_tracker.block_processed(ingestable_range.id, i);
             assert_eq!(
@@ -763,8 +768,8 @@ mod tests {
             0
         );
 
-        // Advancing the first ingestable range would only get us up to 10 since at that point we
-        // also need the 2nd range to advance.
+        // Advancing the first ingestable range would only get us up to 10 since at that
+        // point we also need the 2nd range to advance.
         for i in 0..20 {
             block_tracker.block_processed(ingestable_range1.id, i);
 
@@ -777,7 +782,8 @@ mod tests {
             );
         }
 
-        // Advancing the second range would get us all the way to the first one and stop there.
+        // Advancing the second range would get us all the way to the first one and stop
+        // there.
         for i in 0..40 {
             block_tracker.block_processed(ingestable_range2.id, ingestable_range2.start_block + i);
 
@@ -787,7 +793,8 @@ mod tests {
                     &[]
                 ),
                 min(
-                    ingestable_range1.start_block + 20, // We advanced the first range 20 times in the previous loop
+                    ingestable_range1.start_block + 20, /* We advanced the first range 20 times
+                                                         * in the previous loop */
                     ingestable_range2.start_block + i + 1
                 ),
             );
@@ -802,7 +809,8 @@ mod tests {
         assert_eq!(block_tracker.highest_known_block_count(), 0);
     }
 
-    // Highest known block count is set to the highest block count that was processed.
+    // Highest known block count is set to the highest block count that was
+    // processed.
     #[test_with_logger]
     fn highest_known_block_count_tracks_processed(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger);

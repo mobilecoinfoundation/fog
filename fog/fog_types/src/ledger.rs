@@ -10,9 +10,10 @@ use mc_transaction_core::{
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-/// Parameters for a output request. This is the contents of the encrypted payload sent by the client.
-/// We need to define this since the client will use the external type to send this.  Eventually
-/// we want to use prost to generate this from the external proto, but for now this works.
+/// Parameters for a output request. This is the contents of the encrypted
+/// payload sent by the client. We need to define this since the client will use
+/// the external type to send this.  Eventually we want to use prost to generate
+/// this from the external proto, but for now this works.
 #[derive(Message, Eq, PartialEq)]
 pub struct GetOutputsRequest {
     /// Indices for outputs requested.
@@ -24,9 +25,10 @@ pub struct GetOutputsRequest {
     pub merkle_root_block: u64,
 }
 
-/// A list of outputs and proofs. This is the contents of the encrypted payload sent to the client.
-/// We need to define this since the client will use the external type to read this.
-/// We test in the `fog_api` integration tests that this round-trips with the protobuf generated type
+/// A list of outputs and proofs. This is the contents of the encrypted payload
+/// sent to the client. We need to define this since the client will use the
+/// external type to read this. We test in the `fog_api` integration tests that
+/// this round-trips with the protobuf generated type
 #[derive(Clone, Message, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GetOutputsResponse {
     /// Outputs
@@ -61,9 +63,10 @@ pub struct OutputResult {
     pub proof: TxOutMembershipProof,
 }
 
-/// A list of key images. This is the contents of the encrypted payload sent by the client.
-/// We need to define this since the client will use the external type to send this.  Eventually
-/// we want to use prost to generate this from the external proto, but for now this works.
+/// A list of key images. This is the contents of the encrypted payload sent by
+/// the client. We need to define this since the client will use the external
+/// type to send this.  Eventually we want to use prost to generate this from
+/// the external proto, but for now this works.
 #[derive(Message, Eq, PartialEq)]
 pub struct CheckKeyImagesRequest {
     /// Key images.
@@ -81,10 +84,11 @@ pub struct KeyImageQuery {
     pub start_block: u64,
 }
 
-/// A list that says whether in request key images have been spent. This is the contents of the
-/// encrypted payload sent to the client.
-/// We need to define this since the client will use the external type to send this.  Eventually
-/// we want to use prost to generate this from the external proto, but for now this works.
+/// A list that says whether in request key images have been spent. This is the
+/// contents of the encrypted payload sent to the client.
+/// We need to define this since the client will use the external type to send
+/// this.  Eventually we want to use prost to generate this from the external
+/// proto, but for now this works.
 #[derive(Clone, Message, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CheckKeyImagesResponse {
     /// Number of blocks in the ledger
@@ -117,13 +121,15 @@ pub struct KeyImageResult {
     pub spent_at: u64,
 
     /// The timestamp of the spent_at block.
-    /// Note: The timestamps are based on untrusted reporting of time from the consensus validators.
-    /// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
+    /// Note: The timestamps are based on untrusted reporting of time from the
+    /// consensus validators. Represented as seconds of UTC time since Unix
+    /// epoch 1970-01-01T00:00:00Z.
     #[prost(fixed64, tag = "3")]
     pub timestamp: u64,
 
-    /// Timestamp result code, indicating whether the timestamp was found, can be tried again later,
-    /// or will never be found with the current watcher configuration.
+    /// Timestamp result code, indicating whether the timestamp was found, can
+    /// be tried again later, or will never be found with the current
+    /// watcher configuration.
     #[prost(fixed32, tag = "4")]
     pub timestamp_result_code: u32,
 

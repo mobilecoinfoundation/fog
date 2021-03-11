@@ -268,7 +268,8 @@ fn main() {
         let ledger_db2 = ledger_db.clone();
         let fog_accounts2 = fog_accounts.clone();
         let logger2 = logger.new(o!("num" => i));
-        let fog_resolver = FogResolver::new(fog_report_responses.clone(), &report_verifier);
+        let fog_resolver = FogResolver::new(fog_report_responses.clone(), &report_verifier)
+            .expect("Could not get FogResolver");
 
         thread::Builder::new()
             .name(format!("worker{}", i))

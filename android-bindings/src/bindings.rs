@@ -1460,7 +1460,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogResolver_init_1jni(
         let report_responses: MutexGuard<FogReportResponses> =
             env.get_rust_field(report_responses, RUST_OBJ_FIELD)?;
         let verifier: MutexGuard<Verifier> = env.get_rust_field(verifier, RUST_OBJ_FIELD)?;
-        let fog_resolver = FogResolver::new(report_responses.clone(), &verifier);
+        let fog_resolver = FogResolver::new(report_responses.clone(), &verifier)?;
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, fog_resolver)?)
     })
 }

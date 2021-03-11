@@ -287,7 +287,7 @@ impl Client {
         let fog_responses = self
             .fog_report_conn
             .fetch_fog_reports(fog_uris.into_iter())?;
-        let fog_resolver = FogResolver::new(fog_responses, &self.fog_verifier);
+        let fog_resolver = FogResolver::new(fog_responses, &self.fog_verifier)?;
 
         build_transaction_helper(
             inputs,

@@ -288,11 +288,16 @@ pub extern "C" fn mc_transaction_builder_create(
     fog_resolver: FfiOptRefPtr<McFogResolver>,
 ) -> FfiOptOwnedPtr<McTransactionBuilder> {
     ffi_boundary(|| {
-        let fog_resolver = fog_resolver
-            .as_ref()
-            .map_or_else(FogResolver::default, |fog_resolver| {
-                FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
-            });
+        let fog_resolver =
+            fog_resolver
+                .as_ref()
+                .map_or_else(FogResolver::default, |fog_resolver| {
+                    // It is safe to add an expect here (which should never occur) because
+                    // fogReportUrl is already checked in mc_fog_resolver_add_report_response
+                    // to be convertible to FogUri
+                    FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
+                        .expect("FogResolver could not be constructed from the provided materials")
+                });
         let mut transaction_builder = TransactionBuilder::new(fog_resolver);
         transaction_builder.set_fee(fee);
         transaction_builder.set_tombstone_block(tombstone_block);

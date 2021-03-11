@@ -89,6 +89,7 @@ fn get_pubkey(responses: FogReportResponses, pub_addr: PublicAddress) -> FullyVa
 
     let resolver = FogResolver::new(responses, &report_verifier);
     resolver
+        .expect("Could not get FogPubkeyResolved")
         .get_fog_pubkey(&pub_addr)
         .expect("Could not validate fog pubkey")
 }

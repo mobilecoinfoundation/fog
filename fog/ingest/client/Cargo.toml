@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 # third party
+binascii = "0.1"
 displaydoc = { version = "0.2", default-features = false }
 grpcio = "0.6.0"
 hex = "0.4"

@@ -17,37 +17,14 @@ use mc_crypto_keys::CompressedRistrettoPublic;
 
 pub use fog_types::{common::BlockRange, ETxOutRecord};
 pub use mc_transaction_core::Block;
-pub use types::{FogUserEvent, IngestInvocationId, IngestableRange, ReportData};
+pub use types::{
+    AddBlockDataStatus, FogUserEvent, IngestInvocationId, IngestableRange, IngressPublicKeyRecord,
+    IngressPublicKeyStatus, ReportData,
+};
 
 /// A generic error type for recovery db operations
 pub trait RecoveryDbError: Debug + Display + Send + Sync {}
 impl<T> RecoveryDbError for T where T: Debug + Display + Send + Sync {}
-
-/// Status in the database connected to this ingress public key
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct IngressPublicKeyStatus {
-    /// The first block that fog promises to scan with this key after publishing
-    /// it. This should be the latest block that existed before we published
-    /// it (or, a block close to but before that)
-    pub start_block: u64,
-    /// The largest pubkey expiry value that we have ever published for this
-    /// key. If less than start_block, it means we have never published this
-    /// key.
-    pub pubkey_expiry: u64,
-    /// Whether this key is retiring / retired.
-    /// When a key is retired, we stop publishing reports about it.
-    pub retired: bool,
-}
-
-/// Information returned after attempting to add block data to the database.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct AddBlockDataStatus {
-    /// Indicates that the block we tried to add has already been scanned using
-    /// this ingress key, and didn't need to be scanned again.
-    ///
-    /// If this value is true, then no data was added to the database.
-    pub block_already_scanned_with_this_key: bool,
-}
 
 /// The recovery database interface.
 pub trait RecoveryDb {
@@ -100,8 +77,16 @@ pub trait RecoveryDb {
         key: &CompressedRistrettoPublic,
     ) -> Result<Option<u64>, Self::Error>;
 
-    /// Adds a new ingest invocation to the database, optionally decommissioning
-    /// an older one.
+    /// Get all ingress key records in the database.
+    ///
+    /// The records will be filtered so that records whose start block is less than the given
+    /// number won't be returned.
+    fn get_ingress_key_records(
+        &self,
+        start_block_at_least: u64,
+    ) -> Result<Vec<IngressPublicKeyRecord>, Self::Error>;
+
+    /// Adds a new ingest invocation to the database, optionally decommissioning an older one.
     ///
     /// This should be done when the ingest enclave is processing block data,
     /// and the ORAM overflows and the KexRngPubkey is rotated by the enclave.
@@ -160,25 +145,33 @@ pub trait RecoveryDb {
         txs: &[ETxOutRecord],
     ) -> Result<AddBlockDataStatus, Self::Error>;
 
-    /// Report that a half-open range of blocks has been missed irrecoverably.
+    /// Report that an ingress key has been lost irrecoverably.
     ///
-    /// Clients that hit the view node will learn about the range. Then they
-    /// have to download missed blocks from the fog ledger server, and then
-    /// view-key scan them to recover their transactions.
+    /// This occurs if all the enclaves that have the key are lost.
+    /// If we have not scanned all the blocks up to pubkey_expiry for this key,
+    /// then the remaining blocks are "missed blocks", and clients will have to download
+    /// these blocks and view-key scan them.
     ///
-    /// If blocks are missed but this call is never made, then clients will
-    /// never be able to compute an accurate balance after `start`.
-    /// highest_processed_block_count will always be computed as less than
-    /// any missed block (gap in the data), until a range covering that gap is
-    /// reported permanently missed.
-    /// This means that the database does the right thing to fulfill the client
-    /// contract automatically in the face of missed blocks, but actively
-    /// reporting missed block range is required to allow progress by the
-    /// client.
+    /// When this call is made,
+    /// * the key is marked as lost in the database,
+    /// * the half-open range [last-scanned + 1, pubkey_expiry) is registered as a missed block range,
+    ///   if that range is not empty.
+    ///
+    /// When all the enclaves that have the key are lost, but the key is not reported lost,
+    /// the view server will be blocked from increasing "highest_processed_block_count" value,
+    /// because it is still expecting more data to be produced against this key.
+    /// From the client's point of view, it is as if fog stopped making progress relative to the ledger,
+    /// but the balance check process still returns a balance that was correct at that point in time.
+    ///
+    /// Once a key is published to the users, producing more blocks scanned with it, or reporting the key lost,
+    /// is the only way to allow the view server to make progress, so that clients do not compute incorrect balances.
     ///
     /// Arguments:
-    /// * block_range: The missing block range.
-    fn report_missed_block_range(&self, block_range: &BlockRange) -> Result<(), Self::Error>;
+    /// * ingress_key: The ingress key that is marked lost.
+    fn report_lost_ingress_key(
+        &self,
+        lost_ingress_key: CompressedRistrettoPublic,
+    ) -> Result<(), Self::Error>;
 
     /// Gets all the known missed block ranges.
     ///
@@ -228,16 +221,36 @@ pub trait RecoveryDb {
     /// block index.
     ///
     /// Arguments:
-    /// * ingest_invocation_id: The ingest invocation we need ETxOutRecords from
+    /// * ingress_key: The ingress_key we need ETxOutRecords from
     /// * block_index: The block we need ETxOutRecords from
     ///
     /// Returns:
-    /// * The ETxOutRecord's from when this block was added, or, an error
-    fn get_tx_outs_by_block(
+    /// * Ok(None) if this block has not been scanned with this key.
+    ///   Ok(Some(data)) with the ETxOutRecord's from when this block was added,
+    ///   An error if there is a database error
+    fn get_tx_outs_by_block_and_key(
         &self,
-        ingest_invocation_id: &IngestInvocationId,
+        ingress_key: CompressedRistrettoPublic,
         block_index: u64,
-    ) -> Result<Vec<ETxOutRecord>, Self::Error>;
+    ) -> Result<Option<Vec<ETxOutRecord>>, Self::Error>;
+
+    /// Get the invocation id that published this block with this key.
+    ///
+    /// Note: This is only used by TESTS right now, but it is important to be able to test this
+    ///
+    /// Arguments:
+    /// * ingress_key: The ingress key we are interested in
+    /// * block_index: the blcok we are interested in
+    ///
+    /// Returns:
+    /// * Ok(None) if this block has not been scanned with this key
+    ///   Ok(Some(iid)) if this block has been scanned with this key, and iid is the invocation id that did it
+    ///   An error if there was a database error
+    fn get_invocation_id_by_block_and_key(
+        &self,
+        ingress_key: CompressedRistrettoPublic,
+        block_index: u64,
+    ) -> Result<Option<IngestInvocationId>, Self::Error>;
 
     /// Get the cumulative txo count for a given block number.
     ///

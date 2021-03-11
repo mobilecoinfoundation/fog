@@ -9,7 +9,7 @@
 // its way into the client.
 
 use fog_kex_rng::KexRngPubkey;
-use fog_recovery_db_iface::RecoveryDb;
+use fog_recovery_db_iface::{RecoveryDb, ReportData, ReportDb};
 use fog_sql_recovery_db::{test_utils::SqlRecoveryDbTestContext, SqlRecoveryDb};
 use fog_test_infra::{db_tests::random_kex_rng_pubkey, get_enclave_path};
 use fog_types::{
@@ -187,8 +187,37 @@ fn test_view_integration(view_omap_capacity: u64, logger: Logger) {
     )
     .unwrap();
 
-    db.report_missed_block_range(&BlockRange::new(3, 4))
-        .unwrap();
+    // Block 3 is missing (on a different key)
+    let ingress_key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+    db.new_ingress_key(&ingress_key2, 3).unwrap();
+    db.set_report(
+        &ingress_key2,
+        "",
+        &ReportData {
+            pubkey_expiry: 4,
+            ingest_invocation_id: None,
+            report: Default::default(),
+        },
+    )
+    .unwrap();
+    db.report_lost_ingress_key(ingress_key2).unwrap();
+
+    // Block 3 has no data for the original key
+    // (view server must support this, ingest skips some TxOuts if the decrypted fog hint is junk)
+    db.add_block_data(
+        &invoc_id2,
+        &Block::new(
+            BLOCK_VERSION,
+            &BlockID::default(),
+            3,
+            12,
+            &Default::default(),
+            &Default::default(),
+        ),
+        0,
+        &[],
+    )
+    .unwrap();
 
     db.add_block_data(
         &invoc_id2,
@@ -461,7 +490,7 @@ fn test_overlapping_ingest_ranges(logger: Logger) {
     db.new_ingress_key(&ingress_key1, 0).unwrap();
 
     let ingress_key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
-    db.new_ingress_key(&ingress_key2, 0).unwrap();
+    db.new_ingress_key(&ingress_key2, 10).unwrap();
 
     // invoc_id1 starts at block 0
     let invoc_id1 = db
@@ -612,7 +641,7 @@ fn test_overlapping_ingest_ranges(logger: Logger) {
         }
 
         if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
         }
         allowed_tries -= 1;
         std::thread::sleep(Duration::from_millis(1000));
@@ -631,11 +660,11 @@ fn test_start_with_missing_range(logger: Logger) {
     let db = db_context.get_db_instance();
 
     let ingress_key = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
-    db.new_ingress_key(&ingress_key, 0).unwrap();
+    db.new_ingress_key(&ingress_key, 5).unwrap();
 
-    // invoc_id1 starts at block 10
+    // invoc_id1 starts at block 0, but the initial blocks reported are 10-15
     let invoc_id1 = db
-        .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 10)
+        .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 5)
         .unwrap();
 
     // Add 5 blocks to invoc_id1.
@@ -654,22 +683,23 @@ fn test_start_with_missing_range(logger: Logger) {
     let mut allowed_tries = 60usize;
     loop {
         let result = view_client.request(0, 0, Default::default()).unwrap();
-        if result.highest_processed_block_count == 0 && result.last_known_block_count == 15 {
+        if result.highest_processed_block_count == 0 && result.last_known_block_count == 0 {
             break;
         }
 
         if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
         }
         allowed_tries -= 1;
         std::thread::sleep(Duration::from_millis(1000));
     }
 
-    assert_e_tx_out_records_sanity(&mut view_client, &expected_records, &logger);
-
-    // Adding a missing block range should advance highest processed block count.
-    db.report_missed_block_range(&BlockRange::new(0, 10))
-        .unwrap();
+    // Adding the first 5 blocks that were the gap
+    for i in 5..10 {
+        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
+        db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
+        expected_records.extend(records);
+    }
 
     let mut allowed_tries = 60usize;
     loop {
@@ -679,12 +709,14 @@ fn test_start_with_missing_range(logger: Logger) {
         }
 
         if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
         }
         allowed_tries -= 1;
         std::thread::sleep(Duration::from_millis(1000));
     }
     assert_eq!(server.highest_processed_block_count(), 15);
+
+    assert_e_tx_out_records_sanity(&mut view_client, &expected_records, &logger);
 }
 
 /// Test that view server behaves correctly when there is a missing range
@@ -697,9 +729,19 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
 
     let ingress_key1 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
     db.new_ingress_key(&ingress_key1, 0).unwrap();
+    db.set_report(
+        &ingress_key1,
+        "",
+        &ReportData {
+            pubkey_expiry: 10,
+            ingest_invocation_id: None,
+            report: Default::default(),
+        },
+    )
+    .unwrap();
 
     let ingress_key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
-    db.new_ingress_key(&ingress_key2, 5).unwrap();
+    db.new_ingress_key(&ingress_key2, 10).unwrap();
 
     // invoc_id1 starts at block 0
     let invoc_id1 = db
@@ -714,9 +756,32 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         expected_records.extend(records);
     }
 
-    // Blocks 5-10 are missing.
-    db.report_missed_block_range(&BlockRange::new(5, 10))
-        .unwrap();
+    // At this point we should be at highest processed block 5, and highest known 5, because ingress key 2
+    // doesn't start until 10, and doesn't have any blocks associated to it yet.
+    let mut allowed_tries = 60usize;
+    loop {
+        let result = view_client.request(0, 0, Default::default()).unwrap();
+        if result.highest_processed_block_count == 5 && result.last_known_block_count == 5 {
+            break;
+        }
+
+        if allowed_tries == 0 {
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
+        }
+        allowed_tries -= 1;
+        std::thread::sleep(Duration::from_millis(1000));
+    }
+    assert_eq!(server.highest_processed_block_count(), 5);
+
+    // Ingress key 1 is lost
+    db.report_lost_ingress_key(ingress_key1).unwrap();
+    assert_eq!(
+        db.get_missed_block_ranges().unwrap(),
+        vec![BlockRange {
+            start_block: 5,
+            end_block: 10
+        }]
+    );
 
     // invoc_id2 starts at block 10
     let invoc_id2 = db
@@ -730,43 +795,22 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         expected_records.extend(records);
     }
 
-    // At this point invoc_id1 is still active, so we should still be at highest
-    // processed block 10 but the last known block should be 15.
+    // At this point invoc_id1 is marked lost, so we should be at highest processed block 10
+    // but the last known block should be 15.
     let mut allowed_tries = 60usize;
     loop {
         let result = view_client.request(0, 0, Default::default()).unwrap();
-        if result.highest_processed_block_count == 10 && result.last_known_block_count == 15 {
+        if result.highest_processed_block_count == 15 && result.last_known_block_count == 15 {
             break;
         }
 
         if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
         }
         allowed_tries -= 1;
         std::thread::sleep(Duration::from_millis(1000));
     }
-    assert_eq!(server.highest_processed_block_count(), 10);
-
-    // Adding block 10 to invoc_id1 should push us forward by one block (since
-    // invoc_id2 has processed that block as well).
-    let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 10, 5); // 5 outputs per block
-    db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
-    expected_records.extend(records);
-
-    let mut allowed_tries = 60usize;
-    loop {
-        let result = view_client.request(0, 0, Default::default()).unwrap();
-        if result.highest_processed_block_count == 11 && result.last_known_block_count == 15 {
-            break;
-        }
-
-        if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
-        }
-        allowed_tries -= 1;
-        std::thread::sleep(Duration::from_millis(1000));
-    }
-    assert_eq!(server.highest_processed_block_count(), 11);
+    assert_eq!(server.highest_processed_block_count(), 15);
 
     // Decommissioning invoc_id1 should allow us to advance to the last block
     // invoc_id2 has processed.
@@ -780,7 +824,7 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         }
 
         if allowed_tries == 0 {
-            panic!("Server did not catch up to database!");
+            panic!("Server did not catch up to database! highest_processed_block_count = {}, last_known_block_count = {}", result.highest_processed_block_count, result.last_known_block_count);
         }
         allowed_tries -= 1;
         std::thread::sleep(Duration::from_millis(1000));

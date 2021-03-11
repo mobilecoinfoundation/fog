@@ -502,7 +502,7 @@ class FogConformanceTest:
         self.fog_report.start()
 
         print("Giving ingest some time for RPC to wake up...")
-        time.sleep(10 if self.release else 30)
+        time.sleep(10 if self.release else 60)
 
         # Reduce the ingest pubkey expiry window to 1. This makes it easier for us to test retirement
         # by reducing the amount of blocks we need to generate after requesting the server to retire.
@@ -512,17 +512,6 @@ class FogConformanceTest:
         # Tell the ingest server to activate
         status = self.fog_ingest.activate()
         assert status["mode"] == "Active" and status["pubkey_expiry_window"] == 1, status
-
-        # Report a missed block range from 0 to 1. This is needed after FOG-337 and should not be needed after FOG-393
-        cmd = ' '.join([
-            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
-            f'--uri insecure-fog-ingest://localhost:{BASE_INGEST_CLIENT_PORT}',
-            f'report-missed-block-range',
-            f'--start 0',
-            f'--end 1',
-        ])
-        print(cmd)
-        result = subprocess.check_output(cmd, shell=True)
 
         #######################################################################
         # Begin a series of tests testing incremental balance changes with the
@@ -547,12 +536,15 @@ class FogConformanceTest:
 
         # Check all accounts
         print("Beginning balance checks...")
+        # Note: We allow that 0 or 1 is a reasonable "highest processed block count",
+        # because the origin block will not be scanned, but at this point, no blocks have
+        # been made available to fog at all.
         self.multi_balance_checker.balance_check("from1", [
-            [{0: 0, 1: 0}, [1]],
-            [{0: 0, 1: 0}, [1]],
-            [{0: 0, 1: 0}, [1]],
-            [{0: 0, 1: 0}, [1]],
-            [{0: 0, 1: 0}, [1]],
+            [{0: 0, 1: 0}, [0, 1]],
+            [{0: 0, 1: 0}, [0, 1]],
+            [{0: 0, 1: 0}, [0, 1]],
+            [{0: 0, 1: 0}, [0, 1]],
+            [{0: 0, 1: 0}, [0, 1]],
         ])
 
         # Add block 1 (everywhere)
@@ -570,11 +562,11 @@ class FogConformanceTest:
 
         # Check all accounts
         self.multi_balance_checker.balance_check("from2", [
-            [{1: 0, 2: 19}, [2]],
-            [{1: 0, 2: 9}, [2]],
-            [{1: 0, 2: 0}, [2]],
-            [{1: 0, 2: 17}, [2]],
-            [{1: 0, 2: 27}, [2]],
+            [{0: 0, 1: 0, 2: 19}, [2]],
+            [{0: 0, 1: 0, 2: 9}, [2]],
+            [{0: 0, 1: 0, 2: 0}, [2]],
+            [{0: 0, 1: 0, 2: 17}, [2]],
+            [{0: 0, 1: 0, 2: 27}, [2]],
         ])
 
         # Add block 2 (everywhere)

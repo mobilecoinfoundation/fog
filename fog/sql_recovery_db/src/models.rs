@@ -10,6 +10,7 @@ pub struct IngressKey {
     pub start_block: i64,
     pub pubkey_expiry: i64,
     pub retired: bool,
+    pub lost: bool,
 }
 
 #[derive(Debug, Insertable)]
@@ -19,6 +20,7 @@ pub struct NewIngressKey {
     pub start_block: i64,
     pub pubkey_expiry: i64,
     pub retired: bool,
+    pub lost: bool,
 }
 
 #[derive(Debug, Queryable)]

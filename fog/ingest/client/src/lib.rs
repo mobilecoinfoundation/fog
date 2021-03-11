@@ -6,7 +6,7 @@ use error::Error;
 
 use fog_api::{
     empty::Empty,
-    ingest::{ReportMissedBlockRangeRequest, SetPubkeyExpiryWindowRequest},
+    ingest::{ReportLostIngressKeyRequest, SetPubkeyExpiryWindowRequest},
     ingest_common::{IngestSummary, SetPeersRequest},
     ingest_grpc::AccountIngestApiClient,
 };
@@ -128,22 +128,16 @@ impl FogIngestGrpcClient {
         })
     }
 
-    pub fn report_missed_block_range(&self, start_index: u64, end_index: u64) -> ClientResult<()> {
-        log::trace!(
-            self.logger,
-            "report_missed_block_range({}, {})",
-            start_index,
-            end_index
-        );
+    pub fn report_lost_ingress_key(&self, key: CompressedRistrettoPublic) -> ClientResult<()> {
+        log::trace!(self.logger, "report_lost_ingress_key({})", key,);
 
-        let mut req = ReportMissedBlockRangeRequest::new();
-        req.set_start_index(start_index);
-        req.set_end_index(end_index);
+        let mut req = ReportLostIngressKeyRequest::new();
+        req.set_key((&key).into());
 
         let _ = retry(self.get_retries(), || -> Result<_, Error> {
             Ok(self
                 .ingest_api_client
-                .report_missed_block_range_opt(&req, self.creds.call_option()?)?)
+                .report_lost_ingress_key_opt(&req, self.creds.call_option()?)?)
         })?;
 
         Ok(())

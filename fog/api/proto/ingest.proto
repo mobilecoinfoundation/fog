@@ -2,6 +2,7 @@
 
 syntax = "proto3";
 import "google/protobuf/empty.proto";
+import "external.proto";
 import "fog_common.proto";
 import "ingest_common.proto";
 
@@ -55,11 +56,15 @@ service AccountIngestAPI {
     ///    again and continues life as usual, and then continue debugging the new cluster and try again later.
     rpc Unretire (google.protobuf.Empty) returns (ingest_common.IngestSummary) {}
 
-    /// Report a range of missed blocks.
-    rpc ReportMissedBlockRange(ReportMissedBlockRangeRequest) returns (google.protobuf.Empty) {}
+    /// Report a lost ingress key
+    rpc ReportLostIngressKey(ReportLostIngressKeyRequest) returns (google.protobuf.Empty) {}
 
     /// Get list of missed block ranges.
     rpc GetMissedBlockRanges(google.protobuf.Empty) returns (GetMissedBlockRangesResponse) {}
+}
+
+message ReportLostIngressKeyRequest {
+    external.CompressedRistretto key = 1;
 }
 
 message ReportMissedBlockRangeRequest {

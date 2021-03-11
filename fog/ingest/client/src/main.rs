@@ -9,6 +9,7 @@ use fog_ingest_client::{
 };
 use fog_uri::FogIngestUri;
 use mc_common::logger::{create_root_logger, log, Logger};
+use mc_crypto_keys::CompressedRistrettoPublic;
 use serde_json::json;
 use std::{str::FromStr, sync::Arc};
 use structopt::StructOpt;
@@ -43,8 +44,8 @@ fn main() -> ClientResult<()> {
         IngestConfigCommand::Retire => retire(&logger, &ingest_client),
         IngestConfigCommand::Unretire => unretire(&logger, &ingest_client),
 
-        IngestConfigCommand::ReportMissedBlockRange { start, end } => {
-            report_missed_block_range(&logger, &ingest_client, start, end)
+        IngestConfigCommand::ReportLostIngressKey { key } => {
+            report_lost_ingress_key(&logger, &ingest_client, key)
         }
 
         IngestConfigCommand::GetMissedBlockRanges => {
@@ -112,21 +113,15 @@ fn unretire(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResul
     Ok(())
 }
 
-fn report_missed_block_range(
+fn report_lost_ingress_key(
     logger: &Logger,
     ingest_client: &FogIngestGrpcClient,
-    start: u64,
-    end: u64,
+    key: CompressedRistrettoPublic,
 ) -> ClientResult<()> {
     ingest_client
-        .report_missed_block_range(start, end)
-        .expect("Failed reporting missed block range");
-    log::info!(
-        logger,
-        "Missed block range [{}-{}) reported successfully!",
-        start,
-        end
-    );
+        .report_lost_ingress_key(key)
+        .expect("Failed reporting lost ingress key");
+    log::info!(logger, "Ingress key {:?} reported lost successfully", key);
     Ok(())
 }
 

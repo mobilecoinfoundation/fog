@@ -959,15 +959,12 @@ where
         Ok(())
     }
 
-    /// Record missed blocks range into the database
-    ///
-    /// This is a half-open range [start_index, end_index), see also the
-    /// recovery_db documentation.
-    pub fn report_missed_block_range(
+    /// Record a lost ingress key into the database
+    pub fn report_lost_ingress_key(
         &self,
-        block_range: &BlockRange,
+        lost_ingress_key: CompressedRistrettoPublic,
     ) -> Result<(), <DB as RecoveryDb>::Error> {
-        self.recovery_db.report_missed_block_range(block_range)
+        self.recovery_db.report_lost_ingress_key(lost_ingress_key)
     }
 
     /// Gets all the known missed block ranges.

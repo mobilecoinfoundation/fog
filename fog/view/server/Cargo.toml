@@ -29,6 +29,7 @@ mc-attest-api = { path = "../../../mobilecoin/attest/api" }
 mc-attest-core = { path = "../../../mobilecoin/attest/core" }
 mc-attest-net = { path = "../../../mobilecoin/attest/net" }
 mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
+mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
 mc-sgx-report-cache-untrusted = { path = "../../../mobilecoin/sgx/report-cache/untrusted" }
 mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
 mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
@@ -48,6 +49,7 @@ fog-view-enclave = { path = "../enclave" }
 fog-view-enclave-api = { path = "../enclave/api" }
 
 [dev-dependencies]
+pem = "0.8"
 rand = "0.7"
 rand_core = "0.5"
 tempdir = "0.3"
@@ -58,6 +60,7 @@ fog-view-protocol = { path = "../protocol" }
 mc-attest-core = { path = "../../../mobilecoin/attest/core" }
 mc-common = { path = "../../../mobilecoin/common", features = ["loggers"] }
 mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
+mc-crypto-x509-test-vectors = { path = "../../../mobilecoin/crypto/x509/test-vectors" }
 mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
 mc-util-encodings = { path = "../../../mobilecoin/util/encodings" }
 mc-util-serial = { path = "../../../mobilecoin/util/serial" }

@@ -14,13 +14,14 @@ use fog_uri::IngestPeerUri;
 use grpcio::{RpcContext, RpcStatus, UnarySink};
 use mc_attest_net::RaClient;
 use mc_common::logger::Logger;
+use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_ledger_db::{Ledger, LedgerDB};
 use mc_util_grpc::{
     rpc_database_err, rpc_invalid_arg_error, rpc_logger, rpc_precondition_error, send_result,
 };
 use mc_util_metrics::SVC_COUNTERS;
 use protobuf::RepeatedField;
-use std::{str::FromStr, sync::Arc};
+use std::{convert::TryInto, str::FromStr, sync::Arc};
 
 /// Implements the ingest grpc api
 #[derive(Clone)]
@@ -132,24 +133,19 @@ where
             .map_err(|err| rpc_database_err(err, logger))?)
     }
 
-    /// Report a missed block range
-    pub fn report_missed_block_range_impl(
+    /// Report a lost ingress key
+    pub fn report_lost_ingress_key_impl(
         &mut self,
-        request: ReportMissedBlockRangeRequest,
+        request: ReportLostIngressKeyRequest,
         logger: &Logger,
     ) -> Result<Empty, RpcStatus> {
-        let block_range =
-            fog_types::common::BlockRange::new(request.start_index, request.end_index);
-        if !block_range.is_valid() {
-            return Err(rpc_invalid_arg_error(
-                "block_range",
-                "invalid range",
-                logger,
-            ));
-        }
+        let key: CompressedRistrettoPublic = request
+            .get_key()
+            .try_into()
+            .map_err(|err| rpc_invalid_arg_error("lost_ingress_key", err, logger))?;
 
         self.controller
-            .report_missed_block_range(&block_range)
+            .report_lost_ingress_key(key)
             .map_err(|err| rpc_database_err(err, logger))?;
 
         Ok(Empty::new())
@@ -253,10 +249,10 @@ where
         })
     }
 
-    fn report_missed_block_range(
+    fn report_lost_ingress_key(
         &mut self,
         ctx: RpcContext,
-        request: ReportMissedBlockRangeRequest,
+        request: ReportLostIngressKeyRequest,
         sink: UnarySink<Empty>,
     ) {
         let _timer = SVC_COUNTERS.req(&ctx);
@@ -264,7 +260,7 @@ where
             send_result(
                 ctx,
                 sink,
-                self.report_missed_block_range_impl(request, &logger),
+                self.report_lost_ingress_key_impl(request, &logger),
                 &logger,
             )
         })

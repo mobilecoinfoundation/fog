@@ -491,6 +491,11 @@ where
                         self.new_egress_key(&mut state).expect("Failure to rotate egress key after we can't publish data isn't recoverable, the RNGs would have gaps that the clients can't deal with");
                     } else {
                         // We won the race to publish this block
+                        log::info!(
+                            self.logger,
+                            "Succeeded writing block {} to the database",
+                            block.index
+                        );
                         log::trace!(self.logger, "increment_next_block_index");
                         state.increment_next_block_index();
                     }

@@ -59,6 +59,21 @@ For a quick start, you can build in the same docker image that we use for CI by 
 cargo build
 ```
 
+## Test Instructions
+
+To run the unittest tests locally, you need to start a local postgres instance, then run the tests.  You can do this at the mob prompt:
+
+```
+# From the root of the cloned repository
+./mob prompt
+
+# Start postgres
+service postgresql start
+
+# Run the tests
+cargo test
+```
+
 ## Overview
 
 MobileCoin Fog is a suite of microservices designed to enable MobileCoin payments on mobile devices.

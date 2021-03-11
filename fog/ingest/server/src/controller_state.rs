@@ -277,8 +277,10 @@ impl IngestControllerState {
 pub enum StateChangeError {
     /// Cannot set next_block_index unless server is idling: {0}
     CannotSetNextBlockIndex(IngestMode),
-    /// Cannot reduce pubkey_expiry_window unless server is idling: {0}, old_val
-    /// = {1}, proposed_val = {2}
+    /**
+     * Cannot reduce pubkey_expiry_window unless server is idling: {0},
+     * old_val = {1}, proposed_val = {2}
+     */
     CannotReducePubkeyExpiry(IngestMode, u64, u64),
 }
 

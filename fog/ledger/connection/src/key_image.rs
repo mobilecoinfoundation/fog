@@ -89,8 +89,8 @@ impl KeyImageResultExtension for fog_types::ledger::KeyImageResult {
 #[derive(Display, Debug, Eq, PartialEq)]
 pub enum KeyImageQueryError {
     /// Nonspecific server error handling the request
-    /// FIXME: The server should at least seperate "invalid key image", "rate
-    /// limited", "database", from other error types
+    // FIXME: The server should at least seperate "invalid key image", "rate
+    // limited", "database", from other error types
     KeyImageError,
     /// Unknown status code: {0}
     UnknownStatus(u32),

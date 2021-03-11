@@ -142,8 +142,10 @@ pub enum TxOutRecoveryError {
     InvalidKey(mc_crypto_keys::KeyError),
     /// Fog returned an error when searching for tx: {0}, search_key = {1:?}
     TxOutSearchFailure(TxOutSearchResultCode, Vec<u8>),
-    /// Fog returned an unexpected TxOutSearchResultCode value: {0}, search_key
-    /// = {1:?}
+    /**
+     * Fog returned an unexpected TxOutSearchResultCode value: {0},
+     * search_key  = {1:?}
+     */
     UnexpectedTxOutSearchResultCode(u32, Vec<u8>),
     /// Search key was not found amongst our rngs: {0:?}
     SearchKeyNotFound(Vec<u8>),

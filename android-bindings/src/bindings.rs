@@ -1740,26 +1740,15 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
     env: JNIEnv,
     _obj: JObject,
     prefix: JString,
-) -> jobjectArray {
+) -> jstring {
     jni_ffi_call_or(
         || Ok(JObject::null().into_inner()),
         &env,
         |env| {
             let prefix: String = env.get_string(prefix)?.into();
-
             let words = bip39::Language::English.words_by_prefix(&prefix);
-
-            let array: jobjectArray = env.new_object_array(
-                words.len() as i32,
-                env.find_class("java/lang/String")?,
-                *env.new_string("")?,
-            )?;
-
-            for (i, word) in words.iter().enumerate() {
-                env.set_object_array_element(array, i as i32, env.new_string(word)?)?;
-            }
-
-            Ok(array)
+            let joined_words = words.join(",");
+            Ok(env.new_string(joined_words)?.into_inner())
         },
     )
 }

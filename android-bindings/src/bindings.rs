@@ -1678,8 +1678,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Report_finalize_1jni(env: JNIEn
  *****************************************************************************/
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_entropy_from_mnemonic(
-    env: &JNIEnv,
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1from_1mnemonic(
+    env: JNIEnv,
     _obj: JObject,
     mnemonic: JString,
 ) -> jbyteArray {
@@ -1698,8 +1698,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_entropy_from_mnemonic(
     )
 }
 
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_entropy_to_mnemonic(
-    env: &JNIEnv,
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1to_1mnemonic(
+    env: JNIEnv,
     _obj: JObject,
     entropy: jbyteArray,
 ) -> jstring {
@@ -1715,8 +1716,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_entropy_to_mnemonic(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_get_bip39_seed(
-    env: &JNIEnv,
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_get_1bip39_1seed(
+    env: JNIEnv,
     _obj: JObject,
     mnemonic: JString,
 ) -> jbyteArray {
@@ -1735,8 +1736,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_get_bip39_seed(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_words_by_prefix(
-    env: &JNIEnv,
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
+    env: JNIEnv,
     _obj: JObject,
     prefix: JString,
 ) -> jobjectArray {
@@ -1768,8 +1769,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonic_words_by_prefix(
  *****************************************************************************/
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_derive_ed25519_private_key(
-    env: &JNIEnv,
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_derive_1ed25519_1private_1key(
+    env: JNIEnv,
     _obj: JObject,
     seed: jbyteArray,
     path: jintArray,

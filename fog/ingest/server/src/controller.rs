@@ -493,8 +493,10 @@ where
                         // We won the race to publish this block
                         log::info!(
                             self.logger,
-                            "Succeeded writing block {} to the database",
-                            block.index
+                            "Succeeded writing block {} to the database, invocation id {:?} ingress key {:?}",
+                            block.index,
+                            iid,
+                            ingress_pubkey
                         );
                         log::trace!(self.logger, "increment_next_block_index");
                         state.increment_next_block_index();

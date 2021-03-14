@@ -2,7 +2,7 @@ cargo-features = ["resolver"]
 
 [package]
 name = "view_enclave_trusted"
-version = "0.13.0"
+version = "1.0.1-pre1"
 authors = ["MobileCoin"]
 edition = "2018"
 description = "The MobileCoin Fog user-facing server's enclave entry point."

@@ -2,7 +2,7 @@ cargo-features = ["resolver"]
 
 [package]
 name = "mc-android-bindings"
-version = "0.13.0"
+version = "1.0.1-pre1"
 authors = ["MobileCoin"]
 edition = "2018"
 resolver = "2"

@@ -1,6 +1,6 @@
 [package]
 name = "fog-kex-rng"
-version = "0.13.0"
+version = "1.0.1-pre1"
 authors = ["Mobilecoin"]
 edition = "2018"
 readme = "README.md"

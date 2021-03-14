@@ -383,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -397,10 +397,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-api"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-types 0.13.0",
+ "fog-types 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-edl"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
@@ -423,10 +423,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-impl"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
- "fog-ledger-enclave-api 0.13.0",
- "fog-types 0.13.0",
+ "fog-ledger-enclave-api 1.0.1-pre1",
+ "fog-types 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -438,11 +438,11 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
+ "fog-kex-rng 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
  "mc-watcher-api 1.0.1-pre1",
@@ -582,12 +582,12 @@ dependencies = [
 
 [[package]]
 name = "ledger_enclave_trusted"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ledger-enclave-api 0.13.0",
- "fog-ledger-enclave-edl 0.13.0",
- "fog-ledger-enclave-impl 0.13.0",
+ "fog-ledger-enclave-api 1.0.1-pre1",
+ "fog-ledger-enclave-edl 1.0.1-pre1",
+ "fog-ledger-enclave-impl 1.0.1-pre1",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-enclave-boundary 1.0.1-pre1",

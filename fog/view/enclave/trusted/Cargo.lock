@@ -430,7 +430,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -467,11 +467,11 @@ dependencies = [
 
 [[package]]
 name = "fog-recovery-db-iface"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
- "fog-types 0.13.0",
+ "fog-kex-rng 1.0.1-pre1",
+ "fog-types 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -481,11 +481,11 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
+ "fog-kex-rng 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
  "mc-watcher-api 1.0.1-pre1",
@@ -495,11 +495,11 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-api"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
+ "fog-recovery-db-iface 1.0.1-pre1",
+ "fog-types 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -513,7 +513,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-edl"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
@@ -521,12 +521,12 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-impl"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
- "fog-view-enclave-api 0.13.0",
+ "fog-recovery-db-iface 1.0.1-pre1",
+ "fog-types 1.0.1-pre1",
+ "fog-view-enclave-api 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1689,16 +1689,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "view_enclave_trusted"
-version = "0.13.0"
+version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-ocall-oram-storage-edl 0.5.0",
  "fog-ocall-oram-storage-trusted 0.5.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
- "fog-view-enclave-api 0.13.0",
- "fog-view-enclave-edl 0.13.0",
- "fog-view-enclave-impl 0.13.0",
+ "fog-recovery-db-iface 1.0.1-pre1",
+ "fog-types 1.0.1-pre1",
+ "fog-view-enclave-api 1.0.1-pre1",
+ "fog-view-enclave-edl 1.0.1-pre1",
+ "fog-view-enclave-impl 1.0.1-pre1",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-trusted 1.0.1-pre1",

@@ -88,7 +88,7 @@ pub extern "C" fn mc_bip39_get_seed(
 ///
 /// * `prefix` - must be a nul-terminated C string containing valid UTF-8.
 #[no_mangle]
-pub extern "C" fn mc_bip32_words_by_prefix(prefix: FfiStr) -> FfiOptOwnedStr {
+pub extern "C" fn mc_bip39_words_by_prefix(prefix: FfiStr) -> FfiOptOwnedStr {
     ffi_boundary(|| {
         let prefix = String::try_from_ffi(prefix).expect("prefix is invalid");
         let words = Language::English.words_by_prefix(&prefix);

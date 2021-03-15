@@ -54,7 +54,7 @@ MC_ATTRIBUTE_NONNULL(1, 2, 3);
 /// # Preconditions
 ///
 /// * `prefix` - must be a nul-terminated C string containing valid UTF-8.
-char* MC_NULLABLE mc_bip32_words_by_prefix(
+char* MC_NULLABLE mc_bip39_words_by_prefix(
   const char* MC_NONNULL prefix
 )
 MC_ATTRIBUTE_NONNULL(1);

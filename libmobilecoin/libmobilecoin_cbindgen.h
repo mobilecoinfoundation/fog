@@ -384,7 +384,7 @@ bool mc_bip39_get_seed(FfiStr mnemonic,
  *
  * * `prefix` - must be a nul-terminated C string containing valid UTF-8.
  */
-FfiOptOwnedStr mc_bip32_words_by_prefix(FfiStr prefix);
+FfiOptOwnedStr mc_bip39_words_by_prefix(FfiStr prefix);
 
 bool mc_ristretto_private_validate(FfiRefPtr<McBuffer> ristretto_private,
                                    FfiMutPtr<bool> out_valid);

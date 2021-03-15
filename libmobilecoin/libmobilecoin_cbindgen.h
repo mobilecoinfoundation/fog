@@ -346,20 +346,20 @@ ssize_t mc_attest_ake_decrypt(FfiMutPtr<McAttestAke> attest_ake,
  * # Preconditions
  *
  * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
- * * `out_entropy` - length must be >= 32.
+ * * `out_entropy` - must be null or else length must be >= `entropy.len`.
  *
  * # Errors
  *
  * * `LibMcError::InvalidInput`
  */
-bool mc_bip39_entropy_from_mnemonic(FfiStr mnemonic,
-                                    FfiMutPtr<McMutableBuffer> out_entropy,
-                                    FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+ssize_t mc_bip39_entropy_from_mnemonic(FfiStr mnemonic,
+                                       FfiOptMutPtr<McMutableBuffer> out_entropy,
+                                       FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
 
 /**
  * # Preconditions
  *
- * * `entropy` - length must be 32.
+ * * `entropy` - length must be a multiple of 4 and between 16 and 32, inclusive.
  */
 FfiOptOwnedStr mc_bip39_entropy_to_mnemonic(FfiRefPtr<McBuffer> entropy);
 

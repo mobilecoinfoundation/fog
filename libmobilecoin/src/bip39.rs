@@ -2,12 +2,13 @@
 
 use crate::{common::*, LibMcError};
 use bip39::{Language, Mnemonic};
+use libc::ssize_t;
 use mc_util_ffi::*;
 
 /// # Preconditions
 ///
 /// * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
-/// * `out_entropy` - length must be >= 32.
+/// * `out_entropy` - must be null or else length must be >= `entropy.len`.
 ///
 /// # Errors
 ///
@@ -15,9 +16,9 @@ use mc_util_ffi::*;
 #[no_mangle]
 pub extern "C" fn mc_bip39_entropy_from_mnemonic(
     mnemonic: FfiStr,
-    out_entropy: FfiMutPtr<McMutableBuffer>,
+    out_entropy: FfiOptMutPtr<McMutableBuffer>,
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
-) -> bool {
+) -> ssize_t {
     ffi_boundary_with_error(out_error, || {
         let mnemonic = String::try_from_ffi(mnemonic).expect("mnemonic is invalid");
 
@@ -25,20 +26,22 @@ pub extern "C" fn mc_bip39_entropy_from_mnemonic(
             .map_err(|err| LibMcError::InvalidInput(format!("Invalid mnemonic: {}", err)))?;
         let entropy = mnemonic.to_entropy();
 
-        let out_entropy = out_entropy
-            .into_mut()
-            .as_slice_mut_of_len(entropy.len())
-            .expect("out_entropy length is insufficient");
+        if let Some(out_entropy) = out_entropy.into_option() {
+            let out_entropy = out_entropy
+                .into_mut()
+                .as_slice_mut_of_len(entropy.len())
+                .expect("out_entropy length is insufficient");
+            out_entropy.copy_from_slice(&entropy);
+        }
 
-        out_entropy.copy_from_slice(&entropy);
-
-        Ok(())
+        Ok(ssize_t::ffi_try_from(entropy.len())
+            .expect("entropy.len() could not be converted to ssize_t"))
     })
 }
 
 /// # Preconditions
 ///
-/// * `entropy` - length must be 32.
+/// * `entropy` - length must be a multiple of 4 and between 16 and 32, inclusive.
 #[no_mangle]
 pub extern "C" fn mc_bip39_entropy_to_mnemonic(entropy: FfiRefPtr<McBuffer>) -> FfiOptOwnedStr {
     ffi_boundary(|| {

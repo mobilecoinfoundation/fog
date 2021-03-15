@@ -14,21 +14,21 @@ extern "C" {
 /// # Preconditions
 ///
 /// * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
-/// * `out_entropy` - length must be >= 32.
+/// * `out_entropy` - must be null or else length must be >= `entropy.len`.
 ///
 /// # Errors
 ///
 /// * `LibMcError::InvalidInput`
-bool mc_bip39_entropy_from_mnemonic(
+ssize_t mc_bip39_entropy_from_mnemonic(
   const char* MC_NONNULL mnemonic,
-  McMutableBuffer* MC_NONNULL out_entropy,
+  McMutableBuffer* MC_NULLABLE out_entropy,
   McError* MC_NULLABLE * MC_NULLABLE out_error
 )
-MC_ATTRIBUTE_NONNULL(1, 2);
+MC_ATTRIBUTE_NONNULL(1);
 
 /// # Preconditions
 ///
-/// * `entropy` - length must be 32.
+/// * `entropy` - length must be a multiple of 4 and between 16 and 32, inclusive.
 char* MC_NULLABLE mc_bip39_entropy_to_mnemonic(
   const McBuffer* MC_NONNULL entropy
 )

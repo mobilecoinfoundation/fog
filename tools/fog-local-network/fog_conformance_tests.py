@@ -262,7 +262,7 @@ class FogConformanceTest:
     def fresh_balance_check(self, name, key_num, acceptable_answers, expected_eventual_block_count):
         for ebc in expected_eventual_block_count:
             assert ebc in acceptable_answers
-        print(f"Checking account {key_num}...")
+        print(f"Checking account {key_num} on {name}...")
         start_time = time.perf_counter()
         prog = BalanceCheckProgram(
             name = name,
@@ -306,7 +306,7 @@ class FogConformanceTest:
     def follow_up_balance_check(self, prog, acceptable_answers, expected_eventual_block_count):
         for ebc in expected_eventual_block_count:
             assert ebc in acceptable_answers
-        print(f"Checking account {prog.key_num}...")
+        print(f"Checking account {prog.key_num} on {prog.name}...")
         start_time = time.perf_counter()
         result = prog.check()
         while True:

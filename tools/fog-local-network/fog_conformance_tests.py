@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-2020 MobileCoin Inc.
+# Copyright (c) 2018-2021 MobileCoin Inc.
 
 import argparse
 import json
@@ -405,14 +405,14 @@ class FogConformanceTest:
         print("Giving ingest some time for RPC to wake up...")
         time.sleep(10 if self.release else 30)
 
+        # Reduce the ingest pubkey expiry window to 1. This makes it easier for us to test retirement
+        # by reducing the amount of blocks we need to generate after requesting the server to retire.
+        status = self.fog_ingest.set_pubkey_expiry_window(1)
+        assert status["mode"] == "Idle" and status["pubkey_expiry_window"] == 1, status
+
         # Tell the ingest server to activate
-        cmd = ' '.join([
-            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
-            f'--uri insecure-fog-ingest://localhost:{BASE_INGEST_CLIENT_PORT}',
-            f'activate',
-        ])
-        print(cmd)
-        result = subprocess.check_output(cmd, shell=True)
+        status = self.fog_ingest.activate()
+        assert status["mode"] == "Active" and status["pubkey_expiry_window"] == 1, status
 
         # Report a missed block range from 0 to 1. This is needed after FOG-337 and should not be needed after FOG-393
         cmd = ' '.join([
@@ -593,7 +593,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        # Note: At this point, both 5 and 6 are acceptable block_count values, for accouns that had 0 balance before this block.
+        # Note: At this point, both 5 and 6 are acceptable block_count values, for accounts that had 0 balance before this block.
         # The reason is, the fog-sample-paykit reasons that, if ingest is at block 6 and gives me a TxOut,
         # I know that it cannot be spent in block 6, even if key image service is still at block 5.
         # So I can return a correct balance for block 6, IF my balance is otherwise 0.
@@ -855,6 +855,90 @@ class FogConformanceTest:
         self.follow_up_balance_check(wallet2_from7b, {8: 1}, [8])
         self.follow_up_balance_check(wallet3_from7b, {8: 1}, [8])
         self.follow_up_balance_check(wallet4_from7b, {8: 14}, [8])
+
+        #######################################################################
+        # Test what happens if we introduce a second ingest server and retire
+        # the original one. The desired behavior is that the work is picked by
+        # the second server and balance checks continue as expected.
+        #######################################################################
+
+        # Start a second ingest server
+        self.fog_ingest2 = FogIngest(
+            name = 'ingest2',
+            work_dir = self.work_dir,
+            ledger_db_path = ledger1.ledger_db_path,
+            client_port = BASE_INGEST_CLIENT_PORT + 1,
+            peer_port = BASE_INGEST_PEER_PORT + 1,
+            admin_port = BASE_INGEST_ADMIN_PORT + 1,
+            admin_http_gateway_port = BASE_INGEST_ADMIN_HTTP_GATEWAY_PORT + 1,
+            watcher_db_path = ledger1.watcher_db_path,
+            release = self.release,
+        )
+        self.fog_ingest2.start()
+        print("Giving ingest2 some time for RPC to wake up...")
+        time.sleep(10 if self.release else 30)
+
+        # Tell the second ingest server to activate.
+        status = self.fog_ingest2.activate()
+        assert status["mode"] == "Active"
+
+        # Tell the first ingest server to retire.
+        status = self.fog_ingest.retire()
+        assert status["mode"] == "Active"
+
+        # Store fog pubkey of the 2nd ingest.
+        fog_pubkey = self.fog_ingest2.get_status()["ingress_pubkey"]
+        assert len(fog_pubkey) == 64
+
+        # Add block 8 to ingest and ledger
+        # Give 2 to everyone
+        # Take 4 from 4
+        credits8 = [{'account': 0, 'amount': 2}, {'account': 1, 'amount': 2}, {'account': 2, 'amount': 2}, {'account': 3, 'amount': 2}, {'account': 4, 'amount': 2}]
+        key_images8 = [block7_key_images[0]]
+        print("Key images spent in Block 8: ", key_images8)
+        block8_key_images = ledger1.add_block(credits8, key_images8, fog_pubkey)
+        ledger2.add_block(credits8, key_images8, fog_pubkey)
+        print("Key images for new transactions in Block 8: ", block8_key_images)
+        time.sleep(1)
+
+        # Check balances. These should come from the new RNG of the second ingest server
+        wallet0_from8 = self.fresh_balance_check("from8", 0, {8: 13, 9: 15}, [9])
+        wallet1_from8 = self.fresh_balance_check("from8", 1, {8: 10, 9: 12}, [9])
+        wallet2_from8 = self.fresh_balance_check("from8", 2, {8: 1, 9: 3}, [9])
+        wallet3_from8 = self.fresh_balance_check("from8", 3, {8: 1, 9: 3}, [9])
+        wallet4_from8 = self.fresh_balance_check("from8", 4, {8: 14, 9: 12}, [9])
+
+        # Both ingests should currently be active
+        status = self.fog_ingest.get_status()
+        assert status["mode"] == "Active", status
+
+        status = self.fog_ingest2.get_status()
+        assert status["mode"] == "Active", status
+
+        # Add block 9 to ingest and ledger. This should cause ingest1 to become Idle.
+        # Give 1 to everyone
+        # Take 2 from ???
+        credits9 = [{'account': 0, 'amount': 1}, {'account': 1, 'amount': 1}, {'account': 2, 'amount': 1}, {'account': 3, 'amount': 1}, {'account': 4, 'amount': 1}]
+        key_images9 = [block8_key_images[0]]
+        print("Key images spent in Block 9: ", key_images9)
+        block9_key_images = ledger1.add_block(credits9, key_images9, fog_pubkey)
+        ledger2.add_block(credits9, key_images9, fog_pubkey)
+        print("Key images for new transactions in Block 9: ", block9_key_images)
+        time.sleep(1)
+
+        # Check balances. These should come from the new RNG of the second ingest server
+        wallet0_from9 = self.fresh_balance_check("from9", 0, {9: 15, 10: 14}, [10])
+        wallet1_from9 = self.fresh_balance_check("from9", 1, {9: 12, 10: 13}, [10])
+        wallet2_from9 = self.fresh_balance_check("from9", 2, {9: 3, 10: 4}, [10])
+        wallet3_from9 = self.fresh_balance_check("from9", 3, {9: 3, 10: 4}, [10])
+        wallet4_from9 = self.fresh_balance_check("from9", 4, {9: 12, 10: 13}, [10])
+
+        # Ingest1 should now be retired, ingest2 should still be active
+        status = self.fog_ingest.get_status()
+        assert status["mode"] == "Idle", status
+
+        status = self.fog_ingest2.get_status()
+        assert status["mode"] == "Active", status
 
         print("All checks succeeded!")
 

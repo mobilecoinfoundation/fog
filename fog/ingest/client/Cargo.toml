@@ -20,6 +20,7 @@ grpcio = "0.6.0"
 hex = "0.4"
 protobuf = "2.12"
 retry = "1.2"
+serde_json = "1.0"
 structopt = "0.3"
 
 # root

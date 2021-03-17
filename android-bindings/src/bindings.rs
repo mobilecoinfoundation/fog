@@ -491,8 +491,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_get_1report_1id(
         |env| {
             let address: MutexGuard<PublicAddress> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
             match address.fog_report_id() {
-              None => Ok(JObject::null().into_inner()),
-              Some(out) => Ok(env.new_string(out)?.into_inner())
+                None => Ok(JObject::null().into_inner()),
+                Some(out) => Ok(env.new_string(out)?.into_inner()),
             }
         },
     )
@@ -526,8 +526,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_get_1fog_1uri(
         |env| {
             let address: MutexGuard<PublicAddress> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
             match address.fog_report_url() {
-              None => Ok(JObject::null().into_inner()),
-              Some(out) => Ok(env.new_string(out)?.into_inner())
+                None => Ok(JObject::null().into_inner()),
+                Some(out) => Ok(env.new_string(out)?.into_inner()),
             }
         },
     )
@@ -574,10 +574,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
             env.get_rust_field(view_key, RUST_OBJ_FIELD)?;
         let spend_public_key: MutexGuard<RistrettoPublic> =
             env.get_rust_field(spend_key, RUST_OBJ_FIELD)?;
-        let public_address = PublicAddress::new(
-            &spend_public_key,
-            &view_public_key,
-        );
+        let public_address = PublicAddress::new(&spend_public_key, &view_public_key);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, public_address)?)
     })
 }

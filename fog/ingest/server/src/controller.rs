@@ -809,7 +809,7 @@ where
         peers: Vec<IngestPeerUri>,
         state: &mut MutexGuard<IngestControllerState>,
     ) -> Result<(), SetPeersError> {
-        // Enforce the invariant that the uris in new peers list all have valid responder id
+        // Enforce the invariant that uris in peers list all have valid responder id
         let mut new_peers = peers
             .iter()
             .map(|uri| -> Result<IngestPeerUri, SetPeersError> {

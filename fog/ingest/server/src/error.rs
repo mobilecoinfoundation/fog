@@ -180,6 +180,8 @@ pub enum RestoreStateError {
     IngressKeyMismatch(CompressedRistrettoPublic, CompressedRistrettoPublic),
     /// Statefile contained invalid peer uri: {0}
     InvalidPeerUri(UriParseError),
+    /// Statefile contained uri with no responder id: {0}
+    ResponderId(UriConversionError),
     /**
      * Server not in idle state before restore state operation, this is a
      * logic error

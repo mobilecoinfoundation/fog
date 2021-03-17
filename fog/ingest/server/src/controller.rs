@@ -23,6 +23,7 @@ use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_sgx_report_cache_api::ReportableEnclave;
 use mc_sgx_report_cache_untrusted::{Error as ReportCacheError, ReportCache};
 use mc_transaction_core::{Block, BlockContents, BlockIndex};
+use mc_util_uri::ConnectionUri;
 use std::{
     collections::BTreeSet,
     convert::TryFrom,
@@ -572,7 +573,11 @@ where
         let mut peer_connections: Vec<_> = peers
             .iter()
             .filter_map(|peer| {
-                if *peer == self.config.peer_listen_uri {
+                if peer
+                    .responder_id()
+                    .expect("Could not get responder id from peer URI")
+                    == self.config.local_node_id
+                {
                     None
                 } else {
                     log::info!(self.logger, "activate: connect to peer {}", peer);
@@ -800,7 +805,11 @@ where
     ) {
         let mut new_peers: BTreeSet<IngestPeerUri> = peers.iter().cloned().collect();
         // Our own URI should always be stored in the list of peers
-        new_peers.insert(self.config.peer_listen_uri.clone());
+        let our_uri = state.get_peers().iter().find(|uri| uri.responder_id().expect("Could not get reponder id for one of our peers, that violates an invariant") == self.config.local_node_id).expect("Our own URI was not found among our current set of peers, that violates an invariant").clone();
+        if !new_peers.contains(&our_uri) {
+            log::warn!(self.logger, "The new set of peers did not contain a URI with our responder id. We added our URI to the set: {} <-- {}", SeqDisplay(new_peers.iter()), our_uri);
+            new_peers.insert(our_uri.clone());
+        }
         state.set_peers(new_peers);
     }
 
@@ -887,7 +896,11 @@ where
 
             // Check peers from STORED data to be in the correct backup state
             for peer_uri in new_peers.iter() {
-                if peer_uri == &self.config.peer_listen_uri {
+                if peer_uri
+                    .responder_id()
+                    .map_err(RestoreStateError::ResponderId)?
+                    == self.config.local_node_id
+                {
                     continue;
                 }
 
@@ -1099,8 +1112,21 @@ where
         for peer_uri in peers {
             // Our own uri is in the peers list, because that simplifies checking if peers
             // have matching lists. But we should skip when we reach ourself.
-            if peer_uri == self.config.peer_listen_uri {
-                continue;
+            match peer_uri.responder_id() {
+                Err(err) => {
+                    log::error!(
+                        self.logger,
+                        "Our peer uri: {} did not have a valid responder id: {}",
+                        peer_uri,
+                        err
+                    );
+                    continue;
+                }
+                Ok(responder_id) => {
+                    if responder_id == self.config.local_node_id {
+                        continue;
+                    }
+                }
             }
 
             log::debug!(self.logger, "Checking on peer: {}", peer_uri);

@@ -61,28 +61,29 @@ def log_and_run_shell(cmd):
 #
 # This mocks out the inputs to fog that normally come from consensus
 class TestLedger:
-    def __init__(self, name, ledger_db_path, watcher_db_path, keys_dir, release):
+    def __init__(self, name, ledger_db_path, watcher_db_path, keys_dir, release, initial_seed=0):
         self.name = name
         self.ledger_db_path = ledger_db_path
         self.watcher_db_path = watcher_db_path
         self.keys_dir = keys_dir
         self.release = release
-        self.seed = 0
+        self.seed = initial_seed
 
-        os.makedirs(ledger_db_path)
+        if initial_seed == 0:
+            os.makedirs(ledger_db_path)
 
-        cmd = ' '.join([
-            f'cd {self.ledger_db_path} && exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/init_test_ledger',
-            f'--keys {keys_dir}',
-            f'--ledger-db {self.ledger_db_path}',
-            f'--watcher-db {self.watcher_db_path}',
-            f'--seed {self.seed}',
-        ])
-        print(cmd)
-        result = subprocess.check_output(cmd, shell=True)
-        # Increment seed, so that the next block will have different TxOuts even if the credits are the same.
-        # A tx public key cannot be reused, and the ledger db enforces this.
-        self.seed = 1
+            cmd = ' '.join([
+                f'cd {self.ledger_db_path} && exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/init_test_ledger',
+                f'--keys {keys_dir}',
+                f'--ledger-db {self.ledger_db_path}',
+                f'--watcher-db {self.watcher_db_path}',
+                f'--seed {self.seed}',
+            ])
+            print(cmd)
+            result = subprocess.check_output(cmd, shell=True)
+            # Increment seed, so that the next block will have different TxOuts even if the credits are the same.
+            # A tx public key cannot be reused, and the ledger db enforces this.
+            self.seed = 1
 
     def __repr__(self):
         return self.name
@@ -125,6 +126,26 @@ class TestLedger:
         # A tx public key cannot be reused, and the ledger db enforces this.
         self.seed = self.seed + 1
         return result_json['key_images']
+
+    def clone(self, clone_name):
+        ledger_db_path = f"{self.ledger_db_path}-{clone_name}"
+        watcher_db_path = f"{self.watcher_db_path}-{clone_name}"
+
+        os.makedirs(ledger_db_path)
+        os.makedirs(watcher_db_path)
+
+        shutil.copy(
+            os.path.join(self.ledger_db_path, 'data.mdb'),
+            os.path.join(ledger_db_path, 'data.mdb'),
+        )
+
+        shutil.copy(
+            os.path.join(self.watcher_db_path, 'data.mdb'),
+            os.path.join(watcher_db_path, 'data.mdb'),
+        )
+
+        return TestLedger(clone_name, ledger_db_path, watcher_db_path, self.keys_dir, self.release, self.seed)
+
 
 # Parse a line that came back from the balance_check program on STDOUT
 # Expected to contain a json object with two integers `{ block_count: XXX, balance: YYY }`
@@ -222,6 +243,7 @@ class FogConformanceTest:
         assert os.path.exists(self.balance_check_path)
 
         self.fog_ingest = None
+        self.fog_ingest2 = None
         self.fog_view = None
         self.fog_ledger = None
         self.fog_report = None
@@ -283,6 +305,7 @@ class FogConformanceTest:
                 prog.debug()
                 raise Exception(f"{name} computed balance {result} for account {key_num}, but this balance was not expected. Expected balance at that block_count was {acceptable_answers.get(result['block_count'])}")
             if result['block_count'] in expected_eventual_block_count:
+                print(f"Checking account {key_num} on {name} done: {result}")
                 return prog
             elapsed = time.perf_counter() - start_time
             if elapsed > DEADLINE_SECONDS:
@@ -317,6 +340,7 @@ class FogConformanceTest:
                 prog.debug()
                 raise Exception(f"{prog.name} computed balance {result} for account {prog.key_num}, but this balance was not expected. Expected result was {acceptable_answers.get(result['block_count'])}")
             if result['block_count'] in expected_eventual_block_count:
+                print(f"Checking account {prog.key_num} on {prog.name} done: {result}")
                 return prog
             elapsed = time.perf_counter() - start_time
             if elapsed > DEADLINE_SECONDS:
@@ -845,6 +869,89 @@ class FogConformanceTest:
         status = self.fog_ingest2.get_status()
         assert status["mode"] == "Active", status
 
+        # TODO - stop the first ingest server. Currently not doable since it remains
+        # commissioned in the database (there is no way to set decommissioned=false)
+
+        #######################################################################
+        # Test what happens when we restart the view server
+        #######################################################################
+
+        # Restarting the view server should not impact things.
+        print("Restarting fog view server")
+        self.fog_view.stop()
+        self.fog_view.start()
+        time.sleep(10 if self.release else 30)
+
+        # We will encounter 0: 0 while we wait for the view server to come up.
+        # In theory we could get anything between 0 and 10, but since the view server loads
+        # TxOut data in batches, the observed behavior is going from block 0 to the highest
+        # available one (10).
+        wallet0_from9a = self.fresh_balance_check("from10", 0, {0: 0, 10: 14}, [10])
+        wallet1_from9a = self.fresh_balance_check("from10", 1, {0: 0, 10: 13}, [10])
+        wallet2_from9a = self.fresh_balance_check("from10", 2, {0: 0, 10: 4}, [10])
+        wallet3_from9a = self.fresh_balance_check("from10", 3, {0: 0, 10: 4}, [10])
+        wallet4_from9a = self.fresh_balance_check("from10", 4, {0: 0, 10: 13}, [10])
+
+        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
+            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
+            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
+            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
+            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
+            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
+            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
+            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
+            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
+            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
+            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
+            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
+            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
+            (wallet0_from8, wallet1_from8, wallet2_from8, wallet3_from8, wallet4_from8),
+        ):
+            self.follow_up_balance_check(wallet0, {0: 0, 9: 15, 10: 14}, [10])
+            self.follow_up_balance_check(wallet1, {0: 0, 9: 12, 10: 13}, [10])
+            self.follow_up_balance_check(wallet2, {0: 0, 9: 3, 10: 4}, [10])
+            self.follow_up_balance_check(wallet3, {0: 0, 9: 3, 10: 4}, [10])
+            self.follow_up_balance_check(wallet4, {0: 0, 9: 12, 10: 13}, [10])
+
+        # Add block 10 to ingest and ledger. This should get reported by the restarted view server.
+        # Give 3 to everyone
+        # Take 1 from wallet1
+        credits10 = [{'account': 0, 'amount': 3}, {'account': 1, 'amount': 3}, {'account': 2, 'amount': 3}, {'account': 3, 'amount': 3}, {'account': 4, 'amount': 3}]
+        key_images10 = [block9_key_images[1]]
+        print("Key images spent in Block 10: ", key_images10)
+        block10_key_images = ledger1.add_block(credits10, key_images10, fog_pubkey)
+        ledger2.add_block(credits10, key_images10, fog_pubkey)
+        print("Key images for new transactions in Block 10: ", block10_key_images)
+        time.sleep(1)
+
+        wallet0_from10 = self.fresh_balance_check("from10", 0, {10: 14, 11: 17}, [11])
+        wallet1_from10 = self.fresh_balance_check("from10", 1, {10: 13, 11: 15}, [11])
+        wallet2_from10 = self.fresh_balance_check("from10", 2, {10: 4, 11: 7}, [11])
+        wallet3_from10 = self.fresh_balance_check("from10", 3, {10: 4, 11: 7}, [11])
+        wallet4_from10 = self.fresh_balance_check("from10", 4, {10: 13, 11: 16}, [11])
+
+        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
+            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
+            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
+            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
+            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
+            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
+            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
+            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
+            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
+            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
+            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
+            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
+            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
+            (wallet0_from8, wallet1_from8, wallet2_from8, wallet3_from8, wallet4_from8),
+            (wallet0_from9a, wallet1_from9a, wallet2_from9a, wallet3_from9a, wallet4_from9a),
+        ):
+            self.follow_up_balance_check(wallet0, {10: 14, 11: 17}, [11])
+            self.follow_up_balance_check(wallet1, {10: 13, 11: 15}, [11])
+            self.follow_up_balance_check(wallet2, {10: 4, 11: 7}, [11])
+            self.follow_up_balance_check(wallet3, {10: 4, 11: 7}, [11])
+            self.follow_up_balance_check(wallet4, {10: 13, 11: 16}, [11])
+
         print("All checks succeeded!")
 
     def stop(self):
@@ -859,6 +966,9 @@ class FogConformanceTest:
 
         if self.fog_ingest:
             self.fog_ingest.stop()
+
+        if self.fog_ingest2:
+            self.fog_ingest2.stop()
 
         for prog in self.balance_checks:
             prog.stop()

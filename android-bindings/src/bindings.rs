@@ -486,14 +486,14 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_get_1report_1id(
     obj: JObject,
 ) -> jstring {
     jni_ffi_call_or(
-        || Ok(env.new_string("")?.into_inner()),
+        || Ok(JObject::null().into_inner()),
         &env,
         |env| {
             let address: MutexGuard<PublicAddress> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
-
-            Ok(env
-                .new_string(address.fog_report_id().unwrap_or(""))?
-                .into_inner())
+            match address.fog_report_id() {
+                None => Ok(JObject::null().into_inner()),
+                Some(out) => Ok(env.new_string(out)?.into_inner()),
+            }
         },
     )
 }
@@ -521,20 +521,20 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_get_1fog_1uri(
     obj: JObject,
 ) -> jstring {
     jni_ffi_call_or(
-        || Ok(env.new_string("")?.into_inner()),
+        || Ok(JObject::null().into_inner()),
         &env,
         |env| {
             let address: MutexGuard<PublicAddress> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
-
-            Ok(env
-                .new_string(address.fog_report_url().unwrap_or(""))?
-                .into_inner())
+            match address.fog_report_url() {
+                None => Ok(JObject::null().into_inner()),
+                Some(out) => Ok(env.new_string(out)?.into_inner()),
+            }
         },
     )
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni_1with_1fog(
     env: JNIEnv,
     obj: JObject,
     view_key: JObject,
@@ -558,6 +558,23 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
             fog_report_id,
             fog_authority_sig,
         );
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, public_address)?)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
+    env: JNIEnv,
+    obj: JObject,
+    view_key: JObject,
+    spend_key: JObject,
+) {
+    jni_ffi_call(&env, |env| {
+        let view_public_key: MutexGuard<RistrettoPublic> =
+            env.get_rust_field(view_key, RUST_OBJ_FIELD)?;
+        let spend_public_key: MutexGuard<RistrettoPublic> =
+            env.get_rust_field(spend_key, RUST_OBJ_FIELD)?;
+        let public_address = PublicAddress::new(&spend_public_key, &view_public_key);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, public_address)?)
     })
 }

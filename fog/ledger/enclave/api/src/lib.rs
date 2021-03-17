@@ -26,24 +26,25 @@ use serde::{Deserialize, Serialize};
 /// A generic result type for enclave calls
 pub type Result<T> = StdResult<T, Error>;
 
-/// An intermediate struct for holding data required to get outputs for the client.
-/// This is returned by `client_get_outputs` and allows untrusted to gather data that
-/// will be encrypted for the client in `outputs_for_client`.
+/// An intermediate struct for holding data required to get outputs for the
+/// client. This is returned by `client_get_outputs` and allows untrusted to
+/// gather data that will be encrypted for the client in `outputs_for_client`.
 ///
-/// Eventually we will do the key image check in ORAM, but for now untrusted will do the check
-/// directly.
+/// Eventually we will do the key image check in ORAM, but for now untrusted
+/// will do the check directly.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct OutputContext {
     pub indexes: Vec<u64>,
     pub merkle_root_block: u64,
 }
 
-/// An intermediate struct for holding data required to check key images for the client.
-/// This is returned by `client_check_key_images` and allows untrusted to gather data that
-/// will be encrypted for the client in `outputs_for_client`.
+/// An intermediate struct for holding data required to check key images for the
+/// client. This is returned by `client_check_key_images` and allows untrusted
+/// to gather data that will be encrypted for the client in
+/// `outputs_for_client`.
 ///
-/// Eventually we will do the key image check in ORAM, but for now untrusted will do the check
-/// directly.
+/// Eventually we will do the key image check in ORAM, but for now untrusted
+/// will do the check directly.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct KeyImageContext {
     pub key_images: Vec<KeyImage>,
@@ -67,24 +68,24 @@ pub trait LedgerEnclave: ReportableEnclave {
     /// Destroy a peer association
     fn client_close(&self, channel_id: ClientSession) -> Result<()>;
 
-    /// Extract context data to be handed back to untrusted so that it could collect the
-    /// information required.
+    /// Extract context data to be handed back to untrusted so that it could
+    /// collect the information required.
     fn get_outputs(&self, msg: EnclaveMessage<ClientSession>) -> Result<OutputContext>;
 
-    /// Encrypt outputs and proofs for the given client session, using the given authenticated
-    /// data for the client.
+    /// Encrypt outputs and proofs for the given client session, using the given
+    /// authenticated data for the client.
     fn get_outputs_data(
         &self,
         response: GetOutputsResponse,
         client: ClientSession,
     ) -> Result<EnclaveMessage<ClientSession>>;
 
-    /// Extract context data to be handed back to untrusted so that it could collect the
-    /// information required.
+    /// Extract context data to be handed back to untrusted so that it could
+    /// collect the information required.
     fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext>;
 
-    /// Encrypt key image check results for the given client session, using the given authenticated
-    /// data for the client.
+    /// Encrypt key image check results for the given client session, using the
+    /// given authenticated data for the client.
     fn check_key_images_data(
         &self,
         response: CheckKeyImagesResponse,
@@ -94,9 +95,10 @@ pub trait LedgerEnclave: ReportableEnclave {
 
 /// Helper trait which reduces boiler-plate in untrusted side
 /// The trusted object which implements the above api usually cannot implement
-/// Clone, Send, Sync, etc., but the untrusted side can and usually having a "handle to an enclave"
-/// is what is most useful for a webserver.
-/// This marker trait can be implemented for the untrusted-side representation of the enclave.
+/// Clone, Send, Sync, etc., but the untrusted side can and usually having a
+/// "handle to an enclave" is what is most useful for a webserver.
+/// This marker trait can be implemented for the untrusted-side representation
+/// of the enclave.
 pub trait LedgerEnclaveProxy: LedgerEnclave + Clone + Send + Sync + 'static {}
 
 impl<T> LedgerEnclaveProxy for T where T: LedgerEnclave + Clone + Send + Sync + 'static {}

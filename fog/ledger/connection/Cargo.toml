@@ -19,7 +19,7 @@ fog-uri = { path = "../../uri" }
 fog-enclave-connection = { path = "../../enclave_connection" }
 fog-types = { path = "../../fog_types" }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 grpcio = "0.6.0"
 protobuf = "2.12"
 

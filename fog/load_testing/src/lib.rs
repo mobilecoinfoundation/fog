@@ -26,8 +26,9 @@ pub fn get_bin_path(filename: &str) -> PathBuf {
         return maybe_result;
     }
 
-    // When cargo runs the binary, it likely won't be next to the ingest server binary.
-    // So we try to find the "target" dir and then search target/release or target/debug
+    // When cargo runs the binary, it likely won't be next to the ingest server
+    // binary. So we try to find the "target" dir and then search target/release
+    // or target/debug
     let project_root = {
         let mut result = env::current_exe().expect("Could not get current exe");
         while result.file_name().expect("No Filename for result") != "target" {

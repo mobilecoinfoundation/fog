@@ -37,8 +37,10 @@ pub struct Config {
 /// disk
 #[derive(Debug, Display)]
 pub enum Error {
-    /// One of the files containing cryptographic material could not be read:
-    /// {0}
+    /**
+     * One of the files containing cryptographic material could not be read:
+     * {0}
+     */
     Io(IoError),
     /// The certificate chain could not be parsed as PEM: {0}
     Pem(PemError),
@@ -46,8 +48,10 @@ pub enum Error {
     Chain(ChainError),
     /// There was an error parsing the private key file: {0}
     Key(KeyError),
-    /// The last validated cert in the given chain contains a public key which
-    /// doesn't correspond to the given private key
+    /**
+     * The last validated cert in the given chain contains a public key
+     * which  doesn't correspond to the given private key
+     */
     ChainKeyMismatch,
 }
 

@@ -127,8 +127,9 @@ impl TestClient {
 
     /// Waits for a transaction to be accepted by the network
     ///
-    /// Uses the client to poll a fog service until the submitted transaction either appears
-    /// or has expired. Panics if the transaction is not accepted.
+    /// Uses the client to poll a fog service until the submitted transaction
+    /// either appears or has expired. Panics if the transaction is not
+    /// accepted.
     ///
     /// Arguments:
     /// * client: The client to use for this check
@@ -167,11 +168,14 @@ impl TestClient {
     }
 
     /// Ensure that after all fog servers have caught up and the client has data
-    /// up to a certain number of blocks, the client computes the expected balance.
+    /// up to a certain number of blocks, the client computes the expected
+    /// balance.
     ///
     /// Arguments:
-    /// * block_index: The block_index containing new transactions that must be in the balance
-    /// * expected_balance: The expected balance to compute after this block_index is included
+    /// * block_index: The block_index containing new transactions that must be
+    ///   in the balance
+    /// * expected_balance: The expected balance to compute after this
+    ///   block_index is included
     pub fn ensure_expected_balance_after_block(
         &self,
         client: &mut Client,

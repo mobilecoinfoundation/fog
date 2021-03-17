@@ -48,13 +48,16 @@ impl IngestSgxEnclave {
     ///
     /// Arguments:
     /// - enclave_path: the full path to the signed enclave binary
-    /// - peer_self_id: The responder_id to use with AKE when peering with other ingest enclaves
-    /// - sealed_key: A sealed fog private key which we backed up earlier, to restore now in SGX.
-    ///               If omitted then the enclave creates a new private key randomly.
-    /// - omap_capacity: The capacity of the Oblivious Map that this enclave will create.
-    ///                  Total memory usage should be about 64 * this value, + some overhead,
-    ///                  and about 70% of the capacity won't be usable due to hash table overflow.
-    ///                  So the *number of users* the enclave can support is about 70% times this.
+    /// - peer_self_id: The responder_id to use with AKE when peering with other
+    ///   ingest enclaves
+    /// - sealed_key: A sealed fog private key which we backed up earlier, to
+    ///   restore now in SGX. If omitted then the enclave creates a new private
+    ///   key randomly.
+    /// - omap_capacity: The capacity of the Oblivious Map that this enclave
+    ///   will create. Total memory usage should be about 64 * this value, +
+    ///   some overhead, and about 70% of the capacity won't be usable due to
+    ///   hash table overflow. So the *number of users* the enclave can support
+    ///   is about 70% times this.
     ///
     /// Returns:
     /// - The enclave proxy object, and the sealed ingest private key.
@@ -138,7 +141,8 @@ impl ReportableEnclave for IngestSgxEnclave {
     }
 }
 
-/// Proxy API for talking to the corresponding implementation inside the enclave.
+/// Proxy API for talking to the corresponding implementation inside the
+/// enclave.
 impl IngestEnclave for IngestSgxEnclave {
     fn enclave_init(&self, params: IngestEnclaveInitParams) -> Result<()> {
         let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(params))?;

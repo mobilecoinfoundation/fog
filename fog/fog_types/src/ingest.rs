@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 /// This is not a user-facing API element
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct TxsForIngest {
-    /// The index of the block in the blockchain where this chunk of Txs appeared
+    /// The index of the block in the blockchain where this chunk of Txs
+    /// appeared
     pub block_index: u64,
     /// The number of txo's appearing in the entire blockchain before this chunk
     /// This is needed to compute TxOutRecord::global_tx_out_index

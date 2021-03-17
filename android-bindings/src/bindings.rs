@@ -55,9 +55,9 @@ use std::{
 };
 use zeroize::Zeroize;
 
-/******************************************************************************
+/****************************************************************
  * RistrettoPrivate
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_RistrettoPrivate_init_1jni(
@@ -134,9 +134,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_RistrettoPrivate_get_1public(
     )
 }
 
-/******************************************************************************
+/****************************************************************
  * AttestedClient
- *****************************************************************************/
+ */
 
 enum AttestedClientState {
     Pending(AuthPending<X25519, Aes256Gcm, Sha512>),
@@ -290,9 +290,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_AttestedClient_decrypt_1payload
     )
 }
 
-/******************************************************************************
+/*****************************************************************
  * Amount
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
@@ -352,9 +352,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_unmask_1value(
     )
 }
 
-/******************************************************************************
+/******************************************************************
  * RistrettoPublic
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_RistrettoPublic_init_1jni(
@@ -395,9 +395,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_RistrettoPublic_get_1bytes(
     )
 }
 
-/******************************************************************************
+/*******************************************************************
  * PrintableWrapper
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_PrintableWrapper_b58_1decode(
@@ -441,9 +441,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PrintableWrapper_b58_1encode(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * PublicAddress
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_get_1view_1key(
@@ -579,9 +579,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * ClientKexRng
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_ClientKexRng_init_1jni(
@@ -674,9 +674,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_ClientKexRng_finalize_1jni(
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * Account
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_AccountKey_init_1jni(
@@ -896,9 +896,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_AccountKey_get_1public_1address
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * TxOut
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOut_init_1from_1protobuf_1bytes(
@@ -966,9 +966,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOut_encode(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * TxOutMembershipProof
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOutMembershipProof_init_1from_1protobuf_1bytes(
@@ -995,9 +995,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOutMembershipProof_finalize_1
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * Transaction
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Transaction_finalize_1jni(
@@ -1026,9 +1026,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Transaction_encode(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * TransactionBuilder
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_init_1jni(
@@ -1207,9 +1207,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_build_1tx(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * Util
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_recover_1onetime_1private_1key(
@@ -1288,7 +1288,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_versioned_1crypto_1box_1de
     )
 }
 
-/// A method that converts a BigInteger value to string, used for testing jni_big_int_to_u64.
+/// A method that converts a BigInteger value to string, used for testing
+/// jni_big_int_to_u64.
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_bigint2string(
     env: JNIEnv,
@@ -1305,9 +1306,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_bigint2string(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * Receipt
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Receipt_is_1confirmation_1valid(
@@ -1335,9 +1336,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Receipt_is_1confirmation_1valid
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * ResponderId
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_ResponderId_init_1jni(
@@ -1364,9 +1365,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_ResponderId_finalize_1jni(
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * Attestation Verifier
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Verifier_init_1jni(env: JNIEnv, obj: JObject) {
@@ -1462,9 +1463,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Verifier_finalize_1jni(env: JNI
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * FogResolver
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogResolver_init_1jni(
@@ -1493,9 +1494,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogResolver_finalize_1jni(
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * FogReportResponses
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogReportResponses_init_1jni(
@@ -1539,9 +1540,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_FogReportResponses_finalize_1jn
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * ReportResponse
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_ReportResponse_init_1jni(
@@ -1586,9 +1587,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_ReportResponse_finalize_1jni(
     })
 }
 
-/******************************************************************************
-VerificationSignature
- *****************************************************************************/
+/********************************************************************
+ * VerificationSignature
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_VerificationSignature_init_1jni(
@@ -1614,9 +1615,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_VerificationSignature_finalize_
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * VerificationReport
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_VerificationReport_init_1jni(
@@ -1657,9 +1658,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_VerificationReport_finalize_1jn
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * Report
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Report_init_1jni(
@@ -1690,9 +1691,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Report_finalize_1jni(env: JNIEn
     })
 }
 
-/******************************************************************************
+/********************************************************************
  * Mnemonic (BIP39)
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1from_1mnemonic(
@@ -1770,9 +1771,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
     )
 }
 
-/******************************************************************************
+/********************************************************************
  * SLIP-0010
- *****************************************************************************/
+ */
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_derive_1ed25519_1private_1key(

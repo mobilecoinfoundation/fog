@@ -35,7 +35,7 @@ mc-api = { path = "../mobilecoin/api" }
 
 aes-gcm = { version = "0.6", default-features = false }
 bip39 = "1.0.0-rc1"
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 jni = { version = "0.16.0", default-features = false }
 protobuf = "2.12"
 rand = { version = "0.7", default-features = false }

@@ -58,15 +58,18 @@ impl FogKeyImageGrpcClient {
     }
 }
 
-/// An extension trait that adds a convenience method to check the status of a key image result.
+/// An extension trait that adds a convenience method to check the status of a
+/// key image result.
 pub trait KeyImageResultExtension {
-    /// Check the status of a key image query. A `None` value indicates the key image has not been
-    /// found. Some(spent_at) indicates the key image appeared at block index `spent_at`.
+    /// Check the status of a key image query. A `None` value indicates the key
+    /// image has not been found. Some(spent_at) indicates the key image
+    /// appeared at block index `spent_at`.
     fn status(&self) -> Result<Option<BlockIndex>, KeyImageQueryError>;
 }
 
 impl KeyImageResultExtension for fog_types::ledger::KeyImageResult {
-    /// Map the protobuf KeyImageResult type to a more idiomatic rust Result type
+    /// Map the protobuf KeyImageResult type to a more idiomatic rust Result
+    /// type
     fn status(&self) -> Result<Option<BlockIndex>, KeyImageQueryError> {
         if self.key_image_result_code == KeyImageResultCode::Spent as u32 {
             Ok(Some(self.spent_at))
@@ -86,7 +89,8 @@ impl KeyImageResultExtension for fog_types::ledger::KeyImageResult {
 #[derive(Display, Debug, Eq, PartialEq)]
 pub enum KeyImageQueryError {
     /// Nonspecific server error handling the request
-    /// FIXME: The server should at least seperate "invalid key image", "rate limited", "database", from other error types
+    // FIXME: The server should at least seperate "invalid key image", "rate
+    // limited", "database", from other error types
     KeyImageError,
     /// Unknown status code: {0}
     UnknownStatus(u32),

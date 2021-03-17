@@ -217,7 +217,8 @@ fn test_ingest_enclave_malformed_txos(logger: Logger) {
                     1 => EncryptedFogHint::fake_onetime_hint(&mut rng),
                     // This fog hint is malformed, and doesn't have the right magic bytes
                     2 => make_malformed_fog_hint(&fog_pubkey, &mut rng),
-                    // This fog hint is malformed, and is properly encrypted but contains something that isn't an elliptic curve point
+                    // This fog hint is malformed, and is properly encrypted but contains something
+                    // that isn't an elliptic curve point
                     3 => make_malformed_fog_hint2(&fog_pubkey, &mut rng),
                     _ => panic!("this should be unreachable"),
                 };
@@ -244,7 +245,8 @@ fn test_ingest_enclave_malformed_txos(logger: Logger) {
         let (tx_rows, maybe_kex_rng_pubkey) = enclave.ingest_txs(txs_for_ingest.clone()).unwrap();
         assert!(maybe_kex_rng_pubkey.is_none()); // rng store should not have rotated
 
-        // Check that the right number of txs came back. Every fourth tx doesn't lead to a tx row, because of bad curve point
+        // Check that the right number of txs came back. Every fourth tx doesn't lead to
+        // a tx row, because of bad curve point
         assert_eq!(tx_rows.len(), 40 * 3 / 4);
 
         // check that Bob's crypto math works out
@@ -274,7 +276,10 @@ fn test_ingest_enclave_malformed_txos(logger: Logger) {
                 assert_eq!(tx_out_record.block_index, txs_for_ingest.block_index);
                 assert_eq!(
                     tx_out_record.tx_out_global_index,
-                    txs_for_ingest.global_txo_index + (4 * index3 as u64) // This is 4 for each 3 chunks of tx_rows, there were 4 tx_outs
+                    txs_for_ingest.global_txo_index + (4 * index3 as u64) /* This is 4 for each
+                                                                           * 3 chunks of
+                                                                           * tx_rows, there were
+                                                                           * 4 tx_outs */
                 );
                 assert_eq!(
                     tx_out_record.get_fog_tx_out().unwrap(),
@@ -345,7 +350,8 @@ fn test_ingest_enclave_overflow(logger: Logger) {
         let mut all_tx_rows = Vec::new();
 
         const TXS_PER_CHUNK: usize = 50;
-        // Force the enclave to overflow at least once, since we started it with small capacity
+        // Force the enclave to overflow at least once, since we started it with small
+        // capacity
         for iteration in 0..10 {
             // make some tx outs, each for alice or bob
             let tx_outs: Vec<_> = (0..TXS_PER_CHUNK)
@@ -424,7 +430,8 @@ fn test_ingest_enclave_overflow(logger: Logger) {
 
         log::info!(logger, "Matching ETxOutRows with RNG's and decrypting");
 
-        // Check that alice and bob can actually recover all of the transactions, and each one only recovers one
+        // Check that alice and bob can actually recover all of the transactions, and
+        // each one only recovers one
         let alice_fog_credential = UserPrivate::from(&alice_account);
         let bob_fog_credential = UserPrivate::from(&bob_account);
 

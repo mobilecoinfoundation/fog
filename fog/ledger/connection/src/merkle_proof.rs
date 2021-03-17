@@ -54,7 +54,8 @@ impl FogMerkleProofGrpcClient {
     }
 }
 
-/// An extension trait that adds a convenience method to check that status of an output result.
+/// An extension trait that adds a convenience method to check that status of an
+/// output result.
 pub trait OutputResultExtension {
     /// Check the status of an output query.
     /// A none status indicates that the result was not found

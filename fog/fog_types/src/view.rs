@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 pub use fog_kex_rng::KexRngPubkey;
 
 // User <-> enclave proto schema types
-// These are synced with types in fog_api view.proto, and tests enforce that they round trip
-// These are NOT expected to be synced with Db schema types
+// These are synced with types in fog_api view.proto, and tests enforce that
+// they round trip These are NOT expected to be synced with Db schema types
 
 #[derive(Clone, Eq, PartialEq, Message)]
 pub struct QueryRequestAAD {
@@ -66,14 +66,16 @@ pub struct QueryResponse {
     pub last_known_block_cumulative_txo_count: u64,
 }
 
-/// A record that can be used by the user to produce an Rng shared with fog ingest
+/// A record that can be used by the user to produce an Rng shared with fog
+/// ingest
 #[derive(Clone, Eq, PartialEq, Hash, Message, Serialize, Deserialize)]
 pub struct RngRecord {
     /// The ingest invocation id that produced this record.
     #[prost(int64, tag = "1")]
     pub ingest_invocation_id: i64,
 
-    /// A key-exchange message to be used by the client to create a VersionedKexRng
+    /// A key-exchange message to be used by the client to create a
+    /// VersionedKexRng
     #[prost(message, required, tag = "2")]
     pub pubkey: KexRngPubkey,
 
@@ -93,9 +95,9 @@ pub struct DecommissionedIngestInvocation {
 }
 
 /// An enum representing the possible outcomes of a TxOut search
-/// 0 is not an option here because we want this to go in the protobuf as fixed32,
-/// but in proto3, the default value for fixed32 is 0 and cannot be changed.
-/// Default values are omitted in the on-the-wire representation,
+/// 0 is not an option here because we want this to go in the protobuf as
+/// fixed32, but in proto3, the default value for fixed32 is 0 and cannot be
+/// changed. Default values are omitted in the on-the-wire representation,
 /// which would make the ciphertext length
 /// reveal something about the result code, which we don't want.
 /// Particularly, the Found and NotFound scenarios must be indistinguishable.
@@ -149,23 +151,29 @@ pub struct TxOutSearchResult {
     pub ciphertext: Vec<u8>,
 }
 
-// TxOutRecord is what information the fog service preserves for a user about their TxOut.
-// These are created by the ingest server and then encrypted. The encrypted blobs
-// are eventually returned to the user, who must deserialize them.
+// TxOutRecord is what information the fog service preserves for a user about
+// their TxOut. These are created by the ingest server and then encrypted. The
+// encrypted blobs are eventually returned to the user, who must deserialize
+// them.
 //
-// Note: There are conformance tests in fog_api that check that this matches proto
+// Note: There are conformance tests in fog_api that check that this matches
+// proto
 #[derive(Clone, Eq, Hash, PartialEq, Message)]
 pub struct TxOutRecord {
-    /// The (compressed ristretto) bytes of commitment associated to amount field in the TxOut that was recovered
+    /// The (compressed ristretto) bytes of commitment associated to amount
+    /// field in the TxOut that was recovered
     #[prost(bytes, required, tag = "1")]
     pub tx_out_amount_commitment_data: Vec<u8>,
-    /// The masked value associated to amount field in the TxOut that was recovered
+    /// The masked value associated to amount field in the TxOut that was
+    /// recovered
     #[prost(fixed64, required, tag = "2")]
     pub tx_out_amount_masked_value: u64,
-    /// The (compressed ristretto) bytes of the target key associated to the TxOut that was recovered
+    /// The (compressed ristretto) bytes of the target key associated to the
+    /// TxOut that was recovered
     #[prost(bytes, required, tag = "3")]
     pub tx_out_target_key_data: Vec<u8>,
-    /// The (compressed ristretto) bytes of the public key associated to the TxOut that was recovered
+    /// The (compressed ristretto) bytes of the public key associated to the
+    /// TxOut that was recovered
     #[prost(bytes, required, tag = "4")]
     pub tx_out_public_key_data: Vec<u8>,
     /// Global index within the set of all TxOuts
@@ -177,16 +185,19 @@ pub struct TxOutRecord {
     pub block_index: u64,
 
     /// Timestamp of block at which this TxOut appeared
-    /// Note: The timestamps are based on untrusted reporting of time from the consensus validators.
-    /// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
+    /// Note: The timestamps are based on untrusted reporting of time from the
+    /// consensus validators. Represented as seconds of UTC time since Unix
+    /// epoch 1970-01-01T00:00:00Z.
     #[prost(fixed64, tag = "7")]
     pub timestamp: u64,
 }
 
 impl TxOutRecord {
-    /// Helper to extract a FogTxOut object from the (flattened) TxOutRecord object
+    /// Helper to extract a FogTxOut object from the (flattened) TxOutRecord
+    /// object
     pub fn get_fog_tx_out(&self) -> Result<FogTxOut, KeyError> {
-        // CompressedCommitment does not implement TryFrom, so we have to do the logic here
+        // CompressedCommitment does not implement TryFrom, so we have to do the logic
+        // here
         if self.tx_out_amount_commitment_data.len() != 32 {
             return Err(KeyError::LengthMismatch(
                 32,

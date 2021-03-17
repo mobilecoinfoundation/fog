@@ -34,7 +34,8 @@ fn make_uris(idx: u16) -> (ResponderId, FogIngestUri, IngestPeerUri) {
     (local_node_id, client_listen_uri, peer_listen_uri)
 }
 
-// Helper which makes i'th server and temp dir for its stuff (deleted when objects are dropped)
+// Helper which makes i'th server and temp dir for its stuff (deleted when
+// objects are dropped)
 fn make_node(
     idx: u16,
     peer_idxs: impl Iterator<Item = u16>,

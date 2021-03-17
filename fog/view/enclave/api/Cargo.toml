@@ -18,5 +18,5 @@ mc-sgx-types = { path = "../../../../mobilecoin/sgx/types", default-features = f
 fog-recovery-db-iface = { path = "../../../recovery_db_iface" }
 fog-types = { path = "../../../fog_types" }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 serde = { version = "1.0", default-features = false }

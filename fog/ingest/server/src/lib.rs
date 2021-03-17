@@ -3,12 +3,13 @@
 //! The fog ingest server
 //!
 //! The ingest server functions as the "engine" of fog.
-//! It enables fog to post-process the blockchain and figure out which transactions
-//! were going to which fog users, and then tag these transactions with random
-//! values that those users know to search for, so that they can find their transactions
-//! without revealing to the node operator which transactions were theirs.
-//! It uses an SGX enclave to do all of this decryption, and this enclave also contains
-//! an RNG per user that it is supporting.
+//! It enables fog to post-process the blockchain and figure out which
+//! transactions were going to which fog users, and then tag these transactions
+//! with random values that those users know to search for, so that they can
+//! find their transactions without revealing to the node operator which
+//! transactions were theirs. It uses an SGX enclave to do all of this
+//! decryption, and this enclave also contains an RNG per user that it is
+//! supporting.
 
 #![deny(missing_docs)]
 

@@ -3,8 +3,8 @@
 //! An implementation of the fog-ocall-oram-storage-edl interface
 //!
 //! This crate implements and exports the functions defined in the EDL file.
-//! This is the only public API of this crate, everything else is an implementation
-//! detail.
+//! This is the only public API of this crate, everything else is an
+//! implementation detail.
 //!
 //! Main ideas:
 //! Instead of a global data structure protected by a mutex, this API does
@@ -12,12 +12,13 @@
 //!
 //! On enclave allocation request:
 //! - Create an UntrustedAllocation on the heap (Box::new)
-//! - This "control structure" contains the creation parameters of the allocation,
-//!   and pointers to the block storage regions, created using ~malloc
-//! - The allocation_id u64, is the value of this pointer
-//!   The box is reconstituted whenever the enclave wants to access the allocation
-//! - The box is freed when the enclave releases the allocation
-//!   (This probably won't actually happen in production)
+//! - This "control structure" contains the creation parameters of the
+//!   allocation, and pointers to the block storage regions, created using
+//!   ~malloc
+//! - The allocation_id u64, is the value of this pointer The box is
+//!   reconstituted whenever the enclave wants to access the allocation
+//! - The box is freed when the enclave releases the allocation (This probably
+//!   won't actually happen in production)
 //!
 //! When debug assertions are on, we keep track in a global variable which ids
 //! are valid and which ones aren't so that we can give nice panic messages and
@@ -41,10 +42,11 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
-/// Resources held on untrusted side in connection to an allocation request by enclave
+/// Resources held on untrusted side in connection to an allocation request by
+/// enclave
 ///
-/// This is not actually part of the public interface of the crate, the only thing
-/// exported by the crate is the enclave EDL functions
+/// This is not actually part of the public interface of the crate, the only
+/// thing exported by the crate is the enclave EDL functions
 struct UntrustedAllocation {
     /// The number of data and meta items stored in this allocation
     count: usize,
@@ -56,19 +58,22 @@ struct UntrustedAllocation {
     data_pointer: *mut u64,
     /// The pointer to the meta items
     meta_pointer: *mut u64,
-    /// A flag set to true when a thread is in the critical section and released when it leaves.
-    /// This is used to trigger assertions if there is a race happening on this API
-    /// This is simpler and less expensive than an actual mutex to protect critical sections
+    /// A flag set to true when a thread is in the critical section and released
+    /// when it leaves. This is used to trigger assertions if there is a
+    /// race happening on this API This is simpler and less expensive than
+    /// an actual mutex to protect critical sections
     critical_section_flag: AtomicBool,
-    /// A flag set to true when there is an active checkout. This is used to trigger assertions
-    /// if checkout are not followed by checkin operation.
+    /// A flag set to true when there is an active checkout. This is used to
+    /// trigger assertions if checkout are not followed by checkin
+    /// operation.
     checkout_flag: AtomicBool,
 }
 
 /// Tracks total memory allocated via this mechanism for logging purposes
 static TOTAL_MEM_FOOTPRINT_KB: AtomicU64 = AtomicU64::new(0);
 
-/// Helper which computes the total memory in kb allocated for count, data_item_size, meta_item_size
+/// Helper which computes the total memory in kb allocated for count,
+/// data_item_size, meta_item_size
 fn compute_mem_kb(count: usize, data_item_size: usize, meta_item_size: usize) -> u64 {
     let num_bytes = (count * (data_item_size + meta_item_size)) as u64;
     // Divide by 1024 and round up, to compute num_bytes in kb
@@ -76,10 +81,11 @@ fn compute_mem_kb(count: usize, data_item_size: usize, meta_item_size: usize) ->
 }
 
 impl UntrustedAllocation {
-    /// Create a new untrusted allocation for given count and item sizes, on the heap
+    /// Create a new untrusted allocation for given count and item sizes, on the
+    /// heap
     ///
-    /// Data and meta item sizes must be divisible by 8, consistent with the contract
-    /// described in the edl file
+    /// Data and meta item sizes must be divisible by 8, consistent with the
+    /// contract described in the edl file
     pub fn new(count: usize, data_item_size: usize, meta_item_size: usize) -> Self {
         let mem_kb = compute_mem_kb(count, data_item_size, meta_item_size);
         let total_mem_kb = mem_kb + TOTAL_MEM_FOOTPRINT_KB.fetch_add(mem_kb, Ordering::SeqCst);
@@ -199,7 +205,8 @@ pub unsafe extern "C" fn release_oram_storage(id: u64) {
 /// metabuf_len must be equal to idx_len * meta_item_size / 8,
 /// where meta_item_size was passed when allocating storage.
 ///
-/// All indices must be in bounds, less than count that was passed when allocaitng.
+/// All indices must be in bounds, less than count that was passed when
+/// allocaitng.
 #[no_mangle]
 pub unsafe extern "C" fn checkout_oram_storage(
     id: u64,
@@ -270,7 +277,8 @@ pub unsafe extern "C" fn checkout_oram_storage(
 /// metabuf_len must be equal to idx_len * meta_item_size / 8,
 /// where meta_item_size was passed when allocating storage.
 ///
-/// All indices must be in bounds, less than count that was passed when allocaitng.
+/// All indices must be in bounds, less than count that was passed when
+/// allocaitng.
 #[no_mangle]
 pub unsafe extern "C" fn checkin_oram_storage(
     id: u64,

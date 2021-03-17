@@ -37,14 +37,15 @@ impl StateFile {
 
     /// Write data to the state file on disk, and fsync it.
     ///
-    /// FOG-360: Per discussion in ticket, the most sound way to write to a file to disk in linux is:
-    /// (1) Write to a temporary file
+    /// FOG-360: Per discussion in ticket, the most sound way to write to a file
+    /// to disk in linux is: (1) Write to a temporary file
     /// (2) fsync. If this fails we didn't corrupt the original
     /// (3) Move the temporary file over the old file
-    /// (4) fsync the directory containing the old file, ensuring the move is written to disk.
+    /// (4) fsync the directory containing the old file, ensuring the move is
+    /// written to disk.
     ///
-    /// Unfortunately there's no way to do 4 in the rust stdlib, so we would need to use nix or something.
-    /// https://github.com/rust-lang/rust/issues/32255#issuecomment-308296338
+    /// Unfortunately there's no way to do 4 in the rust stdlib, so we would
+    /// need to use nix or something. https://github.com/rust-lang/rust/issues/32255#issuecomment-308296338
     pub fn write(&self, state_data: &IngestStateFile) -> Result<()> {
         let proto_data = state_data.write_to_bytes().map_err(|e| {
             Error::new(

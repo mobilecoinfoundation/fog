@@ -51,17 +51,20 @@ typedef struct McError {
 typedef MrEnclaveVerifier McMrEnclaveVerifier;
 
 /**
- * This type is meant to be used as a parameter (or field of an another parameter, etc) to C-FFI
- * functions to code written in Rust. Objects of this type are typically allocated on the foreign
- * side of the FFI boundary and are passed in to Rust via an `extern fn`-style function.
+ * This type is meant to be used as a parameter (or field of an another
+ * parameter, etc) to C-FFI functions to code written in Rust. Objects of this
+ * type are typically allocated on the foreign side of the FFI boundary and are
+ * passed in to Rust via an `extern fn`-style function.
  *
- * The purpose of this type is to encapsulate unsafety within a type, such that if this type were
- * to be created solely in safe Rust, that it would contain no unsafety. This is to say that, while
- * this type performs unsafe operations internally, in order for those unsafe operations to
- * actually cause unsafety, this type must have been created or otherwise manipulated from unsafe
- * code (typically either unsafe Rust or unsafe-by-definition foreign code). Therefore, care must
- * be taken when using this type from unsafe code (and indeed it is intended to be used from unsafe
- * code), but the same care does not need to be taken in order to otherwise use it from safe code,
+ * The purpose of this type is to encapsulate unsafety within a type, such that
+ * if this type were to be created solely in safe Rust, that it would contain
+ * no unsafety. This is to say that, while this type performs unsafe operations
+ * internally, in order for those unsafe operations to actually cause unsafety,
+ * this type must have been created or otherwise manipulated from unsafe
+ * code (typically either unsafe Rust or unsafe-by-definition foreign code).
+ * Therefore, care must be taken when using this type from unsafe code (and
+ * indeed it is intended to be used from unsafe code), but the same care does
+ * not need to be taken in order to otherwise use it from safe code,
  * with the assumption that no preconditions were violated from unsafe code.
  */
 typedef struct McBuffer {
@@ -76,11 +79,13 @@ typedef Verifier McVerifier;
 typedef struct AttestAke McAttestAke;
 
 /**
- * Transparent wrapper around a function pointer that accepts a context argument and returns a
- * `u64`, intended for use as a parameter to FFI functions so that foreign code may provide a
- * callback for generating random numbers.
+ * Transparent wrapper around a function pointer that accepts a context
+ * argument and returns a `u64`, intended for use as a parameter to FFI
+ * functions so that foreign code may provide a callback for generating random
+ * numbers.
  *
- * This type has the exact memory layout as the C equivalent `uint64_t (*)(void*)` function pointer.
+ * This type has the exact memory layout as the C equivalent `uint64_t
+ * (*)(void*)` function pointer.
  *
  * `null` is not considered a valid value.
  */
@@ -151,21 +156,22 @@ void mc_data_free(FfiOptOwnedPtr<McData> data);
 ssize_t mc_data_get_bytes(FfiRefPtr<McData> data, FfiOptMutPtr<McMutableBuffer> out_bytes);
 
 /**
- * All non-null owned pointers of type `McError *` that are returned from a Rust FFI function to a
- * foreign caller must call this function in order to free the underlying memory pointed to by the
- * pointer.
+ * All non-null owned pointers of type `McError *` that are returned from a
+ * Rust FFI function to a foreign caller must call this function in order to
+ * free the underlying memory pointed to by the pointer.
  *
- * It is undefined behavior for foreign code to dereference the pointer after it has called this
- * method.
+ * It is undefined behavior for foreign code to dereference the pointer after
+ * it has called this method.
  */
 void mc_error_free(FfiOptOwnedPtr<McError> error);
 
 /**
- * All non-null values with a `char *` return (or out parameter) type that are returned to foreign
- * code must call this function in order to free the underlying memory pointed to by the pointer.
+ * All non-null values with a `char *` return (or out parameter) type that are
+ * returned to foreign code must call this function in order to free the
+ * underlying memory pointed to by the pointer.
  *
- * It is undefined behavior for foreign code to dereference the pointer after it has called this
- * method.
+ * It is undefined behavior for foreign code to dereference the pointer after
+ * it has called this method.
  */
 void mc_string_free(FfiOptOwnedStr string);
 
@@ -285,8 +291,10 @@ ssize_t mc_attest_ake_get_binding(FfiRefPtr<McAttestAke> attest_ake,
 /**
  * # Preconditions
  *
- * * `responder_id` - must be a nul-terminated C string containing a valid responder ID.
- * * `out_auth_request` - must be null or else length must be >= auth_request_output.len.
+ * * `responder_id` - must be a nul-terminated C string containing a valid
+ *   responder ID.
+ * * `out_auth_request` - must be null or else length must be >=
+ *   auth_request_output.len.
  */
 ssize_t mc_attest_ake_get_auth_request(FfiMutPtr<McAttestAke> attest_ake,
                                        FfiStr responder_id,
@@ -312,7 +320,8 @@ bool mc_attest_ake_process_auth_response(FfiMutPtr<McAttestAke> attest_ake,
  * # Preconditions
  *
  * * `attest_ake` - must be in the attested state.
- * * `out_ciphertext` - must be null or else length must be >= `ciphertext.len`.
+ * * `out_ciphertext` - must be null or else length must be >=
+ *   `ciphertext.len`.
  *
  * # Errors
  *
@@ -359,7 +368,8 @@ ssize_t mc_bip39_entropy_from_mnemonic(FfiStr mnemonic,
 /**
  * # Preconditions
  *
- * * `entropy` - length must be a multiple of 4 and between 16 and 32, inclusive.
+ * * `entropy` - length must be a multiple of 4 and between 16 and 32,
+ *   inclusive.
  */
 FfiOptOwnedStr mc_bip39_entropy_to_mnemonic(FfiRefPtr<McBuffer> entropy);
 
@@ -367,7 +377,8 @@ FfiOptOwnedStr mc_bip39_entropy_to_mnemonic(FfiRefPtr<McBuffer> entropy);
  * # Preconditions
  *
  * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
- * * `passphrase` - must be a nul-terminated C string containing valid UTF-8. Can be empty.
+ * * `passphrase` - must be a nul-terminated C string containing valid UTF-8.
+ *   Can be empty.
  * * `out_seed` - length must be >= 64.
  *
  * # Errors
@@ -404,7 +415,8 @@ bool mc_ristretto_public_validate(FfiRefPtr<McBuffer> ristretto_public, FfiMutPt
  * # Preconditions
  *
  * * `public_key` - must be a valid 32-byte compressed Ristretto point.
- * * `out_ciphertext` - must be null or else length must be >= `ciphertext.len`.
+ * * `out_ciphertext` - must be null or else length must be >=
+ *   `ciphertext.len`.
  *
  * # Errors
  *
@@ -436,17 +448,18 @@ ssize_t mc_versioned_crypto_box_decrypt(FfiRefPtr<McBuffer> private_key,
 /**
  * # Preconditions
  *
- * * `printable_wrapper_proto_bytes` - must be a valid binary-serialized `printable.PrintableWrapper`
- *     Protobuf.
+ * * `printable_wrapper_proto_bytes` - must be a valid binary-serialized
+ *   `printable.PrintableWrapper` Protobuf.
  */
 FfiOptOwnedStr mc_printable_wrapper_b58_encode(FfiRefPtr<McBuffer> printable_wrapper_proto_bytes);
 
 /**
  * # Preconditions
  *
- * * `b58_encoded_string` - must be a nul-terminated C string containing valid UTF-8.
- * * `out_printable_wrapper_proto_bytes` - must be null or else length must be >=
- *     `wrapper_bytes.len`.
+ * * `b58_encoded_string` - must be a nul-terminated C string containing valid
+ *   UTF-8.
+ * * `out_printable_wrapper_proto_bytes` - must be null or else length must be
+ *   >= `wrapper_bytes.len`.
  *
  * # Errors
  *
@@ -463,7 +476,8 @@ void mc_fog_resolver_free(FfiOptOwnedPtr<McFogResolver> fog_resolver);
 /**
  * # Preconditions
  *
- * * `report_url` - must be a nul-terminated C string containing a valid Fog report uri.
+ * * `report_url` - must be a nul-terminated C string containing a valid Fog
+ *   report uri.
  *
  * # Errors
  *
@@ -477,7 +491,8 @@ bool mc_fog_resolver_add_report_response(FfiMutPtr<McFogResolver> fog_resolver,
 /**
  * # Preconditions
  *
- * * `subaddress_view_private_key` - must be a valid 32-byte Ristretto-format scalar.
+ * * `subaddress_view_private_key` - must be a valid 32-byte Ristretto-format
+ *   scalar.
  *
  * # Errors
  *
@@ -496,7 +511,8 @@ FfiOptOwnedPtr<McFogRng> mc_fog_rng_clone(FfiRefPtr<McFogRng> fog_rng);
 /**
  * # Preconditions
  *
- * * `out_fog_rng_proto_bytes` - must be null or else length must be >= `encoded.len`.
+ * * `out_fog_rng_proto_bytes` - must be null or else length must be >=
+ *   `encoded.len`.
  */
 ssize_t mc_fog_rng_serialize_proto(FfiRefPtr<McFogRng> fog_rng,
                                    FfiOptMutPtr<McMutableBuffer> out_fog_rng_proto_bytes);
@@ -606,7 +622,8 @@ bool mc_tx_out_matches_any_subaddress(FfiRefPtr<McTxOutAmount> tx_out_amount,
  * # Preconditions
  *
  * * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
- * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+ * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+ *   scalar.
  */
 bool mc_tx_out_matches_subaddress(FfiRefPtr<McBuffer> tx_out_target_key,
                                   FfiRefPtr<McBuffer> tx_out_public_key,
@@ -650,7 +667,8 @@ bool mc_tx_out_get_value(FfiRefPtr<McTxOutAmount> tx_out_amount,
  * # Preconditions
  *
  * * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
- * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+ * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+ *   scalar.
  * * `out_key_image` - length must be >= 32.
  *
  * # Errors
@@ -682,9 +700,10 @@ void mc_transaction_builder_ring_free(FfiOptOwnedPtr<McTransactionBuilderRing> t
 /**
  * # Preconditions
  *
- * * `tx_out_proto_bytes` - must be a valid binary-serialized `external.TxOut` Protobuf.
+ * * `tx_out_proto_bytes` - must be a valid binary-serialized `external.TxOut`
+ *   Protobuf.
  * * `membership_proof_proto_bytes` - must be a valid binary-serialized
- *     `external.TxOutMembershipProof` Protobuf.
+ *   `external.TxOutMembershipProof` Protobuf.
  */
 bool mc_transaction_builder_ring_add_element(FfiMutPtr<McTransactionBuilderRing> ring,
                                              FfiRefPtr<McBuffer> tx_out_proto_bytes,
@@ -699,9 +718,11 @@ void mc_transaction_builder_free(FfiOptOwnedPtr<McTransactionBuilder> transactio
 /**
  * # Preconditions
  *
- * * `transaction_builder` - must not have been previously consumed by a call to `build`.
+ * * `transaction_builder` - must not have been previously consumed by a call
+ *   to `build`.
  * * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
- * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+ * * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+ *   scalar.
  * * `real_index` - must be within bounds of `ring`.
  * * `ring` - `TxOut` at `real_index` must be owned by account keys.
  *
@@ -719,7 +740,8 @@ bool mc_transaction_builder_add_input(FfiMutPtr<McTransactionBuilder> transactio
 /**
  * # Preconditions
  *
- * * `transaction_builder` - must not have been previously consumed by a call to `build`.
+ * * `transaction_builder` - must not have been previously consumed by a call
+ *   to `build`.
  * * `recipient_address` - must be a valid `PublicAddress`.
  * * `out_subaddress_spend_public_key` - length must be >= 32.
  *
@@ -738,7 +760,8 @@ FfiOptOwnedPtr<McData> mc_transaction_builder_add_output(FfiMutPtr<McTransaction
 /**
  * # Preconditions
  *
- * * `transaction_builder` - must not have been previously consumed by a call to `build`.
+ * * `transaction_builder` - must not have been previously consumed by a call
+ *   to `build`.
  * * `recipient_address` - must be a valid `PublicAddress`.
  * * `fog_hint_address` - must be a valid `PublicAddress` with `fog_info`.
  * * `out_tx_out_confirmation_number` - length must be >= 32.
@@ -759,7 +782,8 @@ FfiOptOwnedPtr<McData> mc_transaction_builder_add_output_with_fog_hint_address(F
 /**
  * # Preconditions
  *
- * * `transaction_builder` - must not have been previously consumed by a call to `build`.
+ * * `transaction_builder` - must not have been previously consumed by a call
+ *   to `build`.
  *
  * # Errors
  *

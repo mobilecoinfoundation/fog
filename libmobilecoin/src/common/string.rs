@@ -5,11 +5,12 @@ use crate::LibMcError;
 use mc_util_ffi::{FfiOptOwnedStr, FfiOwnedStr, FfiStr};
 use std::ffi::CString;
 
-/// All non-null values with a `char *` return (or out parameter) type that are returned to foreign
-/// code must call this function in order to free the underlying memory pointed to by the pointer.
+/// All non-null values with a `char *` return (or out parameter) type that are
+/// returned to foreign code must call this function in order to free the
+/// underlying memory pointed to by the pointer.
 ///
-/// It is undefined behavior for foreign code to dereference the pointer after it has called this
-/// method.
+/// It is undefined behavior for foreign code to dereference the pointer after
+/// it has called this method.
 #[no_mangle]
 pub extern "C" fn mc_string_free(string: FfiOptOwnedStr) {
     ffi_boundary(move || {

@@ -26,11 +26,13 @@ impl<T> RecoveryDbError for T where T: Debug + Display + Send + Sync {}
 /// Status in the database connected to this ingress public key
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct IngressPublicKeyStatus {
-    /// The first block that fog promises to scan with this key after publishing it.
-    /// This should be the latest block that existed before we published it (or, a block close to but before that)
+    /// The first block that fog promises to scan with this key after publishing
+    /// it. This should be the latest block that existed before we published
+    /// it (or, a block close to but before that)
     pub start_block: u64,
-    /// The largest pubkey expiry value that we have ever published for this key.
-    /// If less than start_block, it means we have never published this key.
+    /// The largest pubkey expiry value that we have ever published for this
+    /// key. If less than start_block, it means we have never published this
+    /// key.
     pub pubkey_expiry: u64,
     /// Whether this key is retiring / retired.
     /// When a key is retired, we stop publishing reports about it.
@@ -40,8 +42,8 @@ pub struct IngressPublicKeyStatus {
 /// Information returned after attempting to add block data to the database.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AddBlockDataStatus {
-    /// Indicates that the block we tried to add has already been scanned using this ingress key,
-    /// and didn't need to be scanned again.
+    /// Indicates that the block we tried to add has already been scanned using
+    /// this ingress key, and didn't need to be scanned again.
     ///
     /// If this value is true, then no data was added to the database.
     pub block_already_scanned_with_this_key: bool,
@@ -65,7 +67,8 @@ pub trait RecoveryDb {
     /// * start_block: the first block we promise to scan with this key
     ///
     /// Returns
-    /// * true if the insert was successful, false if this key already exists in the database
+    /// * true if the insert was successful, false if this key already exists in
+    ///   the database
     fn new_ingress_key(
         &self,
         key: &CompressedRistrettoPublic,
@@ -74,9 +77,10 @@ pub trait RecoveryDb {
 
     /// Mark an ingress public key for retiring.
     ///
-    /// Passing set_retired = true will make all servers using it stop publishing reports,
-    /// continue scanning to pubkey expiry value, and then stop.
-    /// set_retired = false will cause it to not be marked for retiring anymore, if it was marked for retiring by mistake.
+    /// Passing set_retired = true will make all servers using it stop
+    /// publishing reports, continue scanning to pubkey expiry value, and
+    /// then stop. set_retired = false will cause it to not be marked for
+    /// retiring anymore, if it was marked for retiring by mistake.
     fn retire_ingress_key(
         &self,
         key: &CompressedRistrettoPublic,
@@ -96,7 +100,8 @@ pub trait RecoveryDb {
         key: &CompressedRistrettoPublic,
     ) -> Result<Option<u64>, Self::Error>;
 
-    /// Adds a new ingest invocation to the database, optionally decommissioning an older one.
+    /// Adds a new ingest invocation to the database, optionally decommissioning
+    /// an older one.
     ///
     /// This should be done when the ingest enclave is processing block data,
     /// and the ORAM overflows and the KexRngPubkey is rotated by the enclave.
@@ -106,10 +111,13 @@ pub trait RecoveryDb {
     /// This decommissions the old ingest invocation id and creates a new one,
     /// associated to the new public keys.
     /// Arguments:
-    /// * prev_ingest_invocation_id: The previous unique ingest invocation id to retire
-    /// * ingress_public_key: The ingest server ingress public key, as reported to the report server.
+    /// * prev_ingest_invocation_id: The previous unique ingest invocation id to
+    ///   retire
+    /// * ingress_public_key: The ingest server ingress public key, as reported
+    ///   to the report server.
     /// * egress_public_key: The kex rng pubkey emitted by the ingest enclave
-    /// * start_block: The first block index this ingest invocation will start ingesting from.
+    /// * start_block: The first block index this ingest invocation will start
+    ///   ingesting from.
     fn new_ingest_invocation(
         &self,
         prev_ingest_invocation_id: Option<IngestInvocationId>,
@@ -127,7 +135,8 @@ pub trait RecoveryDb {
     /// This should be done when a given ingest enclave goes down or is retired.
     ///
     /// Arguments:
-    /// * ingest_invocation_id: The unique ingest invocation id that has been retired
+    /// * ingest_invocation_id: The unique ingest invocation id that has been
+    ///   retired
     fn decommission_ingest_invocation(
         &self,
         ingest_invocation_id: &IngestInvocationId,
@@ -136,10 +145,13 @@ pub trait RecoveryDb {
     /// Add records corresponding to a FULLY PROCESSED BLOCK to the database
     ///
     /// Arguments:
-    /// * ingest_invocation_id: The unique ingest invocation id this block was processed by.
+    /// * ingest_invocation_id: The unique ingest invocation id this block was
+    ///   processed by.
     /// * block: The block that was processed.
-    /// * block_signature_timestamp: Seconds since the unix epoch when the block was signed
-    /// * tx_rows: TxRows that the ingest enclave emitted when processing this block
+    /// * block_signature_timestamp: Seconds since the unix epoch when the block
+    ///   was signed
+    /// * tx_rows: TxRows that the ingest enclave emitted when processing this
+    ///   block
     fn add_block_data(
         &self,
         ingest_invocation_id: &IngestInvocationId,
@@ -150,17 +162,19 @@ pub trait RecoveryDb {
 
     /// Report that a half-open range of blocks has been missed irrecoverably.
     ///
-    /// Clients that hit the view node will learn about the range. Then they have to download
-    /// missed blocks from the fog ledger server, and then view-key scan them to recover
-    /// their transactions.
+    /// Clients that hit the view node will learn about the range. Then they
+    /// have to download missed blocks from the fog ledger server, and then
+    /// view-key scan them to recover their transactions.
     ///
-    /// If blocks are missed but this call is never made, then clients will never be able
-    /// to compute an accurate balance after `start`. highest_processed_block_count will always be computed
-    /// as less than any missed block (gap in the data), until a range covering that gap is reported
-    /// permanently missed.
-    /// This means that the database does the right thing to fulfill the client contract automatically
-    /// in the face of missed blocks, but actively reporting missed block range is required to allow
-    /// progress by the client.
+    /// If blocks are missed but this call is never made, then clients will
+    /// never be able to compute an accurate balance after `start`.
+    /// highest_processed_block_count will always be computed as less than
+    /// any missed block (gap in the data), until a range covering that gap is
+    /// reported permanently missed.
+    /// This means that the database does the right thing to fulfill the client
+    /// contract automatically in the face of missed blocks, but actively
+    /// reporting missed block range is required to allow progress by the
+    /// client.
     ///
     /// Arguments:
     /// * block_range: The missing block range.
@@ -178,7 +192,8 @@ pub trait RecoveryDb {
     /// * start_after_event_id: The last event id the user has received.
     ///
     /// Returns:
-    /// * List of found events, and higehst event id in the database (to be used as
+    /// * List of found events, and higehst event id in the database (to be used
+    ///   as
     /// start_after_event_id in the next query).
     fn search_user_events(
         &self,
@@ -189,12 +204,14 @@ pub trait RecoveryDb {
     /// Nonzero start_block can be provided as an optimization opportunity.
     ///
     /// Arguments:
-    /// * start_block: A lower bound on where we will search. This can often be provided by the user
-    ///                in order to limit the scope of the search and reduce load on the servers.
+    /// * start_block: A lower bound on where we will search. This can often be
+    ///   provided by the user in order to limit the scope of the search and
+    ///   reduce load on the servers.
     /// * search_keys: A list of fog tx_out search keys to search for.
     ///
     /// Returns:
-    /// * Exactly one TxOutSearchResult object for every search key, or an internal database error description.
+    /// * Exactly one TxOutSearchResult object for every search key, or an
+    ///   internal database error description.
     fn get_tx_outs(
         &self,
         start_block: u64,
@@ -207,7 +224,8 @@ pub trait RecoveryDb {
         ingest_invocation_id: &IngestInvocationId,
     ) -> Result<(), Self::Error>;
 
-    /// Get any ETxOutRecords produced by a given IngestInvocationId for a given block index.
+    /// Get any ETxOutRecords produced by a given IngestInvocationId for a given
+    /// block index.
     ///
     /// Arguments:
     /// * ingest_invocation_id: The ingest invocation we need ETxOutRecords from
@@ -227,7 +245,8 @@ pub trait RecoveryDb {
     /// * block_index: The block we need cumulative_txo_count for.
     ///
     /// Returns:
-    /// * Some(cumulative_txo_count) if the block was found in the database, None if it wasn't, or
+    /// * Some(cumulative_txo_count) if the block was found in the database,
+    ///   None if it wasn't, or
     /// an error if the query failed.
     fn get_cumulative_txo_count_for_block(
         &self,
@@ -241,10 +260,12 @@ pub trait RecoveryDb {
     /// * block_index: The block we need cumulative_txo_count for.
     ///
     /// Returns:
-    /// * Some(timestamp) if the block was found in the database, None if it wasn't, or
+    /// * Some(timestamp) if the block was found in the database, None if it
+    ///   wasn't, or
     /// an error if the query failed.
     ///
-    /// Note: It is unspecified which invocation id we use when giving the timestamp
+    /// Note: It is unspecified which invocation id we use when giving the
+    /// timestamp
     fn get_block_signature_timestamp_for_block(
         &self,
         block_index: u64,
@@ -260,27 +281,29 @@ pub trait ReportDb {
     type Error: RecoveryDbError;
 
     /// Get all available report data
-    /// Note: We always give the user all the report data, because it is a privacy
-    /// issue if the user divulges which report they care about.
+    /// Note: We always give the user all the report data, because it is a
+    /// privacy issue if the user divulges which report they care about.
     /// There are not expected to be very many reports.
-    /// If there are many reports, then this should be redesigned to use an oblivious
-    /// lookup strategy inside of an sgx enclave.
+    /// If there are many reports, then this should be redesigned to use an
+    /// oblivious lookup strategy inside of an sgx enclave.
     ///
     /// Returns:
     /// * Pairs of the form report-id, report-data
     fn get_all_reports(&self) -> Result<Vec<(String, ReportData)>, Self::Error>;
 
-    /// Set report data associated with a given report id, unless the public key is retired.
+    /// Set report data associated with a given report id, unless the public key
+    /// is retired.
     ///
     /// Arguments:
     /// * ingress_public_key - the public key signed by this report
-    /// * report_id - the report_id associated to the report. this should almost always be the empty string.
+    /// * report_id - the report_id associated to the report. this should almost
+    ///   always be the empty string.
     /// * data - The IAS verification report and cert chain.
     ///
     /// Returns:
-    /// * The status of this ingress public key in the database.
-    ///   If the status is retired, then this set operation DID NOT HAPPEN,
-    ///   and no changes were made to the database.
+    /// * The status of this ingress public key in the database. If the status
+    ///   is retired, then this set operation DID NOT HAPPEN, and no changes
+    ///   were made to the database.
     fn set_report(
         &self,
         ingress_public_key: &CompressedRistrettoPublic,

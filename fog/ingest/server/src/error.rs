@@ -40,7 +40,10 @@ pub enum IngestServiceError {
     Backup(PeerBackupError),
     /// This change not allowed unless server is idle
     ServerNotIdle,
-    /// When activating, the process was aborted because this key is already retired: {0}
+    /**
+     * When activating, the process was aborted because this key is already
+     * retired: {0}
+     */
     KeyAlreadyRetired(CompressedRistrettoPublic),
     /// Report publication and ingress key checkup operation failed
     PublishReport,
@@ -170,11 +173,17 @@ pub enum RestoreStateError {
     ReportCache(ReportCacheError),
     /// Peer backup error: {0}
     Backup(PeerBackupError),
-    /// Ingress public key in state file didn't match what's in the enclave: enclave has {0}, needed {1}
+    /**
+     * Ingress public key in state file didn't match what's in the enclave:
+     * enclave has {0}, needed {1}
+     */
     IngressKeyMismatch(CompressedRistrettoPublic, CompressedRistrettoPublic),
     /// Statefile contained invalid peer uri: {0}
     InvalidPeerUri(UriParseError),
-    /// Server not in idle state before restore state operation, this is a logic error
+    /**
+     * Server not in idle state before restore state operation, this is a
+     * logic error
+     */
     ServerNotIdle,
     /// Invalid data in protobuf: {0:?}
     Conversion(ConversionError),

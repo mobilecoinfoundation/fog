@@ -42,7 +42,8 @@ impl<
 where
     IngestServiceError: From<<DB as RecoveryDb>::Error>,
 {
-    /// Creates a new ingest node (but does not create sockets and start it etc.)
+    /// Creates a new ingest node (but does not create sockets and start it
+    /// etc.)
     pub fn new(
         controller: Arc<IngestController<R, DB>>,
         ledger_db: LedgerDB,

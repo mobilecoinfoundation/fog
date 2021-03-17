@@ -34,7 +34,8 @@ pub struct FogViewService<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> {
 }
 
 impl<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> FogViewService<E, DB> {
-    /// Creates a new fog-view-service node (but does not create sockets and start it etc.)
+    /// Creates a new fog-view-service node (but does not create sockets and
+    /// start it etc.)
     pub fn new(
         enclave: E,
         db: Arc<DB>,
@@ -105,7 +106,8 @@ impl<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> FogViewService<E, DB> {
 
     // Helper function that is common
     fn enclave_err_to_rpc_status(&self, context: &str, src: ViewEnclaveError) -> RpcStatus {
-        // Treat prost-decode error as an invalid arg, everything else is an internal error
+        // Treat prost-decode error as an invalid arg, everything else is an internal
+        // error
         match src {
             ViewEnclaveError::ProstDecode => {
                 rpc_invalid_arg_error(context, "Prost decode failed", &self.logger)

@@ -10,7 +10,8 @@ use std::{
     process::abort,
 };
 
-/// The default field name in the Java world that holds a pointer to the Rust object.
+/// The default field name in the Java world that holds a pointer to the Rust
+/// object.
 pub const RUST_OBJ_FIELD: &str = "rustObj";
 
 /// Performs an FFI-wrapped call with a return value that implements Default.
@@ -22,19 +23,21 @@ pub fn jni_ffi_call<R: Default>(
     jni_ffi_call_or(|| Ok(R::default()), &env, f)
 }
 
-/// Performs an FFI-wrapped call. The purpose of this is to provide a wrapper for functions that
-/// return Result<_, McError>, converting Err(McError) into a Java exception.
-/// Since JNI's API for throwing an exception (`throw_new`) does not have a way of aborting
-/// execution, we are still forced to come up with a return value even though it would never make
-/// it to Java-land. This is the purpose of the `or_err` argument.
+/// Performs an FFI-wrapped call. The purpose of this is to provide a wrapper
+/// for functions that return Result<_, McError>, converting Err(McError) into a
+/// Java exception. Since JNI's API for throwing an exception (`throw_new`) does
+/// not have a way of aborting execution, we are still forced to come up with a
+/// return value even though it would never make it to Java-land. This is the
+/// purpose of the `or_err` argument.
 pub fn jni_ffi_call_or<R>(
     on_err: impl (FnOnce() -> Result<R, McError>) + UnwindSafe,
     env: &JNIEnv,
     f: impl (FnOnce(&JNIEnv) -> Result<R, McError>) + UnwindSafe,
 ) -> R {
     let result = catch_unwind(|| f(env)).unwrap_or_else(|panic_error| {
-        // We assert `panic_error` is unwind safe because, since we won't be modifying it, we
-        // know that no harm will come if we panic while trying to process it.
+        // We assert `panic_error` is unwind safe because, since we won't be modifying
+        // it, we know that no harm will come if we panic while trying to
+        // process it.
         let panic_error = AssertUnwindSafe(panic_error);
         catch_unwind(|| Err(McError::Panic(format_panic(panic_error.0))))
             // If this also panics then we just abort because at this point it's likely
@@ -45,8 +48,8 @@ pub fn jni_ffi_call_or<R>(
     match result {
         Ok(val) => val,
         Err(err) => {
-            // TODO We could throw an object that has an actual enum that matches McError if we
-            // need more usable info.
+            // TODO We could throw an object that has an actual enum that matches McError if
+            // we need more usable info.
             env.throw_new(
                 "java/lang/Exception",
                 format!("jni_ffi_call exception: {}", err),
@@ -68,8 +71,8 @@ pub fn jni_big_int_to_u64(env: &JNIEnv, obj: JObject) -> Result<u64, McError> {
         .to_vec();
 
     // bytes_vec is a big endian representation of the BigInteger value.
-    // strip any leading zeros - this is needed since for u64::max this method returns
-    // [0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff].
+    // strip any leading zeros - this is needed since for u64::max this method
+    // returns [0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff].
     while bytes_vec.get(0) == Some(&0) {
         bytes_vec.remove(0);
     }
@@ -87,8 +90,8 @@ pub fn jni_big_int_to_u64(env: &JNIEnv, obj: JObject) -> Result<u64, McError> {
     Ok(u64::from_be_bytes(be_bytes))
 }
 
-/// Utility method to convert a panic error, as represented by Rust's unwinding mechanism into a
-/// meaningful string that can be displayed to the user.
+/// Utility method to convert a panic error, as represented by Rust's unwinding
+/// mechanism into a meaningful string that can be displayed to the user.
 fn format_panic(panic_error: Box<dyn Any>) -> String {
     let panic_error = match panic_error.downcast::<String>() {
         Ok(msg) => return msg.to_string(),

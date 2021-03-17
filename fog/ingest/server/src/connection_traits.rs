@@ -31,16 +31,16 @@ pub trait IngestConnection: Connection {
     /// Send the ingress private key from ourselves to the remote peer.
     ///
     /// Note: The enclave has a thread-safe API to change its private keys.
-    /// So, another thread can potentially change the private key of our enclave,
-    /// while we are executing this function. That may result in us not sending the key
-    /// that we expected to send.
+    /// So, another thread can potentially change the private key of our
+    /// enclave, while we are executing this function. That may result in us
+    /// not sending the key that we expected to send.
     ///
     /// To avoid races, this also takes the value that we currently think is
     /// our ingress public key.
     ///
     /// If when we get the sealed key from the enclave, it doesn't match this,
-    /// this function returns Error::UnexpectedKeyInEnclave, likely indicating a race.
-    /// If desired you can then retry.
+    /// this function returns Error::UnexpectedKeyInEnclave, likely indicating a
+    /// race. If desired you can then retry.
     fn set_ingress_private_key(
         &mut self,
         current_ingress_public_key: &CompressedRistrettoPublic,

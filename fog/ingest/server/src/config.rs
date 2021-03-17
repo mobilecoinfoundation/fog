@@ -59,7 +59,8 @@ pub struct IngestConfig {
     /// will be flushed. This will cause all users to get a new RNG and have
     /// some extra traffic at fog-view servers.
     ///
-    /// This determines the memory utilization / storage requirement of the server.
+    /// This determines the memory utilization / storage requirement of the
+    /// server.
     #[structopt(long, default_value = "262144")]
     pub user_capacity: u64,
 
@@ -68,7 +69,8 @@ pub struct IngestConfig {
     #[structopt(long, default_value = "100000")]
     pub max_transactions: usize,
 
-    /// The amount we add to current block height to compute pubkey_expiry in reports
+    /// The amount we add to current block height to compute pubkey_expiry in
+    /// reports
     #[structopt(long, default_value = "100")]
     pub pubkey_expiry_window: u64,
 
@@ -77,8 +79,9 @@ pub struct IngestConfig {
     #[structopt(long, default_value = "60", parse(try_from_str=parse_duration_in_seconds))]
     pub peer_checkup_period: Duration,
 
-    /// The amount of time we wait for the watcher db to catchup if it falls behind
-    /// If this timeout is exceeded then the ETxOut's will have no timestamp
+    /// The amount of time we wait for the watcher db to catchup if it falls
+    /// behind If this timeout is exceeded then the ETxOut's will have no
+    /// timestamp
     #[structopt(long, default_value = "5", parse(try_from_str=parse_duration_in_seconds))]
     pub watcher_timeout: Duration,
 

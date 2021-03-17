@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-//! A helper utility for running migrations on a database configured via DATABASE_URL.
+//! A helper utility for running migrations on a database configured via
+//! DATABASE_URL.
 
 #[macro_use]
 extern crate diesel_migrations;

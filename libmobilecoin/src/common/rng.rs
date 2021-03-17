@@ -34,11 +34,13 @@ impl<'a> FfiTryFrom<u64> for i64 {
     }
 }
 
-/// Transparent wrapper around a function pointer that accepts a context argument and returns a
-/// `u64`, intended for use as a parameter to FFI functions so that foreign code may provide a
-/// callback for generating random numbers.
+/// Transparent wrapper around a function pointer that accepts a context
+/// argument and returns a `u64`, intended for use as a parameter to FFI
+/// functions so that foreign code may provide a callback for generating random
+/// numbers.
 ///
-/// This type has the exact memory layout as the C equivalent `uint64_t (*)(void*)` function pointer.
+/// This type has the exact memory layout as the C equivalent `uint64_t
+/// (*)(void*)` function pointer.
 ///
 /// `null` is not considered a valid value.
 #[repr(transparent)]

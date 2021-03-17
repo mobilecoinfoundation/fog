@@ -2,7 +2,8 @@
 
 //! MobileCoin Ingest Enclave Implementation
 //!
-//! This crate implements the inside-the-enclave version of the IngestEnclaveAPI.
+//! This crate implements the inside-the-enclave version of the
+//! IngestEnclaveAPI.
 
 #![no_std]
 #![deny(missing_docs)]
@@ -43,20 +44,22 @@ use mc_transaction_core::fog_hint::FogHint;
 use mc_util_from_random::FromRandom;
 use zeroize::Zeroize;
 
-/// When processing a chunk of transactions, we try to add all of them without overflowing ORAM,
-/// and emit one or zero new rng records. If clearing the table and processing the chunk
-/// fails this many times, we give up -- the configuration should be changed, for bigger ORAM
-/// or smaller chunks.
+/// When processing a chunk of transactions, we try to add all of them without
+/// overflowing ORAM, and emit one or zero new rng records. If clearing the
+/// table and processing the chunk fails this many times, we give up -- the
+/// configuration should be changed, for bigger ORAM or smaller chunks.
 const MAX_CHUNK_RETRIES: usize = 10;
 
 /// Business logic of the SgxIngestEnclave
 pub struct SgxIngestEnclave<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> {
-    /// State related to attested key exchange and reports. This contains the "ingress key",
-    /// which is used to decrypt the fog hints. The public key of that is in the reports.
+    /// State related to attested key exchange and reports. This contains the
+    /// "ingress key", which is used to decrypt the fog hints. The public
+    /// key of that is in the reports.
     ake: AkeEnclaveState<RistrettoIdentity>,
     /// The "egress key" which is used to perform key exchange with the users.
     /// The public key of this appears in the RngRecord objects.
-    /// This MUST NOT be replicated to peer enclaves or sealed under any circumstance.
+    /// This MUST NOT be replicated to peer enclaves or sealed under any
+    /// circumstance.
     egress_key: Mutex<RistrettoPrivate>,
     /// State related to oblivious storage of user rng counters
     rng_store: Mutex<Option<RngStore<OSC>>>,
@@ -76,8 +79,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> SgxIngestEnclave
     }
 
     /// Attempt to ingest tx's. This is a helper function to `ingest_txs`,
-    /// which either succeeds in ingesting all of them, or reports that the map overflowed
-    /// and we have to change the egress key and try again.
+    /// which either succeeds in ingesting all of them, or reports that the map
+    /// overflowed and we have to change the egress key and try again.
     /// Returns `None` if overflow occurs.
     fn attempt_ingest_txs(
         chunk: &TxsForIngest,
@@ -92,8 +95,9 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> SgxIngestEnclave
         // Use the constant time fog hint decryption
         for (index, txo) in chunk.redacted_txs.iter().enumerate() {
             let mut user_id = FogHint::new(RistrettoPublic::from_random(&mut rng));
-            // Note: This is ignored because the semantic we want is, user_id should be random
-            // if decryption failed, and ct_decrypt has no side-effects if decryption fails.
+            // Note: This is ignored because the semantic we want is, user_id should be
+            // random if decryption failed, and ct_decrypt has no side-effects
+            // if decryption fails.
             let _success = FogHint::ct_decrypt(&ingress_key, &txo.e_fog_hint, &mut user_id);
 
             let mut aligned_view_pubkey: A8Bytes<U32> = Aligned(*GenericArray::from_slice(
@@ -110,11 +114,12 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> SgxIngestEnclave
             // will never do that.
             //
             // The interesting scenarios are:
-            // - The Txo is really for a user of this Fog, and then one of the ct_decrypt succeeds,
-            //   and yields that user's view pubkey
-            // - The Txo is for a mobilecoind user without fog (and then the hint is a random cipher text),
-            //   or the Txo is for a user of a different fog deployment. In these cases the mac check fails,
-            //   and we get the random, valid curve point used to initialize user_id.
+            // - The Txo is really for a user of this Fog, and then one of the ct_decrypt
+            //   succeeds, and yields that user's view pubkey
+            // - The Txo is for a mobilecoind user without fog (and then the hint is a
+            //   random cipher text), or the Txo is for a user of a different fog
+            //   deployment. In these cases the mac check fails, and we get the random,
+            //   valid curve point used to initialize user_id.
             //
             // In both of those cases this branch is taken.
             if let Ok(decompressed_view_pubkey) =
@@ -127,14 +132,14 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> SgxIngestEnclave
 
                 // If we overflow, caller needs to make a new egress key, tear down the
                 // whole rng store, and try again
-                // This path isn't constant-time and that's okay because an observer doesn't learn
-                // anything about the txos, rngs, or the associated users.
+                // This path isn't constant-time and that's okay because an observer doesn't
+                // learn anything about the txos, rngs, or the associated users.
                 if overflow {
                     return None;
                 }
 
-                // Create a TxOutRecord, flattening the Txo data and getting extra data like global index,
-                // block index, timestamp
+                // Create a TxOutRecord, flattening the Txo data and getting extra data like
+                // global index, block index, timestamp
                 let commitment_bytes: &[u8; 32] = txo.amount.commitment.as_ref();
                 let txo_record = TxOutRecord {
                     tx_out_amount_commitment_data: commitment_bytes.to_vec(),
@@ -375,8 +380,9 @@ fn seal_private_key(src: &RistrettoPrivate) -> Result<SealedIngestKey> {
         .to_vec())
 }
 
-// Helper for converting error type living only in mc_attest_trusted to the error type in enclave_api
-// (The attest_trusted crate will not compile in non-sgx environment.)
+// Helper for converting error type living only in mc_attest_trusted to the
+// error type in enclave_api (The attest_trusted crate will not compile in
+// non-sgx environment.)
 fn map_sealing_error(src: mc_attest_trusted::IntelSealingError) -> Error {
     match src {
         IntelSealingError::Sgx(err) => err.into(),

@@ -44,7 +44,8 @@ impl FogUntrustedLedgerGrpcClient {
 
     /// Make (non-private) request to download missed blocks
     ///
-    /// TODO: Make this marshall the protobuf-generated type into a nicer rust type?
+    /// TODO: Make this marshall the protobuf-generated type into a nicer rust
+    /// type?
     pub fn get_blocks<'a>(
         &self,
         block_ranges: impl IntoIterator<Item = &'a Range<BlockIndex>>,
@@ -64,10 +65,12 @@ impl FogUntrustedLedgerGrpcClient {
         Ok(result)
     }
 
-    /// Make (non-private) request to check if particular TxOut public keys exist in the ledger.
-    /// Note that these are guaranteed by consensus to be unique.
+    /// Make (non-private) request to check if particular TxOut public keys
+    /// exist in the ledger. Note that these are guaranteed by consensus to
+    /// be unique.
     ///
-    /// TODO: Make this marshall the protobuf-generated type into a nicer rust type?
+    /// TODO: Make this marshall the protobuf-generated type into a nicer rust
+    /// type?
     pub fn get_tx_outs(
         &self,
         tx_out_pubkeys: impl IntoIterator<Item = CompressedRistrettoPublic>,

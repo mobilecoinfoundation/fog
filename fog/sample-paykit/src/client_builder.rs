@@ -37,7 +37,8 @@ pub struct ClientBuilder {
     ledger_server_address: String,
 }
 
-// FIXME: ledger_server_address should be split into key_image_server and merkle_proof_server
+// FIXME: ledger_server_address should be split into key_image_server and
+// merkle_proof_server
 impl ClientBuilder {
     /// Create a new client builder object
     pub fn new(

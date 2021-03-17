@@ -19,8 +19,8 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for PrintableWrapper {
 
 /// # Preconditions
 ///
-/// * `printable_wrapper_proto_bytes` - must be a valid binary-serialized `printable.PrintableWrapper`
-///     Protobuf.
+/// * `printable_wrapper_proto_bytes` - must be a valid binary-serialized
+///   `printable.PrintableWrapper` Protobuf.
 #[no_mangle]
 pub extern "C" fn mc_printable_wrapper_b58_encode(
     printable_wrapper_proto_bytes: FfiRefPtr<McBuffer>,
@@ -39,9 +39,10 @@ pub extern "C" fn mc_printable_wrapper_b58_encode(
 
 /// # Preconditions
 ///
-/// * `b58_encoded_string` - must be a nul-terminated C string containing valid UTF-8.
-/// * `out_printable_wrapper_proto_bytes` - must be null or else length must be >=
-///     `wrapper_bytes.len`.
+/// * `b58_encoded_string` - must be a nul-terminated C string containing valid
+///   UTF-8.
+/// * `out_printable_wrapper_proto_bytes` - must be null or else length must be
+///   >= `wrapper_bytes.len`.
 ///
 /// # Errors
 ///

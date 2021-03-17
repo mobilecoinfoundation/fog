@@ -46,7 +46,8 @@ pub struct KexRngPubkey {
 
 impl KexRngPubkey {
     /// After performing key exchange, take our public key and Core type,
-    /// and produce prosty KexRngPubkey record for client, annotated with version number.
+    /// and produce prosty KexRngPubkey record for client, annotated with
+    /// version number.
     pub fn from_public_key<Core, KexAlgo>(public: &KexAlgo::Public) -> Self
     where
         KexAlgo: Kex,

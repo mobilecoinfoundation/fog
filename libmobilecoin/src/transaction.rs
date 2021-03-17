@@ -64,7 +64,8 @@ pub extern "C" fn mc_tx_out_matches_any_subaddress(
 /// # Preconditions
 ///
 /// * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
-/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+///   scalar.
 #[no_mangle]
 pub extern "C" fn mc_tx_out_matches_subaddress(
     tx_out_target_key: FfiRefPtr<McBuffer>,
@@ -162,7 +163,8 @@ pub extern "C" fn mc_tx_out_get_value(
 /// # Preconditions
 ///
 /// * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
-/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+///   scalar.
 /// * `out_key_image` - length must be >= 32.
 ///
 /// # Errors
@@ -255,9 +257,10 @@ pub extern "C" fn mc_transaction_builder_ring_free(
 
 /// # Preconditions
 ///
-/// * `tx_out_proto_bytes` - must be a valid binary-serialized `external.TxOut` Protobuf.
+/// * `tx_out_proto_bytes` - must be a valid binary-serialized `external.TxOut`
+///   Protobuf.
 /// * `membership_proof_proto_bytes` - must be a valid binary-serialized
-///     `external.TxOutMembershipProof` Protobuf.
+///   `external.TxOutMembershipProof` Protobuf.
 #[no_mangle]
 pub extern "C" fn mc_transaction_builder_ring_add_element(
     ring: FfiMutPtr<McTransactionBuilderRing>,
@@ -316,9 +319,11 @@ pub extern "C" fn mc_transaction_builder_free(
 
 /// # Preconditions
 ///
-/// * `transaction_builder` - must not have been previously consumed by a call to `build`.
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
 /// * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
-/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+///   scalar.
 /// * `real_index` - must be within bounds of `ring`.
 /// * `ring` - `TxOut` at `real_index` must be owned by account keys.
 ///
@@ -379,7 +384,8 @@ pub extern "C" fn mc_transaction_builder_add_input(
 
 /// # Preconditions
 ///
-/// * `transaction_builder` - must not have been previously consumed by a call to `build`.
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
 /// * `recipient_address` - must be a valid `PublicAddress`.
 /// * `out_subaddress_spend_public_key` - length must be >= 32.
 ///
@@ -419,7 +425,8 @@ pub extern "C" fn mc_transaction_builder_add_output(
 
 /// # Preconditions
 ///
-/// * `transaction_builder` - must not have been previously consumed by a call to `build`.
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
 /// * `recipient_address` - must be a valid `PublicAddress`.
 /// * `fog_hint_address` - must be a valid `PublicAddress` with `fog_info`.
 /// * `out_tx_out_confirmation_number` - length must be >= 32.
@@ -467,7 +474,8 @@ pub extern "C" fn mc_transaction_builder_add_output_with_fog_hint_address(
 
 /// # Preconditions
 ///
-/// * `transaction_builder` - must not have been previously consumed by a call to `build`.
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
 ///
 /// # Errors
 ///

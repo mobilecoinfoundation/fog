@@ -19,8 +19,9 @@ fn make_enclave(desired_user_capacity: u64) -> IngestSgxEnclave {
     enclave
 }
 
-// Benchmark adding one user to an ingest enclave with max capacity for 1 million users
-// TODO: Ingest api should exist for adding multiple users with one ecall, or we should benchmark this anyways
+// Benchmark adding one user to an ingest enclave with max capacity for 1
+// million users TODO: Ingest api should exist for adding multiple users with
+// one ecall, or we should benchmark this anyways
 pub fn ingest_capacity_1mil_add_one_user(criterion: &mut Criterion) {
     let enclave = make_enclave(1024 * 1024);
 
@@ -34,7 +35,8 @@ pub fn ingest_capacity_1mil_add_one_user(criterion: &mut Criterion) {
     });
 }
 
-// Benchmark adding one user to an ingest enclave with max capacity for 16 million users
+// Benchmark adding one user to an ingest enclave with max capacity for 16
+// million users
 pub fn ingest_capacity_8mil_add_one_user(criterion: &mut Criterion) {
     let enclave = make_enclave(8 * 1024 * 1024);
 
@@ -48,7 +50,8 @@ pub fn ingest_capacity_8mil_add_one_user(criterion: &mut Criterion) {
     });
 }
 
-// Benchmark adding one user to an ingest enclave with max capacity for 16 million users
+// Benchmark adding one user to an ingest enclave with max capacity for 16
+// million users
 pub fn ingest_capacity_16mil_add_one_user(criterion: &mut Criterion) {
     let enclave = make_enclave(16 * 1024 * 1024);
 
@@ -79,8 +82,8 @@ criterion_group! {
 }
 criterion_main!(
     ingest_capacity_1mil,
-    // FIXME: This requires enclave heap size which is too large and harms CI times
-    // Hold off on this until FOG-39, FOG-146, etc. to use untrusted storage
-    //ingest_capacity_8mil,
-    //ingest_capacity_16mil
+    /* FIXME: This requires enclave heap size which is too large and harms CI times
+     * Hold off on this until FOG-39, FOG-146, etc. to use untrusted storage
+     *ingest_capacity_8mil,
+     *ingest_capacity_16mil */
 );

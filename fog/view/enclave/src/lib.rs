@@ -42,11 +42,14 @@ impl SgxViewEnclave {
     ///
     /// Arguments:
     /// * enclave_path: The path to the signed enclave .so file
-    /// * client_responder_id: The responder_id to be used when connecting to clients
-    /// * db: The recovery db to read data from. This is used when servicing seeds requests
-    /// * desired_capacity: The desired capacity for ETxOutRecords in the oblivious map.
-    ///                     Must be a power of two. Actual capacity will be ~70% of this.
-    ///                     Memory utilization will be about 256 bytes * this + some overhead
+    /// * client_responder_id: The responder_id to be used when connecting to
+    ///   clients
+    /// * db: The recovery db to read data from. This is used when servicing
+    ///   seeds requests
+    /// * desired_capacity: The desired capacity for ETxOutRecords in the
+    ///   oblivious map. Must be a power of two. Actual capacity will be ~70% of
+    ///   this. Memory utilization will be about 256 bytes * this + some
+    ///   overhead
     /// * logger: Logger to use when servicing db access from OCALLs
     pub fn new(
         enclave_path: path::PathBuf,

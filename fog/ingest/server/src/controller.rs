@@ -31,22 +31,23 @@ use std::{
 };
 
 /// The ingest controller sits under the grpc / networking layer, and implements
-/// functions corresponding to high-level actions like "process_next_block, rotate_keys".
-/// The name "controller" is suggested by GRASP guidelines:
+/// functions corresponding to high-level actions like "process_next_block,
+/// rotate_keys". The name "controller" is suggested by GRASP guidelines:
 /// https://en.wikipedia.org/wiki/GRASP_(object-oriented_design)
 ///
-/// The ingest controller API is thread-safe and an Arc to this can be shared with GRPC
-/// services. There is also an ingest worker, which periodically calls "process_next_block".
-/// There should only be one thread doing that.
+/// The ingest controller API is thread-safe and an Arc to this can be shared
+/// with GRPC services. There is also an ingest worker, which periodically calls
+/// "process_next_block". There should only be one thread doing that.
 ///
-/// In consensus service, there is a roughly analogous object ByzantineLedger, which
-/// also has a worker thread, and owns its worker thread. In this case, we can't quite
-/// do that because the worker thread would need a shared reference to the controller,
-/// but the controller cannot obtain `Arc<Self>` in order to construct the worker (AFAIK).
+/// In consensus service, there is a roughly analogous object ByzantineLedger,
+/// which also has a worker thread, and owns its worker thread. In this case, we
+/// can't quite do that because the worker thread would need a shared reference
+/// to the controller, but the controller cannot obtain `Arc<Self>` in order to
+/// construct the worker (AFAIK).
 ///
 /// So the idea here is instead that the IngestController owns no threads, the
-/// IngestWorker is external to it, and all the grpcio threads are also external to it,
-/// and talk to Arc<IngestController> to accomplish their tasks.
+/// IngestWorker is external to it, and all the grpcio threads are also external
+/// to it, and talk to Arc<IngestController> to accomplish their tasks.
 pub struct IngestController<
     R: RaClient + Send + Sync + 'static,
     DB: RecoveryDb + ReportDb + Clone + Send + Sync + 'static,
@@ -102,7 +103,8 @@ where
                             }
                             _ => {
                                 // TODO: Should we delete the file, to avoid a crash loop?
-                                // We could move it to a backup location or something, like, `.1`, `.2`, etc. up to some maximum.
+                                // We could move it to a backup location or something, like, `.1`,
+                                // `.2`, etc. up to some maximum.
                                 panic!("Could not read state file ({:?}): {}", file, io_error);
                             }
                         }
@@ -207,9 +209,9 @@ where
         Ok(())
     }
 
-    /// Make completely new keys in the enclave, wiping out all previous ingress and egress private keys.
-    /// This is similar to reinitializing the enclave.
-    /// This also frees the ingest invocation id if any.
+    /// Make completely new keys in the enclave, wiping out all previous ingress
+    /// and egress private keys. This is similar to reinitializing the
+    /// enclave. This also frees the ingest invocation id if any.
     /// This also updates the state file, and the sealed key file.
     ///
     /// This is only possible if the server is idling
@@ -239,7 +241,8 @@ where
         Ok(())
     }
 
-    // Similar to new_keys_inner, but only wipes out the egress key and rng states, not the ingress key.
+    // Similar to new_keys_inner, but only wipes out the egress key and rng states,
+    // not the ingress key.
     fn new_egress_key(&self, state: &mut MutexGuard<IngestControllerState>) -> Result<(), Error> {
         if !state.is_idle() {
             return Err(Error::ServerNotIdle);
@@ -258,7 +261,8 @@ where
         Ok(())
     }
 
-    // Helper which decommissions our ingest invocation id in the database and updates our state
+    // Helper which decommissions our ingest invocation id in the database and
+    // updates our state
     fn decommission_ingest_invocation_id(&self, state: &mut MutexGuard<IngestControllerState>) {
         // Retire our ingest invocation
         if let Some(iid) = state.get_ingest_invocation_id() {
@@ -273,20 +277,25 @@ where
         }
     }
 
-    /// Process the next block through ingest enclave, and write all resulting ETxOutRecord's to recovery db
-    /// Then increment the next_block_index.
+    /// Process the next block through ingest enclave, and write all resulting
+    /// ETxOutRecord's to recovery db Then increment the next_block_index.
     ///
     /// Additionally, if we are active, try to publish a fog report.
-    /// If we cannot, because the ingress key is retired and there is no more work to do with it,
-    /// set ourselves to the idle state and early return.
+    /// If we cannot, because the ingress key is retired and there is no more
+    /// work to do with it, set ourselves to the idle state and early
+    /// return.
     ///
-    /// This function must maintain an invariant around the ingest invocation id:
-    /// * The first time we publish data using an invocation id, the egress key in the enclave must be fresh,
-    ///   so that all the RNGs will be at the initial position, which is what clients expect.
-    /// * If we have an invocation id before we enter this loop, we must decommission it if we can't make progress,
-    ///   because if we run block data through the enclave, but then don't manage to publish it to the database,
-    ///   there will be gaps in the RNG sequences (some of the entries won't make it to database), and the client's
-    ///   won't be able to perform balance checks successfully then.
+    /// This function must maintain an invariant around the ingest invocation
+    /// id:
+    /// * The first time we publish data using an invocation id, the egress key
+    ///   in the enclave must be fresh, so that all the RNGs will be at the
+    ///   initial position, which is what clients expect.
+    /// * If we have an invocation id before we enter this loop, we must
+    ///   decommission it if we can't make progress, because if we run block
+    ///   data through the enclave, but then don't manage to publish it to the
+    ///   database, there will be gaps in the RNG sequences (some of the entries
+    ///   won't make it to database), and the client's won't be able to perform
+    ///   balance checks successfully then.
     pub fn process_next_block(
         &self,
         block: &Block,
@@ -323,17 +332,20 @@ where
             );
 
             // Publish fresh report on every block, if we are in the active state.
-            // This also returns an ingress key state which indicates if publishing was successful,
-            // it may fail if the key is retired. Then we can check if we are still needed to be active.
+            // This also returns an ingress key state which indicates if publishing was
+            // successful, it may fail if the key is retired. Then we can check
+            // if we are still needed to be active.
             if state.is_active() {
                 log::trace!(self.logger, "publish report");
                 match self.publish_report(&ingress_pubkey, &mut state) {
                     Ok(ingress_key_status) => {
-                        // If our key is retired, and the index we want to scan is past expiry, early return.
-                        // Note, we don't even NEED to scan when block.index == pubkey_expiry, because the
-                        // semantic of pubkey expiry is that it bounds the tombstone block, and a transaction
-                        // cannot land in its tombstone block. But scanning the tombstone block as well
-                        // may help deal with off-by-one errors somewhere else, and doesn't really hurt.
+                        // If our key is retired, and the index we want to scan is past expiry,
+                        // early return. Note, we don't even NEED to scan
+                        // when block.index == pubkey_expiry, because the
+                        // semantic of pubkey expiry is that it bounds the tombstone block, and a
+                        // transaction cannot land in its tombstone block.
+                        // But scanning the tombstone block as well may help
+                        // deal with off-by-one errors somewhere else, and doesn't really hurt.
                         if ingress_key_status.retired
                             && block.index > ingress_key_status.pubkey_expiry
                         {
@@ -345,8 +357,9 @@ where
                         }
                     }
                     Err(err) => {
-                        // Failing to publish a report is not fatal, because we attempt to publish on every block,
-                        // and even if it only succeeds half the time, it wont make much difference in the pubkey
+                        // Failing to publish a report is not fatal, because we attempt to publish
+                        // on every block, and even if it only succeeds half
+                        // the time, it wont make much difference in the pubkey
                         // expiry window.
                         log::error!(
                             self.logger,
@@ -359,7 +372,8 @@ where
             }
 
             // FIXME FOG-390, this should be atomic with the add-block-data operation,
-            // so that the invocation id is not created if we don't actually publish the block data
+            // so that the invocation id is not created if we don't actually publish the
+            // block data
             let mut iid = state.get_ingest_invocation_id();
 
             if iid.is_none() {
@@ -380,8 +394,8 @@ where
             iid
         };
 
-        // TxsForIngest expects global_txo_index to be the index of the first TxOut in the block
-        // handed to it.
+        // TxsForIngest expects global_txo_index to be the index of the first TxOut in
+        // the block handed to it.
         assert!(block.cumulative_txo_count >= block_contents.outputs.len() as u64);
         let mut global_txo_index = block.cumulative_txo_count - block_contents.outputs.len() as u64;
         let initial_global_txo_index = global_txo_index;
@@ -459,20 +473,22 @@ where
         // Commit all the new data to the database,
         // and set num_blocks_processed to block.index + 1
         //
-        // Failure to commit the data is not recoverable without decommissioning our ingest invocation,
-        // since there is no way to roll back the RNG's in the enclave, and the users won't find their
-        // transactions if we skip an RNG output.
-        // But decommissioning the ingest invocation is costly and we don't want to do it if retries will work.
-        // As such, we try indefinitely until we succeed with a linear backoff time capped at 30
-        // seconds (chosen arbitrarily), or until we definitely fail (postgres constraint violation).
-        // A constraint violation indicates that a different ingest server with the same ingress public key
+        // Failure to commit the data is not recoverable without decommissioning our
+        // ingest invocation, since there is no way to roll back the RNG's in
+        // the enclave, and the users won't find their transactions if we skip
+        // an RNG output. But decommissioning the ingest invocation is costly
+        // and we don't want to do it if retries will work. As such, we try
+        // indefinitely until we succeed with a linear backoff time capped at 30
+        // seconds (chosen arbitrarily), or until we definitely fail (postgres
+        // constraint violation). A constraint violation indicates that a
+        // different ingest server with the same ingress public key
         // as this server has already published data for this block.
         let mut retry_seconds = 1;
         loop {
             let db_metrics_timer = counters::DB_ADD_BLOCK_DATA_TIME.start_timer();
             match self.recovery_db.add_block_data(
-                // It's okay to .expect here since this code should not run if we did not get an ingest
-                // invocation id.
+                // It's okay to .expect here since this code should not run if we did not get an
+                // ingest invocation id.
                 iid.as_ref().expect("no ingest invocation id"),
                 &block,
                 timestamp,
@@ -486,7 +502,8 @@ where
                         // We lost the race to publish this block
                         log::info!(self.logger, "Another active server did work for block {}, we should become idle and back off", block.index);
                         state.set_idle();
-                        // we need to nuke our egress key state and reset all rng's, since we scanned something that didn't get published
+                        // we need to nuke our egress key state and reset all rng's, since we
+                        // scanned something that didn't get published
                         // new_egress_key also makes sure our rng is decommissioned
                         self.new_egress_key(&mut state).expect("Failure to rotate egress key after we can't publish data isn't recoverable, the RNGs would have gaps that the clients can't deal with");
                     } else {
@@ -526,11 +543,11 @@ where
     /// - Check peers, if any is active or retiring, abort
     /// - If any peer doesn't have our ingress keys, send it our ingress keys
     /// - If any peer doesn't have our peers, set its peers
-    /// - Check database if any blocks have been scanned using this ingress pubkey,
-    ///   if so start after them.
-    /// - Determine an appropriate start block to start scanning.
-    ///   If key already exists, do last-scanned-block + 1.
-    ///   If not, start at the latest known value of num_blocks.
+    /// - Check database if any blocks have been scanned using this ingress
+    ///   pubkey, if so start after them.
+    /// - Determine an appropriate start block to start scanning. If key already
+    ///   exists, do last-scanned-block + 1. If not, start at the latest known
+    ///   value of num_blocks.
     /// - Enter the active state
     ///
     /// Arguments:
@@ -630,8 +647,9 @@ where
                     "When activating, our key already existed: {:?}",
                     status
                 );
-                // If this key already exists, get the block that was last scanned with it and add one.
-                // If no block was scanned with it yet, start scanning whereever it was supposed to start
+                // If this key already exists, get the block that was last scanned with it and
+                // add one. If no block was scanned with it yet, start scanning
+                // whereever it was supposed to start
                 self.recovery_db
                     .get_last_scanned_block_index(&our_pubkey)?
                     .map(|val| val + 1)
@@ -639,9 +657,10 @@ where
             } else {
                 log::info!(self.logger, "When activating, we seem to have a new key");
                 // This key doesn't exist yet, so we want to start at the "latest" known block.
-                // We take the max of what the caller passed us, which is ledger_db.num_blocks(),
-                // and whatever is in recovery_db, in case our ledger_db is behind
-                // Note: we add one to recovery_db result because that is an index, but num_blocks is a block_count
+                // We take the max of what the caller passed us, which is
+                // ledger_db.num_blocks(), and whatever is in recovery_db, in
+                // case our ledger_db is behind Note: we add one to recovery_db
+                // result because that is an index, but num_blocks is a block_count
                 let start_block = core::cmp::max(
                     ledger_num_blocks,
                     self.recovery_db
@@ -666,10 +685,11 @@ where
         // a block unless this key is published before the next block comes.
         let key_status = self.publish_report(&our_pubkey, &mut state)?;
 
-        // If our key is retired, and the index we want to scan is past expiry, early return.
-        // Note, we don't even NEED to scan when block.index == pubkey_expiry, because the
-        // semantic of pubkey expiry is that it bounds the tombstone block, and a transaction
-        // cannot land in its tombstone block. But scanning the tombstone block as well
+        // If our key is retired, and the index we want to scan is past expiry, early
+        // return. Note, we don't even NEED to scan when block.index ==
+        // pubkey_expiry, because the semantic of pubkey expiry is that it
+        // bounds the tombstone block, and a transaction cannot land in its
+        // tombstone block. But scanning the tombstone block as well
         // may help deal with off-by-one errors somewhere else, and doesn't really hurt.
         if key_status.retired && start_block > key_status.pubkey_expiry {
             log::warn!(self.logger, "When activating, we found out our key has already been retired and there is no remaining work to do. Activation is canceled: our start_block = {}, key_status = {:?}", start_block, key_status);
@@ -708,8 +728,9 @@ where
     /// 1. We are trying to do ingest enclave upgrade
     /// 2. We retire the old cluster and activate the new cluster
     /// 3. Something goes wrong and the new cluster goes up in flames
-    /// 4. We want to unretire the old cluster key so that the old cluster starts publishing fog reports
-    ///    again and continues life as usual, and then continue debugging the new cluster and try again later.
+    /// 4. We want to unretire the old cluster key so that the old cluster
+    /// starts publishing fog reports    again and continues life as usual,
+    /// and then continue debugging the new cluster and try again later.
     pub fn unretire(&self) -> Result<IngestSummary, Error> {
         log::info!(self.logger, "unretire");
 
@@ -725,8 +746,8 @@ where
         Ok(self.get_ingest_summary())
     }
 
-    /// Attempt to sync ingress keys from a remote server, which may be idle or active.
-    /// We can only do this while we are idle.
+    /// Attempt to sync ingress keys from a remote server, which may be idle or
+    /// active. We can only do this while we are idle.
     pub fn sync_keys_from_remote(&self, remote: &IngestPeerUri) -> Result<IngestSummary, Error> {
         if !self.get_state().is_idle() {
             return Err(Error::ServerNotIdle);
@@ -834,8 +855,9 @@ where
     /// the ingress pubkey in the summary matches what's in our enclave,
     /// AND if no peers are active or retiring, AND the key is backed up
     ///
-    /// Egress key can never be restored, it leads to replay attacks, and so the enclave forbids it
-    /// Because of this, ingest invocation id can't be restored either.
+    /// Egress key can never be restored, it leads to replay attacks, and so the
+    /// enclave forbids it Because of this, ingest invocation id can't be
+    /// restored either.
     fn restore_state_from_summary(
         &self,
         state_data: &IngestSummary,
@@ -890,8 +912,8 @@ where
             }
         }
 
-        // Either we're restoring to idle state, or we're restoring to an active state but all backups exist correctly,
-        // so we can make state changes now.
+        // Either we're restoring to idle state, or we're restoring to an active state
+        // but all backups exist correctly, so we can make state changes now.
         state
             .set_pubkey_expiry_window(state_data.pubkey_expiry_window)
             .expect("Modification should have been allowed, this is a logic error");
@@ -912,8 +934,8 @@ where
 
     /// Record missed blocks range into the database
     ///
-    /// This is a half-open range [start_index, end_index), see also the recovery_db
-    /// documentation.
+    /// This is a half-open range [start_index, end_index), see also the
+    /// recovery_db documentation.
     pub fn report_missed_block_range(
         &self,
         block_range: &BlockRange,
@@ -951,7 +973,8 @@ where
 
     // Helper which causes the enclave verification report to be published
     //
-    // The pubkey_expiry will be computed as state.next_block_index + state.pubkey_expiry_window
+    // The pubkey_expiry will be computed as state.next_block_index +
+    // state.pubkey_expiry_window
     //
     // Arguments:
     // * ingress_public_key: The key this report is attesting to the validity of
@@ -959,11 +982,11 @@ where
     //
     // Returns:
     // * Err on a database or report-cache error
-    // * Ok(status) If the database operation succeeded.
-    //              If status.retired is false, we published a report, and possibly updated pubkey_expiry for this key
-    //              If status.retired is true, we did NOT publish a report,
-    //              In this case, the caller can inspect status.pubkey_expiry, which will not change anymore,
-    //              to determine if there is still useful work to do with this ingress key.
+    // * Ok(status) If the database operation succeeded. If status.retired is false,
+    //   we published a report, and possibly updated pubkey_expiry for this key If
+    //   status.retired is true, we did NOT publish a report, In this case, the
+    //   caller can inspect status.pubkey_expiry, which will not change anymore, to
+    //   determine if there is still useful work to do with this ingress key.
     fn publish_report(
         &self,
         ingress_public_key: &CompressedRistrettoPublic,
@@ -987,23 +1010,25 @@ where
                     "Could not publish report and check on ingress key status: {}",
                     err
                 );
-                // Note: At this revision, we don't have generic constraints for converting ReportDB error to IngestServiceError
-                // but the caller won't do much but log this error eventually so...
+                // Note: At this revision, we don't have generic constraints for converting
+                // ReportDB error to IngestServiceError but the caller won't do
+                // much but log this error eventually so...
                 Error::PublishReport
             })?)
     }
 
-    // Helper which writes out the state file. This should be done after processing a block,
-    // or when the state is actively changed.
+    // Helper which writes out the state file. This should be done after processing
+    // a block, or when the state is actively changed.
     // This is a no-op if there is no state file configured.
     fn write_state_file(&self) {
         self.write_state_file_inner(&mut self.get_state())
     }
 
-    // Helper for write_state_file which takes an already existing lock on the state mutex
+    // Helper for write_state_file which takes an already existing lock on the state
+    // mutex
     fn write_state_file_inner(&self, state: &mut MutexGuard<IngestControllerState>) {
-        // This ensures that if the server goes down, we know at what block it stopped and
-        // we know where to start up if we start up again.
+        // This ensures that if the server goes down, we know at what block it stopped
+        // and we know where to start up if we start up again.
         if let Some(state_file) = self.config.state_file.as_ref() {
             let (summary, sealed_key) = loop {
                 let summary = self.get_ingest_summary_inner(state);
@@ -1040,9 +1065,10 @@ where
         }
     }
 
-    // Helper which checks if we are active, then checks up on our peers, sending them our data again if something is wrong
-    // and they are not acting correctly as a backup.
-    // This is meant to be called periodically by a background thread
+    // Helper which checks if we are active, then checks up on our peers, sending
+    // them our data again if something is wrong and they are not acting
+    // correctly as a backup. This is meant to be called periodically by a
+    // background thread
     pub fn peer_checkup(&self) {
         mc_common::trace_time!(self.logger, "IngestController.peer_checkup");
         let peers = {
@@ -1071,8 +1097,8 @@ where
         }
 
         for peer_uri in peers {
-            // Our own uri is in the peers list, because that simplifies checking if peers have matching lists.
-            // But we should skip when we reach ourself.
+            // Our own uri is in the peers list, because that simplifies checking if peers
+            // have matching lists. But we should skip when we reach ourself.
             if peer_uri == self.config.peer_listen_uri {
                 continue;
             }
@@ -1087,8 +1113,9 @@ where
                 self.logger.clone(),
             );
 
-            // Confirm that the peer is backing us up correctly, and log if it isn't in that state,
-            // since it is expected to be. This call will update the peer if it is in the wrong state.
+            // Confirm that the peer is backing us up correctly, and log if it isn't in that
+            // state, since it is expected to be. This call will update the peer
+            // if it is in the wrong state.
             match self.confirm_backup(&mut conn, None, None, None, true, true) {
                 Ok(()) => {
                     log::debug!(self.logger, "Peer backup {} was confirmed", peer_uri);
@@ -1097,9 +1124,11 @@ where
                     err @ PeerBackupError::Connection(ConnectionError::UnexpectedKeyInEnclave(_)),
                 ) => {
                     // This error is informational / debug and not warn
-                    // because it may happen in a race when our server goes from retiring to idle in the other thread.
-                    // Because, that thread wants to wipe out the old keys when they are no longer needed.
-                    // The appropriate thing to do here is back off and wait for next cycle to attempt any more backups.
+                    // because it may happen in a race when our server goes from retiring to idle in
+                    // the other thread. Because, that thread wants to wipe out
+                    // the old keys when they are no longer needed.
+                    // The appropriate thing to do here is back off and wait for next cycle to
+                    // attempt any more backups.
                     log::info!(self.logger, "Peer checkups stopped: Our key changed while checking up on peer backup: {}", err);
                     return;
                 }
@@ -1115,21 +1144,28 @@ where
         }
     }
 
-    /// Helper function which takes a connection to a peer which should be an idle backup, checks if this is the case,
-    /// and if desired, updates the peer to make it correctly a backup.
+    /// Helper function which takes a connection to a peer which should be an
+    /// idle backup, checks if this is the case, and if desired, updates the
+    /// peer to make it correctly a backup.
     ///
     /// Arguments:
     /// - conn: The already-formed peer connection
-    /// - cached_summary: A summary that we have earlier obtained from this peer, if available
-    /// - cached_our_pubkey: The earlier result of self.enclave.get_pubkey(), if available
-    /// - cached_our_peers: The earlier result of self.controller_state.get_peers(), if available
-    /// - update_if_wrong: Whether to update the peer's ingress keys or peer list if it is wrong. If false we just return an error.
-    ///                    If the peer is not idle then we only return an error and don't attempt to update it.
-    /// - log_if_wrong: Whether to log if the peer's ingress keys or peer list is wrong. If it has not been configured as a backup yet,
-    ///                 then it is expected to be wrong before we update it, and then we shouldn't log.
+    /// - cached_summary: A summary that we have earlier obtained from this
+    ///   peer, if available
+    /// - cached_our_pubkey: The earlier result of self.enclave.get_pubkey(), if
+    ///   available
+    /// - cached_our_peers: The earlier result of
+    ///   self.controller_state.get_peers(), if available
+    /// - update_if_wrong: Whether to update the peer's ingress keys or peer
+    ///   list if it is wrong. If false we just return an error. If the peer is
+    ///   not idle then we only return an error and don't attempt to update it.
+    /// - log_if_wrong: Whether to log if the peer's ingress keys or peer list
+    ///   is wrong. If it has not been configured as a backup yet, then it is
+    ///   expected to be wrong before we update it, and then we shouldn't log.
     ///
     /// Returns:
-    /// - Ok if the peer is idle and backing up our data correctly, or we updated it to be in that state.
+    /// - Ok if the peer is idle and backing up our data correctly, or we
+    ///   updated it to be in that state.
     /// - Err if the peer is not now a correctly configured backup.
     fn confirm_backup(
         &self,

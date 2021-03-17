@@ -28,11 +28,12 @@ use mc_oblivious_traits::{
 // We must choose an oblivious map algorithm that can support that
 type KeySize = U16;
 type ValueSize = U240;
-// BlockSize is a tuning parameter for OMap which must become the ValueSize of the selected ORAM
+// BlockSize is a tuning parameter for OMap which must become the ValueSize of
+// the selected ORAM
 type BlockSize = U1024;
 
-// This selects an oblivious ram algorithm which can support queries of size BlockSize
-// The ORAMStorageCreator type is a generic parameter to ETxOutStore
+// This selects an oblivious ram algorithm which can support queries of size
+// BlockSize The ORAMStorageCreator type is a generic parameter to ETxOutStore
 type ObliviousRAMAlgo<OSC> = PathORAM4096Z4Creator<McRng, OSC>;
 
 // These are the requirements on the storage, this is imposed by the choice of
@@ -53,12 +54,11 @@ type ObliviousMapCreator<OSC> = CuckooHashTableCreator<BlockSize, McRng, Oblivio
 ///
 /// - The size in the OMAP is ValueSize which must be divisible by 8,
 /// - The user actually gives us a serialized protobuf
-/// - We use a wire format in the omap where
-///   value[0] = ValueSize - 1 - ciphertext.len(),
-///   ValueSize must be within 255 bytes of ciphertext.len().
-/// - When the lookup misses, we try to obliviously return a buffer of the normal size.
-///   We do this by remembering the ciphertext size byte of the last stored ciphertext.
-///
+/// - We use a wire format in the omap where value[0] = ValueSize - 1 -
+///   ciphertext.len(), ValueSize must be within 255 bytes of ciphertext.len().
+/// - When the lookup misses, we try to obliviously return a buffer of the
+///   normal size. We do this by remembering the ciphertext size byte of the
+///   last stored ciphertext.
 pub struct ETxOutStore<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> {
     /// Oblivious map to hold ETxOutRecords
     omap: Box<<ObliviousMapCreator<OSC> as OMapCreator<KeySize, ValueSize, McRng>>::Output>,

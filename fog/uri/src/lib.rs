@@ -59,11 +59,14 @@ impl UriScheme for IngestPeerScheme {
     const DEFAULT_INSECURE_PORT: u16 = 8090;
 }
 
-/// Uri used when talking to fog-view service, with the right default ports and scheme.
+/// Uri used when talking to fog-view service, with the right default ports and
+/// scheme.
 pub type FogViewUri = Uri<FogViewScheme>;
-/// Uri used when talking to fog-ledger service, with the right default ports and scheme.
+/// Uri used when talking to fog-ledger service, with the right default ports
+/// and scheme.
 pub type FogLedgerUri = Uri<FogLedgerScheme>;
-/// Uri used when talking to fog-ingest service, with the right default ports and scheme.
+/// Uri used when talking to fog-ingest service, with the right default ports
+/// and scheme.
 pub type FogIngestUri = Uri<FogIngestScheme>;
 /// Usi used when talking to fog-ingest-peer service.
 pub type IngestPeerUri = Uri<IngestPeerScheme>;

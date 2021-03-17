@@ -37,12 +37,13 @@ pub struct UntrustedQueryResponse {
     /// The number of blocks at the time that the request was evaluated.
     pub highest_processed_block_count: u64,
 
-    /// The timestamp of the highest processed block at the time that the request was evaluated.
+    /// The timestamp of the highest processed block at the time that the
+    /// request was evaluated.
     pub highest_processed_block_signature_timestamp: u64,
 
     /// The index of the last known block, which can be obtained by calculating
-    /// last_known_block_count - 1. We don't store the index but instead store a count so that we
-    /// have a way of representing no known block (0).
+    /// last_known_block_count - 1. We don't store the index but instead store a
+    /// count so that we have a way of representing no known block (0).
     pub last_known_block_count: u64,
 
     /// The cumulative txo count of the last known block.
@@ -88,8 +89,8 @@ pub enum ViewEnclaveRequest {
 /// TODO: Make this prost compatible
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ViewEnclaveInitParams {
-    /// The sgx_enclave_id_t for this enclave. This is needed to pass to some OCALL's
-    /// back to untrusted as an id for the enclave making the call.
+    /// The sgx_enclave_id_t for this enclave. This is needed to pass to some
+    /// OCALL's back to untrusted as an id for the enclave making the call.
     pub eid: sgx_enclave_id_t,
     /// The responder id for this enclave to use for client connections.
     pub self_client_id: ResponderId,
@@ -130,15 +131,17 @@ pub trait ViewEnclaveApi: ReportableEnclave {
 
     /// SERVER-FACING
 
-    /// Add encrypted tx out records from the fog recovery db to the view enclave's ORAM
+    /// Add encrypted tx out records from the fog recovery db to the view
+    /// enclave's ORAM
     fn add_records(&self, records: Vec<ETxOutRecord>) -> Result<()>;
 }
 
 /// Helper trait which reduces boiler-plate in untrusted side
 /// The trusted object which implements the above api usually cannot implement
-/// Clone, Send, Sync, etc., but the untrusted side can and usually having a "handle to an enclave"
-/// is what is most useful for a webserver.
-/// This marker trait can be implemented for the untrusted-side representation of the enclave.
+/// Clone, Send, Sync, etc., but the untrusted side can and usually having a
+/// "handle to an enclave" is what is most useful for a webserver.
+/// This marker trait can be implemented for the untrusted-side representation
+/// of the enclave.
 pub trait ViewEnclaveProxy: ViewEnclaveApi + Clone + Send + Sync + 'static {}
 
 impl<T> ViewEnclaveProxy for T where T: ViewEnclaveApi + Clone + Send + Sync + 'static {}

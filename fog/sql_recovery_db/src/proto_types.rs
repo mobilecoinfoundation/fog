@@ -4,7 +4,8 @@ use fog_types::ETxOutRecord;
 use prost::Message;
 
 /// Protobuf data stored with an ingested block record in sql
-/// Having smaller tables (fewer entries which are bigger) is better for perf in SQL
+/// Having smaller tables (fewer entries which are bigger) is better for perf in
+/// SQL
 ///
 /// Block index, invocation id, and some other data are stored in postgres
 /// along-side this data,

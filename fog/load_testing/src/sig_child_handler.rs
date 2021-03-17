@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-//! Install a signal handler for SIGCHILD that kills this process if the child dies
+//! Install a signal handler for SIGCHILD that kills this process if the child
+//! dies
 use arrayvec::ArrayString;
 use core::{
     fmt::Write,

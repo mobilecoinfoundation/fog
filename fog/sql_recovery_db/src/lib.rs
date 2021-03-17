@@ -45,8 +45,9 @@ use proto_types::ProtoIngestedBlockData;
 pub use error::Error;
 
 /// Maximum number of parameters PostgreSQL allows in a single query.
-/// The actual limit is 65535. This value is more conservative, resulting on potentially issueing
-/// more queries to the server. This is not expected to be an issue.
+/// The actual limit is 65535. This value is more conservative, resulting on
+/// potentially issueing more queries to the server. This is not expected to be
+/// an issue.
 pub const SQL_MAX_PARAMS: usize = 65000;
 
 /// Maximal number of rows to insert in one batch.
@@ -65,9 +66,10 @@ impl SqlRecoveryDb {
         Self { pool, logger }
     }
 
-    /// Create a new instance using a database URL. This will create a connection pool of size 1.
-    /// The benefit of doing this is that the pool takes care of automatically reconnecting to the
-    /// database if the connection dies.
+    /// Create a new instance using a database URL. This will create a
+    /// connection pool of size 1. The benefit of doing this is that the
+    /// pool takes care of automatically reconnecting to the database if the
+    /// connection dies.
     pub fn new_from_url(database_url: &str, logger: Logger) -> Result<Self, Error> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
@@ -290,8 +292,9 @@ impl RecoveryDb for SqlRecoveryDb {
     ) -> Result<Vec<fog_recovery_db_iface::IngestableRange>, Self::Error> {
         let conn = self.pool.get()?;
 
-        // For each ingest invocation we are aware of get its id, start block, is decommissioned and
-        // the max block number it has ingested (if available).
+        // For each ingest invocation we are aware of get its id, start block, is
+        // decommissioned and the max block number it has ingested (if
+        // available).
         let query = schema::ingest_invocations::dsl::ingest_invocations
             .select((
                 schema::ingest_invocations::dsl::id,
@@ -325,7 +328,8 @@ impl RecoveryDb for SqlRecoveryDb {
     /// This should be done when a given ingest enclave goes down or is retired.
     ///
     /// Arguments:
-    /// * ingest_invocation_id: The unique ingest invocation id that has been retired
+    /// * ingest_invocation_id: The unique ingest invocation id that has been
+    ///   retired
     fn decommission_ingest_invocation(
         &self,
         ingest_invocation_id: &IngestInvocationId,
@@ -350,11 +354,13 @@ impl RecoveryDb for SqlRecoveryDb {
             .build_transaction()
             .read_write()
             .run(|| -> Result<(), Self::Error> {
-                // Get ingress pubkey of this ingest invocation id, which is also stored in the ingested_block record
+                // Get ingress pubkey of this ingest invocation id, which is also stored in the
+                // ingested_block record
                 //
-                // Note: Possibly, we can use an inner-join or something when we would have needed this,
-                // and then not have this in the ingest_blocks table?
-                // It makes the sql expressions simpler for now, we could delete that column from table later
+                // Note: Possibly, we can use an inner-join or something when we would have
+                // needed this, and then not have this in the ingest_blocks
+                // table? It makes the sql expressions simpler for now, we could
+                // delete that column from table later
                 let ingress_key_bytes: Vec<u8> = schema::ingest_invocations::table
                     .filter(schema::ingest_invocations::dsl::id.eq(**ingest_invocation_id))
                     .select(schema::ingest_invocations::ingress_public_key)
@@ -394,9 +400,10 @@ impl RecoveryDb for SqlRecoveryDb {
             Ok(()) => Ok(AddBlockDataStatus {
                 block_already_scanned_with_this_key: false,
             }),
-            // If a unique constraint is violated, we return Ok(block_already_scanned: true) instead of an error
-            // This makes it a little easier for the caller to access this information without
-            // making custom traits for interrogating generic errors.
+            // If a unique constraint is violated, we return Ok(block_already_scanned: true) instead
+            // of an error This makes it a little easier for the caller to access this
+            // information without making custom traits for interrogating generic
+            // errors.
             Err(Self::Error::ORM(diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::UniqueViolation,
                 _,
@@ -604,16 +611,18 @@ impl RecoveryDb for SqlRecoveryDb {
     /// Nonzero start_block can be provided as an optimization opportunity.
     ///
     /// Note: This is still supported for some tests, but it is VERY SLOW.
-    /// We no longer have an index for ETxOutRecords by search key in the SQL directly.
-    /// This should not be used except in tests.
+    /// We no longer have an index for ETxOutRecords by search key in the SQL
+    /// directly. This should not be used except in tests.
     ///
     /// Arguments:
-    /// * start_block: A lower bound on where we will search. This can often be provided by the user
-    ///                in order to limit the scope of the search and reduce load on the servers.
+    /// * start_block: A lower bound on where we will search. This can often be
+    ///   provided by the user in order to limit the scope of the search and
+    ///   reduce load on the servers.
     /// * search_keys: A list of fog tx_out search keys to search for.
     ///
     /// Returns:
-    /// * Exactly one TxOutSearchResult object for every search key, or an internal database error description.
+    /// * Exactly one TxOutSearchResult object for every search key, or an
+    ///   internal database error description.
     fn get_tx_outs(
         &self,
         start_block: u64,
@@ -662,7 +671,8 @@ impl RecoveryDb for SqlRecoveryDb {
         self.update_last_active_at_impl(&conn, ingest_invocation_id)
     }
 
-    /// Get any ETxOutRecords produced by a given IngestInvocationId for a given block index.
+    /// Get any ETxOutRecords produced by a given IngestInvocationId for a given
+    /// block index.
     ///
     /// Arguments:
     /// * ingest_invocation_id: The ingest invocation we need ETxOutRecords from
@@ -697,7 +707,8 @@ impl RecoveryDb for SqlRecoveryDb {
     /// * block_index: The block we need cumulative_txo_count for.
     ///
     /// Returns:
-    /// * Some(cumulative_txo_count) if the block was found in the database, None if it wasn't, or
+    /// * Some(cumulative_txo_count) if the block was found in the database,
+    ///   None if it wasn't, or
     /// an error if the query failed.
     fn get_cumulative_txo_count_for_block(
         &self,
@@ -726,13 +737,15 @@ impl RecoveryDb for SqlRecoveryDb {
     }
 
     /// Get the block signature timestamp for a given block number.
-    /// Note that it is unspecified which timestamp we use if there are multiple timestamps.
+    /// Note that it is unspecified which timestamp we use if there are multiple
+    /// timestamps.
     ///
     /// Arguments:
     /// * block_index: The block we need timestamp for.
     ///
     /// Returns:
-    /// * Some(cumulative_txo_count) if the block was found in the database, None if it wasn't, or
+    /// * Some(cumulative_txo_count) if the block was found in the database,
+    ///   None if it wasn't, or
     /// an error if the query failed.
     fn get_block_signature_timestamp_for_block(
         &self,
@@ -803,7 +816,8 @@ impl ReportDb for SqlRecoveryDb {
 
         Ok(conn.build_transaction().read_write().run(
             || -> Result<IngressPublicKeyStatus, Self::Error> {
-                // First, try to update the pubkey_expiry value on this ingress key, only allowing it to increase, and only if it is not retired
+                // First, try to update the pubkey_expiry value on this ingress key, only
+                // allowing it to increase, and only if it is not retired
                 let result: IngressPublicKeyStatus = {
                     let key_bytes: &[u8] = ingress_key.as_ref();
 
@@ -818,7 +832,8 @@ impl ReportDb for SqlRecoveryDb {
                     .get_results(&conn)?;
 
                     if key_records.is_empty() {
-                        // If the result is empty, the key might not exist, or it might have had a larger pubkey expiry (because this server is behind),
+                        // If the result is empty, the key might not exist, or it might have had a
+                        // larger pubkey expiry (because this server is behind),
                         // so we need to make another query to find which is the case
                         log::info!(self.logger, "update was a no-op");
                         let maybe_key_status =
@@ -1210,7 +1225,8 @@ mod tests {
         let (block2, mut records2) = fog_test_infra::db_tests::random_block(&mut rng, 21, 15);
         records2.sort_by_key(|rec| rec.search_key.clone()); // this makes comparing tests result predictable.
 
-        // Get the last_active_at of the two ingest invocations so we could compare to it later.
+        // Get the last_active_at of the two ingest invocations so we could compare to
+        // it later.
         let invocs_last_active_at: Vec<chrono::NaiveDateTime> =
             schema::ingest_invocations::dsl::ingest_invocations
                 .select(schema::ingest_invocations::dsl::last_active_at)
@@ -1223,8 +1239,8 @@ mod tests {
         // Sleep a second so that the timestamp update would show if it happens.
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // Add the block data to the first invocation and test that everything got written
-        // correctly.
+        // Add the block data to the first invocation and test that everything got
+        // written correctly.
         db.add_block_data(&invoc_id1, &block1, 0, &records1)
             .unwrap();
 
@@ -1358,7 +1374,8 @@ mod tests {
             .report_missed_block_range(&BlockRange::new(11, 10))
             .is_err());
 
-        // Reporting a valid range should succeed and generate the appropriate user events.
+        // Reporting a valid range should succeed and generate the appropriate user
+        // events.
         db.report_missed_block_range(&BlockRange::new(10, 20))
             .unwrap();
 
@@ -1454,8 +1471,8 @@ mod tests {
             ]
         );
 
-        // Searching with a start_from_user_id that is higher than the highest available one should
-        // return nothing.
+        // Searching with a start_from_user_id that is higher than the highest available
+        // one should return nothing.
         let (_events, next_start_from_user_event_id) = db.search_user_events(0).unwrap();
 
         let (events, next_start_from_user_event_id2) = db
@@ -1594,8 +1611,8 @@ mod tests {
             ]
         );
 
-        // Searching with a start_block that filters out the results should filter them as
-        // expected.
+        // Searching with a start_block that filters out the results should filter them
+        // as expected.
         let results = db.get_tx_outs(first_block_index + 5, &test_case).unwrap();
         assert_eq!(
             results,
@@ -1686,8 +1703,8 @@ mod tests {
         db.add_block_data(&invoc_id2, &block2, 0, &records2)
             .unwrap();
 
-        // Get tx outs for an invocation id we're not aware of or a block id we're not aware of
-        // should return an empty array.
+        // Get tx outs for an invocation id we're not aware of or a block id we're not
+        // aware of should return an empty array.
         let tx_outs = db.get_tx_outs_by_block(&invoc_id1, 124).unwrap();
         assert_eq!(tx_outs, vec![]);
 
@@ -1696,8 +1713,8 @@ mod tests {
             .unwrap();
         assert_eq!(tx_outs, vec![]);
 
-        // Getting tx outs for invocation id and block number that were previously written should
-        // work as expected.
+        // Getting tx outs for invocation id and block number that were previously
+        // written should work as expected.
         let tx_outs = db.get_tx_outs_by_block(&invoc_id1, block1.index).unwrap();
         assert_eq!(tx_outs, records1);
 

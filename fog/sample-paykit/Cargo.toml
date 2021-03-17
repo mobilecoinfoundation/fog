@@ -41,7 +41,7 @@ fog-view-connection = { path = "../view/connection" }
 fog-view-enclave-measurement = { path = "../view/enclave/measurement" }
 fog-view-protocol = { path = "../view/protocol" }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 grpcio = "0.6.0"
 link-cplusplus = "1.0" # This is needed to support building on darwin which only has libc++ and not libstdc++
 rand = "0.7"

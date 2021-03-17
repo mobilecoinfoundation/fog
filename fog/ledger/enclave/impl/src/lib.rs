@@ -2,10 +2,10 @@
 
 //! Ledger Service Internal Enclave Implementation
 //!
-//! This crate implements the inside-the-enclave version of the LedgerEnclave trait,
-//! which would traditionally be inside the ledger_enclave crate. This, combined
-//! with a form of dependency injection, would provide the machines with
-//! all the unit testing they would ever need. Fate, it seems, has a sense
+//! This crate implements the inside-the-enclave version of the LedgerEnclave
+//! trait, which would traditionally be inside the ledger_enclave crate. This,
+//! combined with a form of dependency injection, would provide the machines
+//! with all the unit testing they would ever need. Fate, it seems, has a sense
 //! of irony...
 
 #![no_std]

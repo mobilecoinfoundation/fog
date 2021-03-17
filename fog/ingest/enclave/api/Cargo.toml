@@ -17,5 +17,5 @@ mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api"
 fog-kex-rng = { path = "../../../kex_rng" }
 fog-types = { path = "../../../fog_types", default-features = false }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }

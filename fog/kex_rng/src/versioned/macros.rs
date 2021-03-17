@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-// BufferedRng gets Iterator<Vec<u8>> for free, which allows using `.take()` syntax
+// BufferedRng gets Iterator<Vec<u8>> for free, which allows using `.take()`
+// syntax
 macro_rules! impl_iterator_for_buffered_rng {
     ($name: ty) => {
         impl Iterator for $name {
@@ -14,8 +15,8 @@ macro_rules! impl_iterator_for_buffered_rng {
     };
 }
 
-// Implement a multiversion buffered kex rng type, by listing identifiers and core types.
-// A default type must be specified also.
+// Implement a multiversion buffered kex rng type, by listing identifiers and
+// core types. A default type must be specified also.
 macro_rules! impl_multiversion_kex_rng_enum {
     ($enum_name: ident,
      kex: $kex: ty,

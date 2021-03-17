@@ -56,7 +56,8 @@ fn make_uris(idx: u16) -> (ResponderId, FogIngestUri, IngestPeerUri) {
     (local_node_id, client_listen_uri, peer_listen_uri)
 }
 
-// Helper which makes i'th server and temp dir for its stuff (deleted when objects are dropped)
+// Helper which makes i'th server and temp dir for its stuff (deleted when
+// objects are dropped)
 fn make_node(
     idx: u16,
     peer_idxs: impl Iterator<Item = u16>,
@@ -188,8 +189,8 @@ fn wait_for_sync(ledger: &LedgerDB, recovery_db: &SqlRecoveryDb, logger: &Logger
 }
 
 // Test that a three node cluster that starts with all nodes in the idle state,
-// and then one of them is activated, seems to behave corretly as we add test blocks.
-// Then retire it and confirm that they all transition to idle.
+// and then one of them is activated, seems to behave corretly as we add test
+// blocks. Then retire it and confirm that they all transition to idle.
 // Then try to activate one of them again, and confirm that it goes immediately
 // to idle because the key is retired in the DB.
 #[test_with_logger]
@@ -342,8 +343,9 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
         // Wait 10s for active node to have processed everything
         wait_for_sync(&ledger, &recovery_db, &logger);
 
-        // We now hit the pubkey expiry, so when the active node hits the next block, it will switch off instead of processing it.
-        // Because it won't process it, wait_for_sync won't terminate, so we just put a sleep instead.
+        // We now hit the pubkey expiry, so when the active node hits the next block, it
+        // will switch off instead of processing it. Because it won't process
+        // it, wait_for_sync won't terminate, so we just put a sleep instead.
         add_test_block(&mut ledger, &watcher, &mut rng);
         std::thread::sleep(Duration::from_secs(1));
 
@@ -401,17 +403,17 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
     }
 }
 
-// "Fencing" is a term used in k8s go leader election docu, which they say means,
-// that we prevent two leaders from existing simultaneously without fail.
+// "Fencing" is a term used in k8s go leader election docu, which they say
+// means, that we prevent two leaders from existing simultaneously without fail.
 //
 // This test has to do with, creating a situation where two leaders are active,
-// and checking that the database constraint causes exactly one of them to become idle
-// when they attempt to write the same block.
+// and checking that the database constraint causes exactly one of them to
+// become idle when they attempt to write the same block.
 //
-// The "activate" function does some (racy) checks by asking peers if they are active
-// before we ourselves become active, in the course of creating key backups.
-// In order to bypass that, we make the two nodes not peers -- the database doesn't
-// care if they think they are peers or not.
+// The "activate" function does some (racy) checks by asking peers if they are
+// active before we ourselves become active, in the course of creating key
+// backups. In order to bypass that, we make the two nodes not peers -- the
+// database doesn't care if they think they are peers or not.
 #[test_with_logger]
 fn three_node_cluster_fencing(logger: Logger) {
     let mut rng: Hc128Rng = SeedableRng::from_seed([0u8; 32]);
@@ -464,7 +466,8 @@ fn three_node_cluster_fencing(logger: Logger) {
 
     // Do three repetitions of the whole thing
     for _ in 0..3 {
-        // Note: These nodes are not peers, and so do not check eachother when activating
+        // Note: These nodes are not peers, and so do not check eachother when
+        // activating
         let (mut node7, _node7dir) = make_node(
             7,
             vec![7u16].into_iter(),
@@ -516,8 +519,8 @@ fn three_node_cluster_fencing(logger: Logger) {
         assert_eq!(node7_key, node9_key);
 
         for _reps in 0..2 {
-            // Now activate them all, which should work (without raciness) since they can't see eachother, and there are no blocks yet
-            // besides origin block
+            // Now activate them all, which should work (without raciness) since they can't
+            // see eachother, and there are no blocks yet besides origin block
             assert!(
                 node7.activate().is_ok(),
                 "node7 should have been able to activate"
@@ -590,13 +593,14 @@ fn three_node_cluster_fencing(logger: Logger) {
             }
         }
 
-        // At this point we will have one active node and two inactive ones. The active one won the
-        // race and the two others have lost it. We will stop the active one, forcing one of the
-        // inactive ones to be the winner and by that we will validate that losing the race once
-        // does not doom you to always losing it or failing to write a new block.
-        // We are taking this extra step since it is possible that the same node won the race in
-        // all the loop iterations above, and we'd like to ensure that a node that has lost the
-        // race is able to later on win it.
+        // At this point we will have one active node and two inactive ones. The active
+        // one won the race and the two others have lost it. We will stop the
+        // active one, forcing one of the inactive ones to be the winner and by
+        // that we will validate that losing the race once does not doom you to
+        // always losing it or failing to write a new block. We are taking this
+        // extra step since it is possible that the same node won the race in
+        // all the loop iterations above, and we'd like to ensure that a node that has
+        // lost the race is able to later on win it.
         let active_node_num = if node7.is_active() {
             log::info!(logger, "node7 was active");
             node7.stop();
@@ -640,8 +644,8 @@ fn three_node_cluster_fencing(logger: Logger) {
             panic!("no node was active");
         };
 
-        // Write a block, the active node, that was previously inactive because it lost the race,
-        // should manage to write a block.
+        // Write a block, the active node, that was previously inactive because it lost
+        // the race, should manage to write a block.
         add_test_block(&mut ledger, &watcher, &mut rng);
         wait_for_sync(&ledger, &recovery_db, &logger);
         std::thread::sleep(Duration::from_millis(100));

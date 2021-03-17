@@ -28,7 +28,8 @@ pub enum IngestConfigCommand {
     /// Get a summary of the state of the ingest server.
     GetStatus,
 
-    /// Wipe out all keys and oram state in the enclave, replacing them with new random keys.
+    /// Wipe out all keys and oram state in the enclave, replacing them with new
+    /// random keys.
     NewKeys,
 
     /// Set the list of peers of this ingest server.
@@ -36,14 +37,16 @@ pub enum IngestConfigCommand {
 
     /// Set the pubkey_expiry_window of the ingest server.
     SetPubkeyExpiryWindow {
-        /// This value is a number of blocks that is added to the current block index to compute the "pubkey_expiry" value of fog reports.
+        /// This value is a number of blocks that is added to the current block
+        /// index to compute the "pubkey_expiry" value of fog reports.
         pubkey_expiry_window: u64,
     },
 
     /// Attempt to put an idle server in the active mode.
     Activate,
 
-    /// Attempt to put an active server in the retiring mode, after which it will eventually become idle.
+    /// Attempt to put an active server in the retiring mode, after which it
+    /// will eventually become idle.
     Retire,
 
     /// Attempt to take a retired server out of retirement.

@@ -22,8 +22,8 @@ use std::{convert::TryFrom, env, path::PathBuf};
 
 /// Function for turning string constants into run-time enclave paths
 ///
-/// Try to find the libenclave.signed.so file searching in whatever places make sense
-/// for our infrastructure.
+/// Try to find the libenclave.signed.so file searching in whatever places make
+/// sense for our infrastructure.
 pub fn get_enclave_path(filename: &str) -> PathBuf {
     // First try searching right next to the target, this is for circle-ci
     let maybe_result = env::current_exe()
@@ -34,7 +34,8 @@ pub fn get_enclave_path(filename: &str) -> PathBuf {
         return maybe_result;
     }
 
-    // During cargo test, the enclave.so won't be there, so we search in target instead as a fallback
+    // During cargo test, the enclave.so won't be there, so we search in target
+    // instead as a fallback
     let project_root = {
         let mut result = env::current_exe().expect("Could not get current exe");
         while result.file_name().expect("No Filename for result") != "target" {
@@ -51,7 +52,8 @@ pub fn get_enclave_path(filename: &str) -> PathBuf {
         .join(filename)
 }
 
-/// Generate a random test block, submit it, and see if all users recovered their Txs as expected
+/// Generate a random test block, submit it, and see if all users recovered
+/// their Txs as expected
 ///
 /// # Arguments
 /// * users: Users to make transactions for
@@ -62,7 +64,6 @@ pub fn get_enclave_path(filename: &str) -> PathBuf {
 /// * global_txo_count: Total number of txos in the ledger already
 ///
 /// Returns: New global_txo_count
-///
 pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
     users: &mut UserPool,
     ingest: &FogIngestGrpcClient,
@@ -99,8 +100,8 @@ pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
     );
     let num_new_txos = txos.len();
 
-    // Add the timestamp information to watcher for this block index - note watcher does not
-    // allow signatures for block 0.
+    // Add the timestamp information to watcher for this block index - note watcher
+    // does not allow signatures for block 0.
     if block_index > 0 {
         for src_url in watcher.get_config_urls().unwrap().iter() {
             let mut block = Block::default(); // Dummy block - we don't work with blocks in this test framework
@@ -133,8 +134,8 @@ pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
         (timestamp, timestamp_result_code)
     );
 
-    // Make them into a block, and ingest it. This is done by appending a block to the ledger and
-    // having it be polled by ingest.
+    // Make them into a block, and ingest it. This is done by appending a block to
+    // the ledger and having it be polled by ingest.
     let (block, block_contents) = if block_index == 0 {
         let block_contents = BlockContents::new(vec![], txos.clone());
         let block = Block::new_origin_block(&txos);
@@ -156,7 +157,8 @@ pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
         .append_block(&block, &block_contents, None)
         .unwrap_or_else(|err| panic!("failed appending block {:?}: {:?}", block, err));
 
-    // Make the users poll for transactions, until their num blocks matches ledger_db, or we time out
+    // Make the users poll for transactions, until their num blocks matches
+    // ledger_db, or we time out
     {
         let mut retries = 60;
         loop {
@@ -187,7 +189,8 @@ pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
     );
 }
 
-/// Throw all the user phones in the pool and see if they can recover them via the standard polling API
+/// Throw all the user phones in the pool and see if they can recover them via
+/// the standard polling API
 pub fn test_polling_recovery<C: FogViewConnection>(users: &mut UserPool, view: &mut C) {
     // Get a checkpoint against time zero
     let zero_checkpoint = users.get_zero_checkpoint();

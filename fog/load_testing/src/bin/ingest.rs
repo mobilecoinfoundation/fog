@@ -4,7 +4,8 @@
 //! creating one block every 5 seconds.
 //!
 //! It attempts to measure:
-//! - How many Txos per block can we add while still processing the block every 5 seconds?
+//! - How many Txos per block can we add while still processing the block every
+//!   5 seconds?
 //!
 //! FIXME: Fog-300
 //! Processing Txos gets slower as the map gets more full, the load test

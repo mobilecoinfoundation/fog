@@ -2,12 +2,14 @@
 
 //! Fog Ingest client
 
+use fog_api::ingest_common::IngestSummary;
 use fog_ingest_client::{
     config::{IngestConfig, IngestConfigCommand},
     ClientResult, FogIngestGrpcClient,
 };
 use fog_uri::FogIngestUri;
 use mc_common::logger::{create_root_logger, log, Logger};
+use serde_json::json;
 use std::{str::FromStr, sync::Arc};
 use structopt::StructOpt;
 
@@ -54,12 +56,14 @@ fn main() -> ClientResult<()> {
 fn get_status(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.get_status().expect("rpc failed");
     log::info!(logger, "Status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
 fn new_keys(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.new_keys().expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
@@ -72,6 +76,7 @@ fn set_pubkey_expiry_window(
         .set_pubkey_expiry_window(pubkey_expiry_window)
         .expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
@@ -82,24 +87,28 @@ fn set_peers(
 ) -> ClientResult<()> {
     let status = ingest_client.set_peers(peer_uris).expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
 fn activate(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.activate().expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
 fn retire(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.retire().expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
 fn unretire(logger: &Logger, ingest_client: &FogIngestGrpcClient) -> ClientResult<()> {
     let status = ingest_client.unretire().expect("rpc failed");
     log::info!(logger, "Done, status: {:?}", status);
+    println!("{}", ingest_summary_to_json(&status));
     Ok(())
 }
 
@@ -132,5 +141,31 @@ fn get_missed_block_ranges(
     for range in missed_block_ranges.iter() {
         log::info!(logger, "[{}-{})", range.start_block, range.end_block);
     }
+
+    println!(
+        "{}",
+        json!(missed_block_ranges
+            .iter()
+            .map(|range| json!({
+                "start_block": range.start_block,
+                "end_block": range.end_block,
+            }))
+            .collect::<Vec<_>>())
+    );
+
     Ok(())
+}
+
+fn ingest_summary_to_json(summary: &IngestSummary) -> String {
+    json!({
+        "mode": format!("{:?}", summary.mode),
+        "next_block_index": summary.next_block_index,
+        "pubkey_expiry_window": summary.pubkey_expiry_window,
+        "ingress_pubkey": hex::encode(summary.get_ingress_pubkey().get_data()),
+        "egress_pubkey": hex::encode(summary.get_egress_pubkey()),
+        "kex_rng_version": summary.kex_rng_version,
+        "peers": summary.get_peers(),
+        "ingest_invocation_id": summary.ingest_invocation_id,
+    })
+    .to_string()
 }

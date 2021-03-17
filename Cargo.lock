@@ -1079,6 +1079,7 @@ dependencies = [
  "mc-util-uri 1.0.1-pre1",
  "protobuf 2.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "retry 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

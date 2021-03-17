@@ -1,5 +1,6 @@
-# Copyright (c) 2018-2020 MobileCoin Inc.
+# Copyright (c) 2018-2021 MobileCoin Inc.
 
+import json
 import os
 import subprocess
 
@@ -80,7 +81,7 @@ class FogIngest:
             f'--peer-listen-uri=insecure-igp://localhost:{self.peer_port}/',
             f'--ias-api-key={IAS_API_KEY}',
             f'--ias-spid={IAS_SPID}',
-            f'--local-node-id localhost:{self.client_port}',
+            f'--local-node-id localhost:{self.peer_port}',
             f'--state-file {self.state_file_path}',
             f'--admin-listen-uri=insecure-mca://127.0.0.1:{self.admin_port}/',
             f'--watcher-db {self.watcher_db_path}',
@@ -109,6 +110,57 @@ class FogIngest:
         if self.admin_http_gateway_process and self.admin_http_gateway_process.poll() is None:
             self.admin_http_gateway_process.terminate()
             self.admin_http_gateway_process = None
+
+    def get_status(self):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'get-status',
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result)
+
+    def activate(self):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'activate',
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result)
+
+    def set_pubkey_expiry_window(self, value):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'set-pubkey-expiry-window',
+            str(value),
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result)
+
+    def set_peers(self, peers):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'set-peers',
+        ] + peers)
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result)
+
+    def retire(self):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'retire',
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result)
 
 
 class FogView:

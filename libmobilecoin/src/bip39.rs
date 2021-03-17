@@ -41,7 +41,8 @@ pub extern "C" fn mc_bip39_entropy_from_mnemonic(
 
 /// # Preconditions
 ///
-/// * `entropy` - length must be a multiple of 4 and between 16 and 32, inclusive.
+/// * `entropy` - length must be a multiple of 4 and between 16 and 32,
+///   inclusive.
 #[no_mangle]
 pub extern "C" fn mc_bip39_entropy_to_mnemonic(entropy: FfiRefPtr<McBuffer>) -> FfiOptOwnedStr {
     ffi_boundary(|| {

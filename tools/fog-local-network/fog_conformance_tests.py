@@ -801,7 +801,7 @@ class FogConformanceTest:
 
         # Add block 9 to ingest and ledger. This should cause ingest1 to become Idle.
         # Give 1 to everyone
-        # Take 2 from ???
+        # Take 2 from wallet0
         credits9 = [{'account': 0, 'amount': 1}, {'account': 1, 'amount': 1}, {'account': 2, 'amount': 1}, {'account': 3, 'amount': 1}, {'account': 4, 'amount': 1}]
         key_images9 = [block8_key_images[0]]
         print("Key images spent in Block 9: ", key_images9)

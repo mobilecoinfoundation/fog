@@ -182,6 +182,8 @@ pub enum RestoreStateError {
     InvalidPeerUri(UriParseError),
     /// Statefile contained uri with no responder id: {0}
     ResponderId(UriConversionError),
+    /// Setting peers from the statefile failed: {0}
+    SetPeers(SetPeersError),
     /**
      * Server not in idle state before restore state operation, this is a
      * logic error
@@ -224,5 +226,24 @@ impl From<UriParseError> for RestoreStateError {
 impl From<ConversionError> for RestoreStateError {
     fn from(src: ConversionError) -> Self {
         Self::Conversion(src)
+    }
+}
+
+impl From<SetPeersError> for RestoreStateError {
+    fn from(src: SetPeersError) -> Self {
+        Self::SetPeers(src)
+    }
+}
+
+/// An error which occurs when attempting to set the list of peers
+#[derive(Debug, Display)]
+pub enum SetPeersError {
+    /// Statefile contained uri with no responder id: {0}
+    ResponderId(UriConversionError),
+}
+
+impl From<UriConversionError> for SetPeersError {
+    fn from(src: UriConversionError) -> Self {
+        Self::ResponderId(src)
     }
 }

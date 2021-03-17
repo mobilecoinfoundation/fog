@@ -78,13 +78,10 @@ pub struct IngestControllerState {
 impl IngestControllerState {
     /// Initialize ingest controller state from config, and a logger
     pub fn new(config: &IngestServerConfig, logger: Logger) -> Self {
-        let mut peers = config.peers.clone();
-        // Our own URI should always be stored in the list of peers
-        peers.insert(config.peer_listen_uri.clone());
+        let peers = config.peers.clone();
         Self {
             mode: IngestMode::Idle,
-            next_block_index: 0, /* Note: this is reset when the server actually activates, based
-                                  * on DB's */
+            next_block_index: 0, // this is set when the server activates, based on DB's
             pubkey_expiry_window: config.pubkey_expiry_window,
             ingest_invocation_id: None,
             peers,

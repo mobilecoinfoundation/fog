@@ -16,12 +16,11 @@ use fog_ingest_server::{
 use fog_recovery_db_iface::{RecoveryDb, ReportDb};
 use fog_test_infra::{get_enclave_path, mock_client::PassThroughViewClient, mock_users::UserPool};
 use fog_uri::{FogIngestUri, IngestPeerUri};
+use maplit::btreeset;
 use mc_attest_net::{Client as AttestClient, RaClient};
-use mc_common::{
-    logger::{log, test_with_logger, Logger},
-    ResponderId,
-};
+use mc_common::logger::{log, test_with_logger, Logger};
 use mc_ledger_db::LedgerDB;
+use mc_util_uri::ConnectionUri;
 use mc_watcher::watcher_db::WatcherDB;
 use rand_core::RngCore;
 use std::{str::FromStr, sync::Arc, time::Duration};
@@ -91,8 +90,10 @@ fn test_ingest_polling_integration<A, DB>(
                 WatcherDB::open_rw(db_tmp.path().to_path_buf(), &src_urls, logger.clone()).unwrap();
 
             // In each phase we tear down ingest
-            let local_node_id =
-                ResponderId::from_str(&format!("127.0.0.1:{}", base_port + 4)).unwrap();
+            let igp_uri =
+                IngestPeerUri::from_str(&format!("insecure-igp://0.0.0.0:{}/", base_port + 5))
+                    .unwrap();
+            let local_node_id = igp_uri.responder_id().unwrap();
 
             let _ingest_server = {
                 let config = IngestServerConfig {
@@ -103,12 +104,8 @@ fn test_ingest_polling_integration<A, DB>(
                         base_port + 4
                     ))
                     .unwrap(),
-                    peer_listen_uri: IngestPeerUri::from_str(&format!(
-                        "insecure-igp://0.0.0.0:{}/",
-                        base_port + 5
-                    ))
-                    .unwrap(),
-                    peers: Default::default(),
+                    peer_listen_uri: igp_uri.clone(),
+                    peers: btreeset![igp_uri.clone()],
                     fog_report_id: Default::default(),
                     max_transactions: 10_000,
                     pubkey_expiry_window: 4,

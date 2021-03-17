@@ -6,7 +6,7 @@ use crate::{
     connection_traits::IngestConnection,
     controller_state::{IngestControllerState, StateChangeError},
     counters,
-    error::{IngestServiceError as Error, PeerBackupError, RestoreStateError},
+    error::{IngestServiceError as Error, PeerBackupError, RestoreStateError, SetPeersError},
     server::IngestServerConfig,
     SeqDisplay,
 };
@@ -793,8 +793,14 @@ where
     }
 
     /// Set the list of peers
-    pub fn set_peers(&self, peers: Vec<IngestPeerUri>) {
-        self.set_peers_inner(peers, &mut self.get_state());
+    ///
+    /// * Arguments:
+    /// - peers: A list of ingest peer uris
+    ///
+    /// * Returns:
+    /// - An error if any of the peer uris doesn't have a valid responder id.
+    pub fn set_peers(&self, peers: Vec<IngestPeerUri>) -> Result<(), SetPeersError> {
+        self.set_peers_inner(peers, &mut self.get_state())
     }
 
     // Does work of set_peers but takes mutex guard for controller state as argument
@@ -802,15 +808,23 @@ where
         &self,
         peers: Vec<IngestPeerUri>,
         state: &mut MutexGuard<IngestControllerState>,
-    ) {
-        let mut new_peers: BTreeSet<IngestPeerUri> = peers.iter().cloned().collect();
+    ) -> Result<(), SetPeersError> {
+        // Enforce the invariant that the uris in new peers list all have valid responder id
+        let mut new_peers = peers
+            .iter()
+            .map(|uri| -> Result<IngestPeerUri, SetPeersError> {
+                uri.responder_id()?;
+                Ok(uri.clone())
+            })
+            .collect::<Result<BTreeSet<IngestPeerUri>, SetPeersError>>()?;
         // Our own URI should always be stored in the list of peers
-        let our_uri = state.get_peers().iter().find(|uri| uri.responder_id().expect("Could not get reponder id for one of our peers, that violates an invariant") == self.config.local_node_id).expect("Our own URI was not found among our current set of peers, that violates an invariant").clone();
+        let our_uri = state.get_peers().iter().find(|uri| uri.responder_id().expect("Could not get responder-id for one of our peers, that violates an invariant") == self.config.local_node_id).expect("Our own URI was not found among our current set of peers, that violates an invariant").clone();
         if !new_peers.contains(&our_uri) {
-            log::warn!(self.logger, "The new set of peers did not contain a URI with our responder id. We added our URI to the set: {} <-- {}", SeqDisplay(new_peers.iter()), our_uri);
+            log::warn!(self.logger, "The new set of peers did not contain a URI with our responder-id. We added our URI to the set: {} <-- {}", SeqDisplay(new_peers.iter()), our_uri);
             new_peers.insert(our_uri);
         }
         state.set_peers(new_peers);
+        Ok(())
     }
 
     /// Get the next block index, and whether we are idle, atomically together.
@@ -898,7 +912,7 @@ where
             for peer_uri in new_peers.iter() {
                 if peer_uri
                     .responder_id()
-                    .map_err(RestoreStateError::ResponderId)?
+                    .map_err(|err| RestoreStateError::SetPeers(err.into()))?
                     == self.config.local_node_id
                 {
                     continue;
@@ -927,13 +941,13 @@ where
 
         // Either we're restoring to idle state, or we're restoring to an active state
         // but all backups exist correctly, so we can make state changes now.
+        self.set_peers_inner(new_peers.into_iter().collect(), &mut state)?;
         state
             .set_pubkey_expiry_window(state_data.pubkey_expiry_window)
             .expect("Modification should have been allowed, this is a logic error");
         state
             .set_next_block_index(state_data.next_block_index)
             .expect("Modification should have been allowed, this is a logic error");
-        self.set_peers_inner(new_peers.into_iter().collect(), &mut state);
 
         match state_data.mode {
             IngestControllerMode::Idle => {}

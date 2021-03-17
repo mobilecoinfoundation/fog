@@ -808,7 +808,7 @@ where
         let our_uri = state.get_peers().iter().find(|uri| uri.responder_id().expect("Could not get reponder id for one of our peers, that violates an invariant") == self.config.local_node_id).expect("Our own URI was not found among our current set of peers, that violates an invariant").clone();
         if !new_peers.contains(&our_uri) {
             log::warn!(self.logger, "The new set of peers did not contain a URI with our responder id. We added our URI to the set: {} <-- {}", SeqDisplay(new_peers.iter()), our_uri);
-            new_peers.insert(our_uri.clone());
+            new_peers.insert(our_uri);
         }
         state.set_peers(new_peers);
     }

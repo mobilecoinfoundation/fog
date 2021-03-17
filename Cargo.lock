@@ -863,16 +863,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "displaydoc"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "proc-macro2 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "displaydoc"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -1054,7 +1044,7 @@ name = "fog-enclave-connection"
 version = "0.13.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-attest-ake 1.0.1-pre1",
  "mc-attest-api 1.0.1-pre1",
@@ -1074,7 +1064,7 @@ dependencies = [
 name = "fog-ingest-client"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-types 0.13.0",
  "fog-uri 0.13.0",
@@ -1130,7 +1120,7 @@ dependencies = [
 name = "fog-ingest-enclave-api"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "fog-types 0.13.0",
  "mc-attest-core 1.0.1-pre1",
@@ -1201,7 +1191,7 @@ name = "fog-ingest-server"
 version = "0.13.0"
 dependencies = [
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-ingest-client 0.13.0",
  "fog-ingest-enclave 0.13.0",
@@ -1254,7 +1244,7 @@ name = "fog-kex-rng"
 version = "0.13.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-util-from-random 1.0.1-pre1",
  "mc-util-repr-bytes 1.0.1-pre1",
@@ -1268,7 +1258,7 @@ dependencies = [
 name = "fog-ledger-connection"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-enclave-connection 0.13.0",
  "fog-types 0.13.0",
@@ -1312,7 +1302,7 @@ dependencies = [
 name = "fog-ledger-enclave-api"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-types 0.13.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
@@ -1366,7 +1356,7 @@ name = "fog-ledger-server"
 version = "0.13.0"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-ledger-connection 0.13.0",
  "fog-ledger-enclave 0.13.0",
@@ -1480,7 +1470,7 @@ dependencies = [
  "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "balanced-tree-index 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-sgx-compat 1.0.1-pre1",
@@ -1500,7 +1490,7 @@ dependencies = [
 name = "fog-recovery-db-iface"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "fog-types 0.13.0",
  "mc-attest-core 1.0.1-pre1",
@@ -1532,7 +1522,7 @@ dependencies = [
 name = "fog-report-server"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-recovery-db-iface 0.13.0",
  "fog-sql-recovery-db 0.13.0",
@@ -1566,7 +1556,7 @@ dependencies = [
 name = "fog-sample-paykit"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-enclave-connection 0.13.0",
  "fog-ingest-enclave-measurement 0.13.0",
@@ -1607,7 +1597,7 @@ dependencies = [
  "diesel 1.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "diesel-derive-enum 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "diesel_migrations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "fog-recovery-db-iface 0.13.0",
  "fog-test-infra 0.13.0",
@@ -1679,7 +1669,7 @@ name = "fog-types"
 version = "0.13.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
@@ -1755,7 +1745,7 @@ dependencies = [
 name = "fog-view-enclave-api"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-recovery-db-iface 0.13.0",
  "fog-types 0.13.0",
  "mc-attest-core 1.0.1-pre1",
@@ -1833,7 +1823,7 @@ name = "fog-view-protocol"
 version = "0.13.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "fog-types 0.13.0",
  "mc-account-keys 1.0.1-pre1",
@@ -1855,7 +1845,7 @@ dependencies = [
 name = "fog-view-server"
 version = "0.13.0"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-kex-rng 0.13.0",
  "fog-recovery-db-iface 0.13.0",
@@ -2431,7 +2421,7 @@ dependencies = [
  "bip39 1.0.0-rc1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cbindgen 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cmake 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "libc 0.2.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -2583,7 +2573,7 @@ version = "0.13.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "bip39 1.0.0-rc1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-kex-rng 0.13.0",
  "jni 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -5865,7 +5855,6 @@ dependencies = [
 "checksum dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
 "checksum dirs-sys 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "afa0b23de8fd801745c471deffa6e12d248f962c9fd4b4c33787b055599bde7b"
 "checksum discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
-"checksum displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "adc2ab4d5a16117f9029e9a6b5e4e79f4c67f6519bc134210d4d4a04ba31f41b"
 "checksum displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f98e1bbbcbb1b2646d6e900da42974b641eb784851adcd4f0ae4c07c8bc7b42b"
 "checksum downcast 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4bb454f0228b18c7f4c3b0ebbee346ed9c52e7443b0999cd543ff3571205701d"
 "checksum dtoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4358a9e11b9a09cf52383b451b49a169e8d797b68aa02301ff586d70d9661ea3"

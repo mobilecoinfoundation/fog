@@ -28,7 +28,7 @@ fog-api = { path = "../../api" }
 fog-recovery-db-iface = { path = "../../recovery_db_iface" }
 fog-sql-recovery-db = { path = "../../sql_recovery_db" }
 
-displaydoc = "0.1.7"
+displaydoc = "0.2"
 futures = "0.3"
 grpcio = "0.6.0"
 pem = "0.8"

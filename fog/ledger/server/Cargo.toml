@@ -37,7 +37,7 @@ fog-uri = { path = "../../uri" }
 fog-ledger-enclave = { path = "../enclave" }
 fog-ledger-enclave-api = { path = "../enclave/api" }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 futures = "0.3"
 grpcio = "0.6.0"
 hex = "0.4"

@@ -18,7 +18,7 @@ mc-util-grpc = { path = "../../mobilecoin/util/grpc" }
 mc-util-serial = { path = "../../mobilecoin/util/serial" }
 mc-util-uri = { path = "../../mobilecoin/util/uri" }
 
-displaydoc = { version = "0.1", default-features = false }
+displaydoc = { version = "0.2", default-features = false }
 grpcio = "0.6.0"
 aes-gcm = "0.6"
 sha2 = "0.9"

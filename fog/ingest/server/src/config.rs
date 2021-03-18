@@ -38,7 +38,7 @@ pub struct IngestConfig {
     pub peer_listen_uri: IngestPeerUri,
 
     /// List of all peers in this cluster
-    #[structopt(long)]
+    #[structopt(long, use_delimiter = true)]
     pub peers: Vec<IngestPeerUri>,
 
     /// Path to ledger db (lmdb), used for ingest in a polling fashion
@@ -97,4 +97,25 @@ pub struct IngestConfig {
 /// Converts a string containing number of seconds to a Duration object.
 fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntError> {
     Ok(Duration::from_secs(u64::from_str(src)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn ingest_server_config_example() {
+        let config = IngestConfig::from_iter_safe(
+         &["/usr/bin/fog_ingest_server",
+      "--ledger-db", "/fog-data/ledger",
+      "--watcher-db", "/fog-data/watcher",
+     "--ias-spid", "00000000000000000000000000000000", "--ias-api-key", "00000000000000000000000000000000",
+      "--client-listen-uri", "insecure-fog-ingest://0.0.0.0:3226/",
+      "--peer-listen-uri", "insecure-igp://0.0.0.0:8090/",
+      "--local-node-id", "fogingest2.buildtest.svc.cluster.local:443",
+      "--peers", "insecure-igp://fogingest1.buildtest.svc.cluster.local:443,insecure-igp://fogingest2.buildtest.svc.cluster.local:443",
+      "--state-file", "/foo/bar",
+      "--admin-listen-uri", "insecure-mca://127.0.0.1:8003/",
+      "--pubkey-expiry-window", "100"]).expect("Could not parse command line arguments");
+        assert_eq!(config.peers.len(), 2);
+    }
 }

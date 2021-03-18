@@ -6,12 +6,11 @@ use fog_ingest_server::{
 };
 use fog_test_infra::get_enclave_path;
 use fog_uri::{FogIngestUri, IngestPeerUri};
+use maplit::btreeset;
 use mc_attest_net::{Client as AttestClient, RaClient};
-use mc_common::{
-    logger::{test_with_logger, Logger},
-    ResponderId,
-};
+use mc_common::logger::{test_with_logger, Logger};
 use mc_ledger_db::LedgerDB;
+use mc_util_uri::ConnectionUri;
 use mc_watcher::watcher_db::WatcherDB;
 use std::{str::FromStr, time::Duration};
 use tempdir::TempDir;
@@ -28,7 +27,9 @@ fn test_ingest_sealed_key_recovery(logger: Logger) {
 
     let base_port: u16 = 3457;
 
-    let local_node_id = ResponderId::from_str(&format!("127.0.0.1:{}", base_port + 5)).unwrap();
+    let igp_uri =
+        IngestPeerUri::from_str(&format!("insecure-igp://127.0.0.1:{}/", base_port + 5)).unwrap();
+    let local_node_id = igp_uri.responder_id().unwrap();
 
     let state_file_tmp =
         TempDir::new("ingest_state").expect("Could not make tempdir for ingest state");
@@ -42,12 +43,8 @@ fn test_ingest_sealed_key_recovery(logger: Logger) {
             base_port + 4
         ))
         .unwrap(),
-        peer_listen_uri: IngestPeerUri::from_str(&format!(
-            "insecure-igp://0.0.0.0:{}/",
-            base_port + 5
-        ))
-        .unwrap(),
-        peers: Default::default(),
+        peer_listen_uri: igp_uri.clone(),
+        peers: btreeset![igp_uri.clone()],
         fog_report_id: Default::default(),
         max_transactions: 10_000,
         pubkey_expiry_window: 100,

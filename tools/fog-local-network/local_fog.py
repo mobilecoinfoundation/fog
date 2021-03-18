@@ -79,6 +79,7 @@ class FogIngest:
             f'--ledger-db={self.ledger_db_path}',
             f'--client-listen-uri={self.client_listen_url}',
             f'--peer-listen-uri=insecure-igp://localhost:{self.peer_port}/',
+            f'--peers=insecure-igp://localhost:{self.peer_port}/',
             f'--ias-api-key={IAS_API_KEY}',
             f'--ias-spid={IAS_SPID}',
             f'--local-node-id localhost:{self.peer_port}',

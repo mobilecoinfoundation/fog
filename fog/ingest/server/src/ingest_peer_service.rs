@@ -62,7 +62,9 @@ where
             .collect::<Result<Vec<_>, _>>()
             .map_err(|err| rpc_invalid_arg_error("invalid peer uri", err, logger))?;
 
-        self.controller.set_peers(peers);
+        self.controller
+            .set_peers(peers)
+            .map_err(|err| rpc_invalid_arg_error(err, "invalid peer uri", logger))?;
 
         Ok(self.controller.get_ingest_summary())
     }

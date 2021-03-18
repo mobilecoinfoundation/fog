@@ -1207,6 +1207,7 @@ dependencies = [
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-api 1.0.1-pre1",
  "mc-attest-api 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",

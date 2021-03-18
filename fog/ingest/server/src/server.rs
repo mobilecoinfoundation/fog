@@ -10,6 +10,7 @@ use crate::{
     ingest_service::IngestService,
     state_file::StateFile,
     worker::{IngestWorker, PeerCheckupWorker},
+    SeqDisplay,
 };
 use fog_api::{
     ingest_common::{IngestControllerMode, IngestSummary},
@@ -132,6 +133,25 @@ where
         ledger_db: LedgerDB,
         logger: Logger,
     ) -> Self {
+        // Validate peer list in config:
+        // - Each peers responder id should be unique
+        // - Our responder id ("local-node-id") should be one of them
+        let peer_responder_ids: BTreeSet<ResponderId> = config
+            .peers
+            .iter()
+            .map(|uri| {
+                uri.responder_id()
+                    .expect("Could not compute responder id for one of our peers")
+            })
+            .collect();
+        if peer_responder_ids.len() != config.peers.len() {
+            panic!("Invalid configuration: Had {} peer uris, but only {} unique responder id's among them. Peers: {}, Responder Ids: {:?}", config.peers.len(), peer_responder_ids.len(), SeqDisplay(config.peers.iter()), peer_responder_ids);
+        }
+
+        if !peer_responder_ids.contains(&config.local_node_id) {
+            panic!("Invaild configuration: Our local node id does not appear as one of the respond ids of one of the uris in the peer list, but that is required.");
+        }
+
         let controller = Arc::new(IngestController::new(
             config.clone(),
             ra_client,

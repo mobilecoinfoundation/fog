@@ -38,7 +38,7 @@ pub struct IngestConfig {
     pub peer_listen_uri: IngestPeerUri,
 
     /// List of all peers in this cluster
-    #[structopt(long, raw(use_delimiter = "true"))]
+    #[structopt(long, use_delimiter = "true")]
     pub peers: Vec<IngestPeerUri>,
 
     /// Path to ledger db (lmdb), used for ingest in a polling fashion

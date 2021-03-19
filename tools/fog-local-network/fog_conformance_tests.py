@@ -165,6 +165,7 @@ def parse_balance_check_output(line):
     return result
 
 class BalanceCheckProgram:
+    """An object for starting and controlling the execution of an external balance check program."""
     def __init__(self, name, balance_check_path, keys_dir, ledger_url, view_url, key_num, release):
         self.name = name
         self.balance_check_path = balance_check_path
@@ -221,13 +222,64 @@ class BalanceCheckProgram:
         self.popen.terminate()
         self.popen = None
 
+    # Check that the wallet is able to compute expected balance and reach an expected
+    # block count.
+    #
+    # Arguments:
+    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
+    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
+    #                                  otherwise, we continue testing.
+    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
+    def assert_balance(self, acceptable_answers, expected_eventual_block_count):
+        for ebc in expected_eventual_block_count:
+            assert ebc in acceptable_answers
+
+        print(f"Checking account {self.key_num} on {self.name}...")
+        start_time = time.perf_counter()
+
+        result = self.check() if self.popen else self.start()
+        while True:
+            if result['block_count'] not in acceptable_answers:
+                self.debug()
+                raise Exception(f"{self.name} computed balance {result} for account {self.key_num}, but this block count was not expected. Acceptable answers were {acceptable_answers}")
+
+            if acceptable_answers.get(result['block_count']) != result['balance']:
+                self.debug()
+                raise Exception(f"{self.name} computed balance {result} for account {self.key_num}, but this balance was not expected. Expected balance at that block_count was {acceptable_answers.get(result['block_count'])}")
+
+            if result['block_count'] in expected_eventual_block_count:
+                print(f"Checking account {self.key_num} on {self.name} done: {result}")
+                break
+
+            elapsed = time.perf_counter() - start_time
+            if elapsed > DEADLINE_SECONDS:
+                raise Exception(f"{self.name} did not converge to expected answer within {elapsed} seconds")
+
+            result = self.check()
+
 
 class MultiBalanceTester:
+    """The MultiBalanceTester keeps track of an ever-growing set of BalanceCheckProgram
+    instances.
+
+    At each step of the conformance tests we want to verify:
+    1. That a freshly-started client/wallet (balance checker) is able to get correct
+       balances for the accounts it is tracking.
+    2. That all previously-started balance checkers update correctly and are able to
+       get correct balances for the accounts they are tracking.
+    """
+
+    # The number of wallets we are playing with at each step.
     NUM_WALLETS = 5
 
-    def __init__(self, fog_conformance_test): # TODO fog_conformance_test is a hack
-        self.fog_conformance_test = fog_conformance_test
-        self.balance_checkers = []
+    def __init__(self, balance_check_path, keys_dir, fog_ledger, fog_view, release):
+        self.balance_check_path = balance_check_path
+        self.keys_dir = keys_dir
+        self.fog_ledger = fog_ledger
+        self.fog_view = fog_view
+        self.release = release
+
+        self.steps = []
 
     def __enter__(self):
         return self
@@ -235,23 +287,33 @@ class MultiBalanceTester:
     def __exit__(self):
         self.stop()
 
+    # Perform balance checks using both fresh and pre-existing wallets.
+    #
+    # Arguments:
+    # * step_name: a name to give this balance check instance e.g. "from-block-20", to help diagnostics
+    # * acceptable_answers_per_wallet: A list of tuples, having a tuple per wallet (so a total of NUM_WALLETS
+    #   tuples) that contain information on the acceptable balances and eventual block count for each account.
+    #   Each tuple contains two elements:
+    #   1) A dict mapping block_counts to balance values which would be considered correct
+    #   2) The block counts which we expect to eventually see in order to be satisfied otherwise, we continue testing.
+    #      This is a list because in some cases a client could reasonably stop at one place or another.
     def balance_check(self, step_name, acceptable_answers_per_wallet):
         assert len(acceptable_answers_per_wallet) == self.NUM_WALLETS
 
         print(f'{step_name}: Performing fresh balance checks')
-        new_balance_checkers = [
-            self.fog_conformance_test.fresh_balance_check(step_name, wallet_num, acceptable_balances, expected_eventual_block_count)
+        new_wallets = [
+            self._fresh_balance_check(step_name, wallet_num, acceptable_balances, expected_eventual_block_count)
             for wallet_num, (acceptable_balances, expected_eventual_block_count) in enumerate(acceptable_answers_per_wallet)
         ]
 
-        if self.balance_checkers:
+        if self.steps:
             print(f'{step_name}: Performing followup balance checks')
-            for wallets in self.balance_checkers:
+            for wallets in self.steps:
                 for wallet, (acceptable_balances, expected_eventual_block_count) in zip(wallets, acceptable_answers_per_wallet):
                     print(f'{step_name}: Followup balane check on {wallet.name} {wallet.key_num}...')
-                    self.fog_conformance_test.follow_up_balance_check(wallet, acceptable_balances, expected_eventual_block_count)
+                    self._follow_up_balance_check(wallet, acceptable_balances, expected_eventual_block_count)
 
-        self.balance_checkers.append(new_balance_checkers)
+        self.steps.append(new_wallets)
 
     def stop(self):
         for wallets in self.balance_checkers:
@@ -259,6 +321,57 @@ class MultiBalanceTester:
                 balance_checker.stop()
 
         self.balance_checkers = []
+
+    # Make a fresh balance_check program, and check that it computes an expected balance
+    #
+    # Arguments:
+    # * name: a name to give this balance check instance e.g. "from-block-20", to help diagnostics
+    # * key_num: The number of the account keys to use, within the sample keys directory
+    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
+    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
+    #                                  otherwise, we continue testing.
+    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
+    #
+    # Returns:
+    # * The running balance check program, so that we can query this same wallet later for balances after more updates
+    #
+    # Invariant:
+    # * If this function returns without throwing, then we eventually computed a balance at one of the expected_eventual_block_count,
+    #   without ever returning an answer that wasn't in the acceptable_answers list.
+    def _fresh_balance_check(self, name, key_num, acceptable_answers, expected_eventual_block_count):
+        for ebc in expected_eventual_block_count:
+            assert ebc in acceptable_answers
+
+        print(f"Fresh-checking account {key_num} on {name}...")
+        prog = BalanceCheckProgram(
+            name = name,
+            balance_check_path = self.balance_check_path,
+            keys_dir = self.keys_dir,
+            ledger_url = self.fog_ledger.client_listen_url,
+            view_url = self.fog_view.client_listen_url,
+            key_num = key_num,
+            release = self.release
+        )
+
+        prog.assert_balance(acceptable_answers, expected_eventual_block_count)
+        return prog
+
+    # Takes an existing balance_check program (wallet), and check that it computes an expected balance
+    #
+    # Arguments:
+    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
+    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
+    #                                  otherwise, we continue testing.
+    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
+    #
+    # Returns:
+    # * The running balance check program. This is the same as the prog argument
+    #
+    # Invariant:
+    # * If this function returns without throwing, then we eventually computed a balance at one of the expected_eventual_block_count,
+    #   without ever returning an answer that wasn't in the acceptable_answers list.
+    def _follow_up_balance_check(self, prog, acceptable_answers, expected_eventual_block_count):
+        prog.assert_balance(acceptable_answers, expected_eventual_block_count)
 
 
 class FogConformanceTest:
@@ -287,7 +400,7 @@ class FogConformanceTest:
         self.fog_view = None
         self.fog_ledger = None
         self.fog_report = None
-        self.balance_checks = []
+        self.mbt = None
 
     # These allow us to use `with ... as ...` python syntax,
     # and guarantees that servers are stopped if an exception occurs
@@ -305,90 +418,12 @@ class FogConformanceTest:
         test_ledger = TestLedger(name, ledger_db_dir, watcher_db_dir, keys_dir = self.keys_dir, release = self.release)
         return test_ledger
 
-    # Make a fresh balance_check program, and check that it computes an expected balance
-    #
-    # Arguments:
-    # * name: a name to give this balance check instance e.g. "from-block-20", to help diagnostics
-    # * key_num: The number of the account keys to use, within the sample keys directory
-    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
-    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
-    #                                  otherwise, we continue testing.
-    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
-    #
-    # Returns:
-    # * The running balance check program, so that we can query this same wallet later for balances after more updates
-    #
-    # Invariant:
-    # * If this function returns without throwing, then we eventually computed a balance at one of the expected_eventual_block_count,
-    #   without ever returning an answer that wasn't in the acceptable_answers list.
-    def fresh_balance_check(self, name, key_num, acceptable_answers, expected_eventual_block_count):
-        for ebc in expected_eventual_block_count:
-            assert ebc in acceptable_answers
-        print(f"Checking account {key_num} on {name}...")
-        start_time = time.perf_counter()
-        prog = BalanceCheckProgram(
-            name = name,
-            balance_check_path = self.balance_check_path,
-            keys_dir = self.keys_dir,
-            ledger_url = self.fog_ledger.client_listen_url,
-            view_url = self.fog_view.client_listen_url,
-            key_num = key_num,
-            release = self.release
-        )
-        self.balance_checks.append(prog)
-        result = prog.start()
-        while True:
-            if result['block_count'] not in acceptable_answers:
-                prog.debug()
-                raise Exception(f"{name} computed balance {result} for account {key_num}, but this block count was not expected. Acceptable answers were {acceptable_answers}")
-            if acceptable_answers.get(result['block_count']) != result['balance']:
-                prog.debug()
-                raise Exception(f"{name} computed balance {result} for account {key_num}, but this balance was not expected. Expected balance at that block_count was {acceptable_answers.get(result['block_count'])}")
-            if result['block_count'] in expected_eventual_block_count:
-                print(f"Checking account {key_num} on {name} done: {result}")
-                return prog
-            elapsed = time.perf_counter() - start_time
-            if elapsed > DEADLINE_SECONDS:
-                raise Exception(f"{prog.name} did not converge to expected answer within {elapsed} seconds")
-            result = prog.check()
-
-    # Takes an existing balance_check program (wallet), and check that it computes an expected balance
-    #
-    # Arguments:
-    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
-    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
-    #                                  otherwise, we continue testing.
-    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
-    #
-    # Returns:
-    # * The running balance check program. This is the same as the prog argument
-    #
-    # Invariant:
-    # * If this function returns without throwing, then we eventually computed a balance at one of the expected_eventual_block_count,
-    #   without ever returning an answer that wasn't in the acceptable_answers list.
-    def follow_up_balance_check(self, prog, acceptable_answers, expected_eventual_block_count):
-        for ebc in expected_eventual_block_count:
-            assert ebc in acceptable_answers
-        print(f"Checking account {prog.key_num} on {prog.name}...")
-        start_time = time.perf_counter()
-        result = prog.check()
-        while True:
-            if result['block_count'] not in acceptable_answers:
-                prog.debug()
-                raise Exception(f"{prog.name} computed balance {result} for account {prog.key_num}, but this block count was not expected. Acceptable answers were {acceptable_answers}")
-            if acceptable_answers.get(result['block_count']) != result['balance']:
-                prog.debug()
-                raise Exception(f"{prog.name} computed balance {result} for account {prog.key_num}, but this balance was not expected. Expected result was {acceptable_answers.get(result['block_count'])}")
-            if result['block_count'] in expected_eventual_block_count:
-                print(f"Checking account {prog.key_num} on {prog.name} done: {result}")
-                return prog
-            elapsed = time.perf_counter() - start_time
-            if elapsed > DEADLINE_SECONDS:
-                raise Exception(f"{prog.name} did not converge to expected answer within {elapsed} seconds")
-            result = prog.check()
-
     # Create the databases and servers in the workdir and run the actual test
     def run(self):
+        #######################################################################
+        # Set up the fog network
+        #######################################################################
+
         # Report server url
         report_server_url = f'insecure-fog://localhost:{BASE_REPORT_CLIENT_PORT}'
 
@@ -489,6 +524,11 @@ class FogConformanceTest:
         print(cmd)
         result = subprocess.check_output(cmd, shell=True)
 
+        #######################################################################
+        # Begin a series of tests testing incremental balance changes with the
+        # fog setup created above.
+        #######################################################################
+
         # Get fog pubkey
         print("Getting fog pubkey...")
         keyfile = os.path.join(self.keys_dir, "account_keys_0.pub")
@@ -497,11 +537,17 @@ class FogConformanceTest:
         print("Fog pubkey = ", fog_pubkey)
 
         # Create the multi balance tester
-        mbt = MultiBalanceTester(self)
+        self.mbt = MultiBalanceTester(
+            self.balance_check_path,
+            self.keys_dir,
+            self.fog_ledger,
+            self.fog_view,
+            self.release,
+        )
 
         # Check all accounts
         print("Beginning balance checks...")
-        mbt.balance_check("from1", [
+        self.mbt.balance_check("from1", [
             [{0: 0, 1: 0}, [1]],
             [{0: 0, 1: 0}, [1]],
             [{0: 0, 1: 0}, [1]],
@@ -518,7 +564,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from2", [
+        self.mbt.balance_check("from2", [
             [{1: 0, 2: 19}, [2]],
             [{1: 0, 2: 9}, [2]],
             [{1: 0, 2: 0}, [2]],
@@ -538,7 +584,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from3", [
+        self.mbt.balance_check("from3", [
             [{2: 19, 3: 4}, [3]],
             [{2: 9, 3: 0}, [3]],
             [{2: 0, 3: 0}, [3]],
@@ -563,7 +609,7 @@ class FogConformanceTest:
         # need that compute your balance at block 4, because none of the new TxOuts in block 4 can also be spent in block 4.
         # But the client doesn't need to think that way -- the fog-sample-paykit just happens to.
         # It's also reasonable to say that if the key image server is stuck on block 5, then we won't try to compute a balance past 5.
-        mbt.balance_check("from3a", [
+        self.mbt.balance_check("from3a", [
             [{3: 4}, [3]],
             [{3: 0, 4: 1}, [3, 4]],
             [{3: 0, 4: 1}, [3, 4]],
@@ -576,7 +622,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from4", [
+        self.mbt.balance_check("from4", [
             [{3: 4, 4: 5}, [4]],
             [{3: 0, 4: 1}, [4]],
             [{3: 0, 4: 1}, [4]],
@@ -595,7 +641,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from4a", [
+        self.mbt.balance_check("from4a", [
             [{4: 5}, [4]],
             [{4: 1}, [4]],
             [{4: 1}, [4]],
@@ -608,7 +654,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from5", [
+        self.mbt.balance_check("from5", [
             [{4: 5, 5: 10}, [5]],
             [{4: 1, 5: 6}, [5]],
             [{4: 1, 5: 0}, [5]],
@@ -631,7 +677,7 @@ class FogConformanceTest:
         # The reason is, the fog-sample-paykit reasons that, if ingest is at block 6 and gives me a TxOut,
         # I know that it cannot be spent in block 6, even if key image service is still at block 5.
         # So I can return a correct balance for block 6, IF my balance is otherwise 0.
-        mbt.balance_check("from5a", [
+        self.mbt.balance_check("from5a", [
             [{5: 10}, [5]],
             [{5: 6}, [5]],
             [{5: 0, 6: 9}, [5, 6]],
@@ -650,7 +696,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from6a", [
+        self.mbt.balance_check("from6a", [
             [{5: 10}, [5]],
             [{5: 6}, [5]],
             [{5: 0, 6: 9}, [5, 6]],
@@ -663,7 +709,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from6b", [
+        self.mbt.balance_check("from6b", [
             [{5: 10, 6: 12}, [6]],
             [{5: 6, 6: 11}, [6]],
             [{5: 0, 6: 9}, [6]],
@@ -682,7 +728,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from7a", [
+        self.mbt.balance_check("from7a", [
             [{6: 12}, [6]],
             [{6: 11}, [6]],
             [{6: 9}, [6]],
@@ -695,7 +741,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from7b", [
+        self.mbt.balance_check("from7b", [
             [{6: 12, 7: 13}, [7]],
             [{6: 11, 7: 10}, [7]],
             [{6: 9, 7: 10}, [7]],
@@ -708,7 +754,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        mbt.balance_check("from7c", [
+        self.mbt.balance_check("from7c", [
             [{7: 13, 8: 13}, [8]],
             [{7: 10, 8: 10}, [8]],
             [{7: 10, 8: 1}, [8]],
@@ -762,7 +808,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        mbt.balance_check("from8", [
+        self.mbt.balance_check("from8", [
             [{8: 13, 9: 15}, [9]],
             [{8: 10, 9: 12}, [9]],
             [{8: 1, 9: 3}, [9]],
@@ -789,7 +835,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        mbt.balance_check("from9", [
+        self.mbt.balance_check("from9", [
             [{9: 15, 10: 14}, [10]],
             [{9: 12, 10: 13}, [10]],
             [{9: 3, 10: 4}, [10]],
@@ -821,7 +867,7 @@ class FogConformanceTest:
         # In theory we could get anything between 0 and 10, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
         # available one (10).
-        mbt.balance_check("from10a", [
+        self.mbt.balance_check("from10a", [
             [{0: 0, 10: 14}, [10]],
             [{0: 0, 10: 13}, [10]],
             [{0: 0, 10: 4}, [10]],
@@ -840,8 +886,7 @@ class FogConformanceTest:
         print("Key images for new transactions in Block 10: ", block10_key_images)
         time.sleep(1)
 
-
-        mbt.balance_check("from10b", [
+        self.mbt.balance_check("from10b", [
             [{10: 14, 11: 17}, [11]],
             [{10: 13, 11: 15}, [11]],
             [{10: 4, 11: 7}, [11]],
@@ -867,8 +912,8 @@ class FogConformanceTest:
         if self.fog_ingest2:
             self.fog_ingest2.stop()
 
-        for prog in self.balance_checks:
-            prog.stop()
+        if self.mbt:
+            self.mbt.stop()
 
 
 if __name__ == '__main__':

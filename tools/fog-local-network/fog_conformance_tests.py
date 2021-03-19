@@ -213,13 +213,53 @@ class BalanceCheckProgram:
         with AlarmGuard(self):
             # wait for program to be done printing on STDERR
             # this will block until a new line on STDOUT or until STDOUT is closed
-            ignored = self.popen.stdout.readline()
+            _ = self.popen.stdout.readline()
 
     # Stop the program
     def stop(self):
         assert self.popen is not None
         self.popen.terminate()
         self.popen = None
+
+
+class MultiBalanceTester:
+    NUM_WALLETS = 5
+
+    def __init__(self, fog_conformance_test): # TODO fog_conformance_test is a hack
+        self.fog_conformance_test = fog_conformance_test
+        self.balance_checkers = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.stop()
+
+    def balance_check(self, step_name, acceptable_answers_per_wallet):
+        assert len(acceptable_answers_per_wallet) == self.NUM_WALLETS
+
+        print(f'{step_name}: Performing fresh balance checks')
+        new_balance_checkers = [
+            self.fog_conformance_test.fresh_balance_check(step_name, wallet_num, acceptable_balances, expected_eventual_block_count)
+            for wallet_num, (acceptable_balances, expected_eventual_block_count) in enumerate(acceptable_answers_per_wallet)
+        ]
+
+        if self.balance_checkers:
+            print(f'{step_name}: Performing followup balance checks')
+            for wallets in self.balance_checkers:
+                for wallet, (acceptable_balances, expected_eventual_block_count) in zip(wallets, acceptable_answers_per_wallet):
+                    print(f'{step_name}: Followup balane check on {wallet.name} {wallet.key_num}...')
+                    self.fog_conformance_test.follow_up_balance_check(wallet, acceptable_balances, expected_eventual_block_count)
+
+        self.balance_checkers.append(new_balance_checkers)
+
+    def stop(self):
+        for wallets in self.balance_checkers:
+            for balance_checker in wallets:
+                balance_checker.stop()
+
+        self.balance_checkers = []
+
 
 class FogConformanceTest:
     # Build the fog and mobilecoin repos for needed code, in release mode if selected
@@ -456,13 +496,18 @@ class FogConformanceTest:
         assert len(fog_pubkey) == 64
         print("Fog pubkey = ", fog_pubkey)
 
+        # Create the multi balance tester
+        mbt = MultiBalanceTester(self)
+
         # Check all accounts
         print("Beginning balance checks...")
-        wallet0_from1 = self.fresh_balance_check("from1", 0, {0: 0, 1: 0}, [1])
-        wallet1_from1 = self.fresh_balance_check("from1", 1, {0: 0, 1: 0}, [1])
-        wallet2_from1 = self.fresh_balance_check("from1", 2, {0: 0, 1: 0}, [1])
-        wallet3_from1 = self.fresh_balance_check("from1", 3, {0: 0, 1: 0}, [1])
-        wallet4_from1 = self.fresh_balance_check("from1", 4, {0: 0, 1: 0}, [1])
+        mbt.balance_check("from1", [
+            [{0: 0, 1: 0}, [1]],
+            [{0: 0, 1: 0}, [1]],
+            [{0: 0, 1: 0}, [1]],
+            [{0: 0, 1: 0}, [1]],
+            [{0: 0, 1: 0}, [1]],
+        ])
 
         # Add block 1 (everywhere)
         credits1 = [{ 'account': 0, 'amount': 15 }, {'account': 0, 'amount': 4}, {'account': 1, 'amount': 9}, {'account': 3, 'amount': 17}, {'account': 4, 'amount': 27}]
@@ -473,11 +518,13 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from2 = self.fresh_balance_check("from2", 0, {1: 0, 2: 19}, [2])
-        wallet1_from2 = self.fresh_balance_check("from2", 1, {1: 0, 2: 9}, [2])
-        wallet2_from2 = self.fresh_balance_check("from2", 2, {1: 0, 2: 0}, [2])
-        wallet3_from2 = self.fresh_balance_check("from2", 3, {1: 0, 2: 17}, [2])
-        wallet4_from2 = self.fresh_balance_check("from2", 4, {1: 0, 2: 27}, [2])
+        mbt.balance_check("from2", [
+            [{1: 0, 2: 19}, [2]],
+            [{1: 0, 2: 9}, [2]],
+            [{1: 0, 2: 0}, [2]],
+            [{1: 0, 2: 17}, [2]],
+            [{1: 0, 2: 27}, [2]],
+        ])
 
         # Add block 2 (everywhere)
         # Adds 19 to 3, 2 to 4
@@ -491,17 +538,14 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from3 = self.fresh_balance_check("from3", 0, {2: 19, 3: 4}, [3])
-        wallet1_from3 = self.fresh_balance_check("from3", 1, {2: 9, 3: 0}, [3])
-        wallet2_from3 = self.fresh_balance_check("from3", 2, {2: 0, 3: 0}, [3])
-        wallet3_from3 = self.fresh_balance_check("from3", 3, {2: 17, 3: 36}, [3])
-        wallet4_from3 = self.fresh_balance_check("from3", 4, {2: 27, 3: 2}, [3])
+        mbt.balance_check("from3", [
+            [{2: 19, 3: 4}, [3]],
+            [{2: 9, 3: 0}, [3]],
+            [{2: 0, 3: 0}, [3]],
+            [{2: 17, 3: 36}, [3]],
+            [{2: 27, 3: 2}, [3]],
 
-        self.follow_up_balance_check(wallet0_from1, {3: 4}, [3])
-        self.follow_up_balance_check(wallet1_from1, {3: 0}, [3])
-        self.follow_up_balance_check(wallet2_from1, {3: 0}, [3])
-        self.follow_up_balance_check(wallet3_from1, {3: 36}, [3])
-        self.follow_up_balance_check(wallet4_from1, {3: 2}, [3])
+        ])
 
         # Add block 3 to ingest only
         # Adds 3 to 3, 1 to everyone else
@@ -519,28 +563,26 @@ class FogConformanceTest:
         # need that compute your balance at block 4, because none of the new TxOuts in block 4 can also be spent in block 4.
         # But the client doesn't need to think that way -- the fog-sample-paykit just happens to.
         # It's also reasonable to say that if the key image server is stuck on block 5, then we won't try to compute a balance past 5.
-        wallet0_from3a = self.fresh_balance_check("from3a", 0, {3: 4}, [3])
-        wallet1_from3a = self.fresh_balance_check("from3a", 1, {3: 0, 4: 1}, [3, 4])
-        wallet2_from3a = self.fresh_balance_check("from3a", 2, {3: 0, 4: 1}, [3, 4])
-        wallet3_from3a = self.fresh_balance_check("from3a", 3, {3: 36}, [3])
-        wallet4_from3a = self.fresh_balance_check("from3a", 4, {3: 2}, [3])
-
-        self.follow_up_balance_check(wallet0_from1, {3: 4}, [3])
-        self.follow_up_balance_check(wallet1_from1, {3: 0, 4: 1}, [3, 4])
-        self.follow_up_balance_check(wallet2_from1, {3: 0, 4: 1}, [3, 4])
-        self.follow_up_balance_check(wallet3_from1, {3: 36}, [3])
-        self.follow_up_balance_check(wallet4_from1, {3: 2}, [3])
+        mbt.balance_check("from3a", [
+            [{3: 4}, [3]],
+            [{3: 0, 4: 1}, [3, 4]],
+            [{3: 0, 4: 1}, [3, 4]],
+            [{3: 36}, [3]],
+            [{3: 2}, [3]],
+        ])
 
         # Add block 3 to ledger
         ledger2.add_block(credits3, key_images3, fog_pubkey)
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from4 = self.fresh_balance_check("from4", 0, {3: 4, 4: 5}, [4])
-        wallet1_from4 = self.fresh_balance_check("from4", 1, {3: 0, 4: 1}, [4])
-        wallet2_from4 = self.fresh_balance_check("from4", 2, {3: 0, 4: 1}, [4])
-        wallet3_from4 = self.fresh_balance_check("from4", 3, {3: 36, 4: 20}, [4])
-        wallet4_from4 = self.fresh_balance_check("from4", 4, {3: 2, 4: 1}, [4])
+        mbt.balance_check("from4", [
+            [{3: 4, 4: 5}, [4]],
+            [{3: 0, 4: 1}, [4]],
+            [{3: 0, 4: 1}, [4]],
+            [{3: 36, 4: 20}, [4]],
+            [{3: 2, 4: 1}, [4]],
+        ])
 
         # Add block 4 to ledger only
         # Adds 10 to account 0 and 6 to account 1, in two outputs
@@ -553,44 +595,26 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from4a = self.fresh_balance_check("from4a", 0, {4: 5}, [4])
-        wallet1_from4a = self.fresh_balance_check("from4a", 1, {4: 1}, [4])
-        wallet2_from4a = self.fresh_balance_check("from4a", 2, {4: 1}, [4])
-        wallet3_from4a = self.fresh_balance_check("from4a", 3, {4: 20}, [4])
-        wallet4_from4a = self.fresh_balance_check("from4a", 4, {4: 1}, [4])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-        ):
-            self.follow_up_balance_check(wallet0, {4: 5}, [4])
-            self.follow_up_balance_check(wallet1, {4: 1}, [4])
-            self.follow_up_balance_check(wallet2, {4: 1}, [4])
-            self.follow_up_balance_check(wallet3, {4: 20}, [4])
-            self.follow_up_balance_check(wallet4, {4: 1}, [4])
+        mbt.balance_check("from4a", [
+            [{4: 5}, [4]],
+            [{4: 1}, [4]],
+            [{4: 1}, [4]],
+            [{4: 20}, [4]],
+            [{4: 1}, [4]],
+        ])
 
         # Add block 4 to ingest
         ledger1.add_block(credits4, key_images4, fog_pubkey)
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from5 = self.fresh_balance_check("from5", 0, {4: 5, 5: 10}, [5])
-        wallet1_from5 = self.fresh_balance_check("from5", 1, {4: 1, 5: 6}, [5])
-        wallet2_from5 = self.fresh_balance_check("from5", 2, {4: 1, 5: 0}, [5])
-        wallet3_from5 = self.fresh_balance_check("from5", 3, {4: 20, 5: 0}, [5])
-        wallet4_from5 = self.fresh_balance_check("from5", 4, {4: 1, 5: 0}, [5])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-        ):
-            self.follow_up_balance_check(wallet0, {5: 10}, [5])
-            self.follow_up_balance_check(wallet1, {5: 6}, [5])
-            self.follow_up_balance_check(wallet2, {5: 0}, [5])
-            self.follow_up_balance_check(wallet3, {5: 0}, [5])
-            self.follow_up_balance_check(wallet4, {5: 0}, [5])
+        mbt.balance_check("from5", [
+            [{4: 5, 5: 10}, [5]],
+            [{4: 1, 5: 6}, [5]],
+            [{4: 1, 5: 0}, [5]],
+            [{4: 20, 5: 0}, [5]],
+            [{4: 1, 5: 0}, [5]],
+        ])
 
         # Add block 5 to ingest only
         # Give 9 to everyone
@@ -607,23 +631,13 @@ class FogConformanceTest:
         # The reason is, the fog-sample-paykit reasons that, if ingest is at block 6 and gives me a TxOut,
         # I know that it cannot be spent in block 6, even if key image service is still at block 5.
         # So I can return a correct balance for block 6, IF my balance is otherwise 0.
-        wallet0_from5a = self.fresh_balance_check("from5a", 0, {5: 10}, [5])
-        wallet1_from5a = self.fresh_balance_check("from5a", 1, {5: 6}, [5])
-        wallet2_from5a = self.fresh_balance_check("from5a", 2, {5: 0, 6: 9}, [5, 6])
-        wallet3_from5a = self.fresh_balance_check("from5a", 3, {5: 0, 6: 9}, [5, 6])
-        wallet4_from5a = self.fresh_balance_check("from5a", 4, {5: 0, 6: 9}, [5, 6])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-        ):
-            self.follow_up_balance_check(wallet0, {5: 10}, [5])
-            self.follow_up_balance_check(wallet1, {5: 6}, [5])
-            self.follow_up_balance_check(wallet2, {5: 0, 6: 9}, [5, 6])
-            self.follow_up_balance_check(wallet3, {5: 0, 6: 9}, [5, 6])
-            self.follow_up_balance_check(wallet4, {5: 0, 6: 9}, [5, 6])
+        mbt.balance_check("from5a", [
+            [{5: 10}, [5]],
+            [{5: 6}, [5]],
+            [{5: 0, 6: 9}, [5, 6]],
+            [{5: 0, 6: 9}, [5, 6]],
+            [{5: 0, 6: 9}, [5, 6]],
+        ])
 
         # Add block 6 to ingest only
         # Give 1 to everyone
@@ -636,45 +650,26 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from6a = self.fresh_balance_check("from6a", 0, {5: 10}, [5])
-        wallet1_from6a = self.fresh_balance_check("from6a", 1, {5: 6}, [5])
-        wallet2_from6a = self.fresh_balance_check("from6a", 2, {5: 0, 6: 9}, [5, 6])
-        wallet3_from6a = self.fresh_balance_check("from6a", 3, {5: 0, 6: 9}, [5, 6])
-        wallet4_from6a = self.fresh_balance_check("from6a", 4, {5: 0, 6: 9}, [5, 6])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-        ):
-            self.follow_up_balance_check(wallet0, {5: 10}, [5])
-            self.follow_up_balance_check(wallet1, {5: 6}, [5])
-            self.follow_up_balance_check(wallet2, {5: 0, 6: 9}, [5, 6])
-            self.follow_up_balance_check(wallet3, {5: 0, 6: 9}, [5, 6])
-            self.follow_up_balance_check(wallet4, {5: 0, 6: 9}, [5, 6])
+        mbt.balance_check("from6a", [
+            [{5: 10}, [5]],
+            [{5: 6}, [5]],
+            [{5: 0, 6: 9}, [5, 6]],
+            [{5: 0, 6: 9}, [5, 6]],
+            [{5: 0, 6: 9}, [5, 6]],
+        ])
 
         # Add block 5 to ledger
         ledger2.add_block(credits5, key_images5, fog_pubkey)
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from6b = self.fresh_balance_check("from6b", 0, {5: 10, 6: 12}, [6])
-        wallet1_from6b = self.fresh_balance_check("from6b", 1, {5: 6, 6: 11}, [6])
-        wallet2_from6b = self.fresh_balance_check("from6b", 2, {5: 0, 6: 9}, [6])
-        wallet3_from6b = self.fresh_balance_check("from6b", 3, {5: 0, 6: 9}, [6])
-        wallet4_from6b = self.fresh_balance_check("from6b", 4, {5: 0, 6: 9}, [6])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-        ):
-            self.follow_up_balance_check(wallet0, {6: 12}, [6])
-            self.follow_up_balance_check(wallet1, {6: 11}, [6])
-            self.follow_up_balance_check(wallet2, {6: 9}, [6])
-            self.follow_up_balance_check(wallet3, {6: 9}, [6])
-            self.follow_up_balance_check(wallet4, {6: 9}, [6])
+        mbt.balance_check("from6b", [
+            [{5: 10, 6: 12}, [6]],
+            [{5: 6, 6: 11}, [6]],
+            [{5: 0, 6: 9}, [6]],
+            [{5: 0, 6: 9}, [6]],
+            [{5: 0, 6: 9}, [6]],
+        ])
 
         # Add block 7 to ingest only
         # Add 4 to 4,
@@ -687,82 +682,39 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from7a = self.fresh_balance_check("from7a", 0, {6: 12}, [6])
-        wallet1_from7a = self.fresh_balance_check("from7a", 1, {6: 11}, [6])
-        wallet2_from7a = self.fresh_balance_check("from7a", 2, {6: 9}, [6])
-        wallet3_from7a = self.fresh_balance_check("from7a", 3, {6: 9}, [6])
-        wallet4_from7a = self.fresh_balance_check("from7a", 4, {6: 9}, [6])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-        ):
-            self.follow_up_balance_check(wallet0, {6: 12}, [6])
-            self.follow_up_balance_check(wallet1, {6: 11}, [6])
-            self.follow_up_balance_check(wallet2, {6: 9}, [6])
-            self.follow_up_balance_check(wallet3, {6: 9}, [6])
-            self.follow_up_balance_check(wallet4, {6: 9}, [6])
+        mbt.balance_check("from7a", [
+            [{6: 12}, [6]],
+            [{6: 11}, [6]],
+            [{6: 9}, [6]],
+            [{6: 9}, [6]],
+            [{6: 9}, [6]],
+        ])
 
         # Add block 6 to ledger
         ledger2.add_block(credits6, key_images6, fog_pubkey)
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from7b = self.fresh_balance_check("from7b", 0, {6: 12, 7: 13}, [7])
-        wallet1_from7b = self.fresh_balance_check("from7b", 1, {6: 11, 7: 10}, [7])
-        wallet2_from7b = self.fresh_balance_check("from7b", 2, {6: 9, 7: 10}, [7])
-        wallet3_from7b = self.fresh_balance_check("from7b", 3, {6: 9, 7: 1}, [7])
-        wallet4_from7b = self.fresh_balance_check("from7b", 4, {6: 9, 7: 10}, [7])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
-        ):
-            self.follow_up_balance_check(wallet0, {7: 13}, [7])
-            self.follow_up_balance_check(wallet1, {7: 10}, [7])
-            self.follow_up_balance_check(wallet2, {7: 10}, [7])
-            self.follow_up_balance_check(wallet3, {7: 1}, [7])
-            self.follow_up_balance_check(wallet4, {7: 10}, [7])
+        mbt.balance_check("from7b", [
+            [{6: 12, 7: 13}, [7]],
+            [{6: 11, 7: 10}, [7]],
+            [{6: 9, 7: 10}, [7]],
+            [{6: 9, 7: 1}, [7]],
+            [{6: 9, 7: 10}, [7]],
+        ])
 
         # Add block 7 to ledger
         ledger2.add_block(credits7, key_images7, fog_pubkey)
         time.sleep(1)
 
         # Check all accounts
-        wallet0_from7c = self.fresh_balance_check("from7c", 0, {7: 13, 8: 13}, [8])
-        wallet1_from7c = self.fresh_balance_check("from7c", 1, {7: 10, 8: 10}, [8])
-        wallet2_from7c = self.fresh_balance_check("from7c", 2, {7: 10, 8: 1}, [8])
-        wallet3_from7c = self.fresh_balance_check("from7c", 3, {7: 1, 8: 1}, [8])
-        wallet4_from7c = self.fresh_balance_check("from7c", 4, {7: 10, 8: 14}, [8])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
-            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
-            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
-            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
-        ):
-            self.follow_up_balance_check(wallet0, {8: 13}, [8])
-            self.follow_up_balance_check(wallet1, {8: 10}, [8])
-            self.follow_up_balance_check(wallet2, {8: 1}, [8])
-            self.follow_up_balance_check(wallet3, {8: 1}, [8])
-            self.follow_up_balance_check(wallet4, {8: 14}, [8])
+        mbt.balance_check("from7c", [
+            [{7: 13, 8: 13}, [8]],
+            [{7: 10, 8: 10}, [8]],
+            [{7: 10, 8: 1}, [8]],
+            [{7: 1, 8: 1}, [8]],
+            [{7: 10, 8: 14}, [8]],
+        ])
 
         #######################################################################
         # Test what happens if we introduce a second ingest server and retire
@@ -810,11 +762,13 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        wallet0_from8 = self.fresh_balance_check("from8", 0, {8: 13, 9: 15}, [9])
-        wallet1_from8 = self.fresh_balance_check("from8", 1, {8: 10, 9: 12}, [9])
-        wallet2_from8 = self.fresh_balance_check("from8", 2, {8: 1, 9: 3}, [9])
-        wallet3_from8 = self.fresh_balance_check("from8", 3, {8: 1, 9: 3}, [9])
-        wallet4_from8 = self.fresh_balance_check("from8", 4, {8: 14, 9: 12}, [9])
+        mbt.balance_check("from8", [
+            [{8: 13, 9: 15}, [9]],
+            [{8: 10, 9: 12}, [9]],
+            [{8: 1, 9: 3}, [9]],
+            [{8: 1, 9: 3}, [9]],
+            [{8: 14, 9: 12}, [9]],
+        ])
 
         # Both ingests should currently be active
         status = self.fog_ingest.get_status()
@@ -835,32 +789,13 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        wallet0_from9 = self.fresh_balance_check("from9", 0, {9: 15, 10: 14}, [10])
-        wallet1_from9 = self.fresh_balance_check("from9", 1, {9: 12, 10: 13}, [10])
-        wallet2_from9 = self.fresh_balance_check("from9", 2, {9: 3, 10: 4}, [10])
-        wallet3_from9 = self.fresh_balance_check("from9", 3, {9: 3, 10: 4}, [10])
-        wallet4_from9 = self.fresh_balance_check("from9", 4, {9: 12, 10: 13}, [10])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
-            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
-            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
-            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
-            (wallet0_from8, wallet1_from8, wallet2_from8, wallet3_from8, wallet4_from8),
-        ):
-            self.follow_up_balance_check(wallet0, {9: 15, 10: 14}, [10])
-            self.follow_up_balance_check(wallet1, {9: 12, 10: 13}, [10])
-            self.follow_up_balance_check(wallet2, {9: 3, 10: 4}, [10])
-            self.follow_up_balance_check(wallet3, {9: 3, 10: 4}, [10])
-            self.follow_up_balance_check(wallet4, {9: 12, 10: 13}, [10])
+        mbt.balance_check("from9", [
+            [{9: 15, 10: 14}, [10]],
+            [{9: 12, 10: 13}, [10]],
+            [{9: 3, 10: 4}, [10]],
+            [{9: 3, 10: 4}, [10]],
+            [{9: 12, 10: 13}, [10]],
+        ])
 
         # Ingest1 should now be retired, ingest2 should still be active
         status = self.fog_ingest.get_status()
@@ -886,32 +821,13 @@ class FogConformanceTest:
         # In theory we could get anything between 0 and 10, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
         # available one (10).
-        wallet0_from9a = self.fresh_balance_check("from10", 0, {0: 0, 10: 14}, [10])
-        wallet1_from9a = self.fresh_balance_check("from10", 1, {0: 0, 10: 13}, [10])
-        wallet2_from9a = self.fresh_balance_check("from10", 2, {0: 0, 10: 4}, [10])
-        wallet3_from9a = self.fresh_balance_check("from10", 3, {0: 0, 10: 4}, [10])
-        wallet4_from9a = self.fresh_balance_check("from10", 4, {0: 0, 10: 13}, [10])
-
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
-            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
-            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
-            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
-            (wallet0_from8, wallet1_from8, wallet2_from8, wallet3_from8, wallet4_from8),
-        ):
-            self.follow_up_balance_check(wallet0, {0: 0, 9: 15, 10: 14}, [10])
-            self.follow_up_balance_check(wallet1, {0: 0, 9: 12, 10: 13}, [10])
-            self.follow_up_balance_check(wallet2, {0: 0, 9: 3, 10: 4}, [10])
-            self.follow_up_balance_check(wallet3, {0: 0, 9: 3, 10: 4}, [10])
-            self.follow_up_balance_check(wallet4, {0: 0, 9: 12, 10: 13}, [10])
+        mbt.balance_check("from10a", [
+            [{0: 0, 10: 14}, [10]],
+            [{0: 0, 10: 13}, [10]],
+            [{0: 0, 10: 4}, [10]],
+            [{0: 0, 10: 4}, [10]],
+            [{0: 0, 10: 13}, [10]],
+        ])
 
         # Add block 10 to ingest and ledger. This should get reported by the restarted view server.
         # Give 3 to everyone
@@ -924,33 +840,14 @@ class FogConformanceTest:
         print("Key images for new transactions in Block 10: ", block10_key_images)
         time.sleep(1)
 
-        wallet0_from10 = self.fresh_balance_check("from10", 0, {10: 14, 11: 17}, [11])
-        wallet1_from10 = self.fresh_balance_check("from10", 1, {10: 13, 11: 15}, [11])
-        wallet2_from10 = self.fresh_balance_check("from10", 2, {10: 4, 11: 7}, [11])
-        wallet3_from10 = self.fresh_balance_check("from10", 3, {10: 4, 11: 7}, [11])
-        wallet4_from10 = self.fresh_balance_check("from10", 4, {10: 13, 11: 16}, [11])
 
-        for (wallet0, wallet1, wallet2, wallet3, wallet4) in (
-            (wallet0_from1, wallet1_from1, wallet2_from1, wallet3_from1, wallet4_from1),
-            (wallet0_from2, wallet1_from2, wallet2_from2, wallet3_from2, wallet4_from2),
-            (wallet0_from3, wallet1_from3, wallet2_from3, wallet3_from3, wallet4_from3),
-            (wallet0_from3a, wallet1_from3a, wallet2_from3a, wallet3_from3a, wallet4_from3a),
-            (wallet0_from4, wallet1_from4, wallet2_from4, wallet3_from4, wallet4_from4),
-            (wallet0_from4a, wallet1_from4a, wallet2_from4a, wallet3_from4a, wallet4_from4a),
-            (wallet0_from5, wallet1_from5, wallet2_from5, wallet3_from5, wallet4_from5),
-            (wallet0_from5a, wallet1_from5a, wallet2_from5a, wallet3_from5a, wallet4_from5a),
-            (wallet0_from6a, wallet1_from6a, wallet2_from6a, wallet3_from6a, wallet4_from6a),
-            (wallet0_from6b, wallet1_from6b, wallet2_from6b, wallet3_from6b, wallet4_from6b),
-            (wallet0_from7a, wallet1_from7a, wallet2_from7a, wallet3_from7a, wallet4_from7a),
-            (wallet0_from7b, wallet1_from7b, wallet2_from7b, wallet3_from7b, wallet4_from7b),
-            (wallet0_from8, wallet1_from8, wallet2_from8, wallet3_from8, wallet4_from8),
-            (wallet0_from9a, wallet1_from9a, wallet2_from9a, wallet3_from9a, wallet4_from9a),
-        ):
-            self.follow_up_balance_check(wallet0, {10: 14, 11: 17}, [11])
-            self.follow_up_balance_check(wallet1, {10: 13, 11: 15}, [11])
-            self.follow_up_balance_check(wallet2, {10: 4, 11: 7}, [11])
-            self.follow_up_balance_check(wallet3, {10: 4, 11: 7}, [11])
-            self.follow_up_balance_check(wallet4, {10: 13, 11: 16}, [11])
+        mbt.balance_check("from10b", [
+            [{10: 14, 11: 17}, [11]],
+            [{10: 13, 11: 15}, [11]],
+            [{10: 4, 11: 7}, [11]],
+            [{10: 4, 11: 7}, [11]],
+            [{10: 13, 11: 16}, [11]],
+        ])
 
         print("All checks succeeded!")
 

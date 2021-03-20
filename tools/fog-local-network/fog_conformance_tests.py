@@ -316,11 +316,11 @@ class MultiBalanceTester:
         self.steps.append(new_wallets)
 
     def stop(self):
-        for wallets in self.balance_checkers:
+        for wallets in self.steps:
             for balance_checker in wallets:
                 balance_checker.stop()
 
-        self.balance_checkers = []
+        self.steps = []
 
     # Make a fresh balance_check program, and check that it computes an expected balance
     #

@@ -342,7 +342,10 @@ where
             if state.is_active() {
                 log::trace!(self.logger, "publish report");
                 match self.publish_report(&ingress_pubkey, &mut state) {
-                    Ok(ingress_key_status) => {
+                    Ok(None) => {
+                        return;
+                    }
+                    Ok(Some(ingress_key_status)) => {
                         // If our key is retired, and the index we want to scan is past expiry,
                         // early return. Note, we don't even NEED to scan
                         // when block.index == pubkey_expiry, because the
@@ -691,28 +694,37 @@ where
         // no blocks come after we activate. This is needed because in some tests,
         // the only transactions sent are fog transactions, so there can't be
         // a block unless this key is published before the next block comes.
-        let key_status = self.publish_report(&our_pubkey, &mut state)?;
+        match self.publish_report(&our_pubkey, &mut state) {
+            Ok(None) => {
+                // TODO: is this ok to return?
+                return Ok(IngestSummary::new());
+            }
+            Ok(Some(key_status)) => {
+                // If our key is retired, and the index we want to scan is past expiry, early
+                // return. Note, we don't even NEED to scan when block.index ==
+                // pubkey_expiry, because the semantic of pubkey expiry is that it
+                // bounds the tombstone block, and a transaction cannot land in its
+                // tombstone block. But scanning the tombstone block as well
+                // may help deal with off-by-one errors somewhere else, and doesn't really hurt.
+                if key_status.retired && start_block > key_status.pubkey_expiry {
+                    log::warn!(self.logger, "When activating, we found out our key has already been retired and there is no remaining work to do. Activation is canceled: our start_block = {}, key_status = {:?}", start_block, key_status);
+                    return Err(Error::KeyAlreadyRetired(our_pubkey));
+                }
 
-        // If our key is retired, and the index we want to scan is past expiry, early
-        // return. Note, we don't even NEED to scan when block.index ==
-        // pubkey_expiry, because the semantic of pubkey expiry is that it
-        // bounds the tombstone block, and a transaction cannot land in its
-        // tombstone block. But scanning the tombstone block as well
-        // may help deal with off-by-one errors somewhere else, and doesn't really hurt.
-        if key_status.retired && start_block > key_status.pubkey_expiry {
-            log::warn!(self.logger, "When activating, we found out our key has already been retired and there is no remaining work to do. Activation is canceled: our start_block = {}, key_status = {:?}", start_block, key_status);
-            return Err(Error::KeyAlreadyRetired(our_pubkey));
+                state.set_active();
+                drop(state);
+                log::info!(
+                    self.logger,
+                    "activate: success. start block is {}",
+                    start_block
+                );
+                self.write_state_file();
+                return Ok(self.get_ingest_summary());
+            }
+            Err(err) => {
+                return Err(err);
+            }
         }
-
-        state.set_active();
-        drop(state);
-        log::info!(
-            self.logger,
-            "activate: success. start block is {}",
-            start_block
-        );
-        self.write_state_file();
-        Ok(self.get_ingest_summary())
     }
 
     /// Attempt to mark our ingress public key as retired in the database.
@@ -1027,20 +1039,55 @@ where
         &self,
         ingress_public_key: &CompressedRistrettoPublic,
         state: &mut MutexGuard<IngestControllerState>,
-    ) -> Result<IngressPublicKeyStatus, Error> {
+    ) -> Result<Option<IngressPublicKeyStatus>, Error> {
+
+        let next_block_index = state.get_next_block_index();
+
+        let last_report_published_block_index = state.get_last_report_published_block_index();
+        let current_pubkey_expiry = last_report_published_block_index + state.get_pubkey_expiry_window();
+
+        log::info!(
+            self.logger,
+            "===> next_block_index {} last_report_published_block_index {} current_pubkey_expiry {}",
+            next_block_index,
+            last_report_published_block_index,
+            current_pubkey_expiry
+        );
+
+        // TODO: Something may be incorrect with this logic...? 
+        // This if-block is always running (ie. a report is never published).
+        // I see this log line starting at the very beginning of running the conformance tests: 
+        //     Block index 1 smaller than the current pubkey expiry 2. Not publishing a report
+        //
+        if next_block_index < current_pubkey_expiry {
+            // Don't publish report
+            // TODO: Change to debug
+            log::info!(
+                self.logger,
+                "Block index {} smaller than the current pubkey expiry {}. Not publishing a report.",
+                next_block_index,
+                current_pubkey_expiry
+            );
+            return Ok(None);
+        }
+
         self.update_enclave_report_cache()?;
 
         let report_data = ReportData {
             ingest_invocation_id: state.get_ingest_invocation_id(),
             report: self.enclave.get_ias_report()?,
-            pubkey_expiry: state.get_next_block_index() + state.get_pubkey_expiry_window(),
+            pubkey_expiry: current_pubkey_expiry + state.get_pubkey_expiry_window() ,
         };
         let report_id = self.config.fog_report_id.as_ref();
 
-        Ok(self
-            .recovery_db
-            .set_report(ingress_public_key, report_id, &report_data)
-            .map_err(|err| {
+        let key_status = self.recovery_db.set_report(ingress_public_key, report_id, &report_data);
+
+        match key_status {
+            Ok(key_status) => {
+                state.set_last_report_published_block_index(next_block_index);
+                return Ok(Some(key_status));
+            },
+            Err(err) => {
                 log::error!(
                     self.logger,
                     "Could not publish report and check on ingress key status: {}",
@@ -1049,8 +1096,9 @@ where
                 // Note: At this revision, we don't have generic constraints for converting
                 // ReportDB error to IngestServiceError but the caller won't do
                 // much but log this error eventually so...
-                Error::PublishReport
-            })?)
+                return Err(Error::PublishReport);
+            }
+        }
     }
 
     // Helper which writes out the state file. This should be done after processing

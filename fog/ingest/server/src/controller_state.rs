@@ -73,6 +73,8 @@ pub struct IngestControllerState {
     peers: BTreeSet<IngestPeerUri>,
     /// Logger
     logger: Logger,
+    /// The last block index that an ingest report was published for
+    last_report_published_block_index: u64
 }
 
 impl IngestControllerState {
@@ -86,6 +88,7 @@ impl IngestControllerState {
             ingest_invocation_id: None,
             peers,
             logger,
+            last_report_published_block_index: 0
         }
     }
 
@@ -235,6 +238,8 @@ impl IngestControllerState {
             }
         };
 
+        result.last_report_published_block_index = self.last_report_published_block_index;
+
         result.next_block_index = self.next_block_index;
         result.pubkey_expiry_window = self.pubkey_expiry_window;
         if let Some(iid) = self.ingest_invocation_id {
@@ -267,6 +272,16 @@ impl IngestControllerState {
                 counters::MODE.set(counters::MODE_ACTIVE);
             }
         }
+    }
+
+    /// Set the last block index that an ingest report was published for
+    pub fn get_last_report_published_block_index(&self) -> u64 {
+        self.last_report_published_block_index
+    }
+
+    /// Set the last block index that an ingest report was published for
+    pub fn set_last_report_published_block_index(&mut self, new_val: u64) {
+        self.last_report_published_block_index = new_val;
     }
 }
 

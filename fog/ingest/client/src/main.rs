@@ -161,6 +161,7 @@ fn ingest_summary_to_json(summary: &IngestSummary) -> String {
         "kex_rng_version": summary.kex_rng_version,
         "peers": summary.get_peers(),
         "ingest_invocation_id": summary.ingest_invocation_id,
+        "last_report_published_block_index": summary.last_report_published_block_index
     })
     .to_string()
 }

@@ -35,6 +35,8 @@ message IngestSummary {
     repeated string peers = 7;
     /// The current ingest invocation id of this server (only if Active)
     int64 ingest_invocation_id = 8;
+    /// The last block index that an ingest report was published at
+    uint64 last_report_published_block_index = 9;
 }
 
 /// The schema of the ingest server's state file that it backs up on disk

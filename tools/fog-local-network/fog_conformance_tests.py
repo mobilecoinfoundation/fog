@@ -258,8 +258,8 @@ class BalanceCheckProgram:
             result = self.check()
 
 
-class MultiBalanceTester:
-    """The MultiBalanceTester keeps track of an ever-growing set of BalanceCheckProgram
+class MultiBalanceChecker:
+    """The MultiBalanceChecker keeps track of an ever-growing set of BalanceCheckProgram
     instances.
 
     At each step of the conformance tests we want to verify:
@@ -400,7 +400,7 @@ class FogConformanceTest:
         self.fog_view = None
         self.fog_ledger = None
         self.fog_report = None
-        self.mbt = None
+        self.multi_balance_checker = None
 
     # These allow us to use `with ... as ...` python syntax,
     # and guarantees that servers are stopped if an exception occurs
@@ -536,8 +536,8 @@ class FogConformanceTest:
         assert len(fog_pubkey) == 64
         print("Fog pubkey = ", fog_pubkey)
 
-        # Create the multi balance tester
-        self.mbt = MultiBalanceTester(
+        # Create the multi balance checker
+        self.multi_balance_checker = MultiBalanceChecker(
             self.balance_check_path,
             self.keys_dir,
             self.fog_ledger,
@@ -547,7 +547,7 @@ class FogConformanceTest:
 
         # Check all accounts
         print("Beginning balance checks...")
-        self.mbt.balance_check("from1", [
+        self.multi_balance_checker.balance_check("from1", [
             [{0: 0, 1: 0}, [1]],
             [{0: 0, 1: 0}, [1]],
             [{0: 0, 1: 0}, [1]],
@@ -556,7 +556,12 @@ class FogConformanceTest:
         ])
 
         # Add block 1 (everywhere)
-        credits1 = [{ 'account': 0, 'amount': 15 }, {'account': 0, 'amount': 4}, {'account': 1, 'amount': 9}, {'account': 3, 'amount': 17}, {'account': 4, 'amount': 27}]
+        credits1 = [
+            {'account': 0, 'amount': 15}, {'account': 0, 'amount': 4},
+            {'account': 1, 'amount': 9},
+            {'account': 3, 'amount': 17},
+            {'account': 4, 'amount': 27},
+        ]
         key_images1 = ['0' * 64] # fake key image (32 bytes hex), can't add block with no key images
         block1_key_images = ledger1.add_block(credits1, key_images1, fog_pubkey)
         ledger2.add_block(credits1, key_images1, fog_pubkey)
@@ -564,7 +569,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from2", [
+        self.multi_balance_checker.balance_check("from2", [
             [{1: 0, 2: 19}, [2]],
             [{1: 0, 2: 9}, [2]],
             [{1: 0, 2: 0}, [2]],
@@ -575,7 +580,10 @@ class FogConformanceTest:
         # Add block 2 (everywhere)
         # Adds 19 to 3, 2 to 4
         # Spends 15 from 0, 9 from 1, 27 from 4
-        credits2 = [{ 'account': 3, 'amount': 19 }, {'account': 4, 'amount': 2}]
+        credits2 = [
+            {'account': 3, 'amount': 19},
+            {'account': 4, 'amount': 2},
+        ]
         key_images2 = [block1_key_images[x] for x in [0, 2, 4]]
         print("Key images spent in Block 2: ", key_images2)
         block2_key_images = ledger1.add_block(credits2, key_images2, fog_pubkey)
@@ -584,19 +592,24 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from3", [
+        self.multi_balance_checker.balance_check("from3", [
             [{2: 19, 3: 4}, [3]],
             [{2: 9, 3: 0}, [3]],
             [{2: 0, 3: 0}, [3]],
             [{2: 17, 3: 36}, [3]],
             [{2: 27, 3: 2}, [3]],
-
         ])
 
         # Add block 3 to ingest only
         # Adds 3 to 3, 1 to everyone else
         # Spends all credits introduced in block 2, so 19 from 3, 2 from 4
-        credits3 = [{ 'account': 0, 'amount': 1}, { 'account': 1, 'amount': 1 }, { 'account': 2, 'amount': 1}, {'account': 3, 'amount': 3}, {'account': 4, 'amount': 1}]
+        credits3 = [
+            {'account': 0, 'amount': 1},
+            {'account': 1, 'amount': 1},
+            {'account': 2, 'amount': 1},
+            {'account': 3, 'amount': 3},
+            {'account': 4, 'amount': 1},
+        ]
         key_images3 = block2_key_images # Spend all credits introduced in block 2
         print("Key images spent in Block 3: ", key_images3)
         block3_key_images = ledger1.add_block(credits3, key_images3, fog_pubkey)
@@ -609,7 +622,7 @@ class FogConformanceTest:
         # need that compute your balance at block 4, because none of the new TxOuts in block 4 can also be spent in block 4.
         # But the client doesn't need to think that way -- the fog-sample-paykit just happens to.
         # It's also reasonable to say that if the key image server is stuck on block 5, then we won't try to compute a balance past 5.
-        self.mbt.balance_check("from3a", [
+        self.multi_balance_checker.balance_check("from3a", [
             [{3: 4}, [3]],
             [{3: 0, 4: 1}, [3, 4]],
             [{3: 0, 4: 1}, [3, 4]],
@@ -622,7 +635,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from4", [
+        self.multi_balance_checker.balance_check("from4", [
             [{3: 4, 4: 5}, [4]],
             [{3: 0, 4: 1}, [4]],
             [{3: 0, 4: 1}, [4]],
@@ -633,7 +646,10 @@ class FogConformanceTest:
         # Add block 4 to ledger only
         # Adds 10 to account 0 and 6 to account 1, in two outputs
         # Wipes out all outstanding key images
-        credits4 = [{ 'account': 0, 'amount': 7}, {'account': 0, 'amount': 3}, {'account': 1, 'amount': 2}, {'account': 1, 'amount': 4}]
+        credits4 = [
+            {'account': 0, 'amount': 7}, {'account': 0, 'amount': 3},
+            {'account': 1, 'amount': 2}, {'account': 1, 'amount': 4},
+        ]
         key_images4 = block3_key_images + [block1_key_images[x] for x in [1, 3]]
         print("Key images spent in Block 4: ", key_images4)
         block4_key_images = ledger2.add_block(credits4, key_images4, fog_pubkey)
@@ -641,7 +657,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from4a", [
+        self.multi_balance_checker.balance_check("from4a", [
             [{4: 5}, [4]],
             [{4: 1}, [4]],
             [{4: 1}, [4]],
@@ -654,7 +670,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from5", [
+        self.multi_balance_checker.balance_check("from5", [
             [{4: 5, 5: 10}, [5]],
             [{4: 1, 5: 6}, [5]],
             [{4: 1, 5: 0}, [5]],
@@ -665,7 +681,13 @@ class FogConformanceTest:
         # Add block 5 to ingest only
         # Give 9 to everyone
         # Take 7 from 0 and 4 from 1
-        credits5 = [{'account': 0, 'amount': 9}, {'account': 1, 'amount': 9}, {'account': 2, 'amount': 9}, {'account': 3, 'amount': 9}, {'account': 4, 'amount': 9}]
+        credits5 = [
+            {'account': 0, 'amount': 9},
+            {'account': 1, 'amount': 9},
+            {'account': 2, 'amount': 9},
+            {'account': 3, 'amount': 9},
+            {'account': 4, 'amount': 9},
+        ]
         key_images5 = [block4_key_images[x] for x in [0, 3]]
         print("Key images spent in Block 5: ", key_images5)
         block5_key_images = ledger1.add_block(credits5, key_images5, fog_pubkey)
@@ -677,7 +699,7 @@ class FogConformanceTest:
         # The reason is, the fog-sample-paykit reasons that, if ingest is at block 6 and gives me a TxOut,
         # I know that it cannot be spent in block 6, even if key image service is still at block 5.
         # So I can return a correct balance for block 6, IF my balance is otherwise 0.
-        self.mbt.balance_check("from5a", [
+        self.multi_balance_checker.balance_check("from5a", [
             [{5: 10}, [5]],
             [{5: 6}, [5]],
             [{5: 0, 6: 9}, [5, 6]],
@@ -688,7 +710,13 @@ class FogConformanceTest:
         # Add block 6 to ingest only
         # Give 1 to everyone
         # Take 2 from 1 and 9 from 3
-        credits6 = [{'account': 0, 'amount': 1}, {'account': 1, 'amount': 1}, {'account': 2, 'amount': 1}, {'account': 3, 'amount': 1}, {'account': 4, 'amount': 1}]
+        credits6 = [
+            {'account': 0, 'amount': 1},
+            {'account': 1, 'amount': 1},
+            {'account': 2, 'amount': 1},
+            {'account': 3, 'amount': 1},
+            {'account': 4, 'amount': 1},
+        ]
         key_images6 = [block4_key_images[2], block5_key_images[3]]
         print("Key images spent in Block 6: ", key_images6)
         block6_key_images = ledger1.add_block(credits6, key_images6, fog_pubkey)
@@ -696,7 +724,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from6a", [
+        self.multi_balance_checker.balance_check("from6a", [
             [{5: 10}, [5]],
             [{5: 6}, [5]],
             [{5: 0, 6: 9}, [5, 6]],
@@ -709,7 +737,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from6b", [
+        self.multi_balance_checker.balance_check("from6b", [
             [{5: 10, 6: 12}, [6]],
             [{5: 6, 6: 11}, [6]],
             [{5: 0, 6: 9}, [6]],
@@ -728,7 +756,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from7a", [
+        self.multi_balance_checker.balance_check("from7a", [
             [{6: 12}, [6]],
             [{6: 11}, [6]],
             [{6: 9}, [6]],
@@ -741,7 +769,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from7b", [
+        self.multi_balance_checker.balance_check("from7b", [
             [{6: 12, 7: 13}, [7]],
             [{6: 11, 7: 10}, [7]],
             [{6: 9, 7: 10}, [7]],
@@ -754,7 +782,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check all accounts
-        self.mbt.balance_check("from7c", [
+        self.multi_balance_checker.balance_check("from7c", [
             [{7: 13, 8: 13}, [8]],
             [{7: 10, 8: 10}, [8]],
             [{7: 10, 8: 1}, [8]],
@@ -799,7 +827,13 @@ class FogConformanceTest:
         # Add block 8 to ingest and ledger
         # Give 2 to everyone
         # Take 4 from 4
-        credits8 = [{'account': 0, 'amount': 2}, {'account': 1, 'amount': 2}, {'account': 2, 'amount': 2}, {'account': 3, 'amount': 2}, {'account': 4, 'amount': 2}]
+        credits8 = [
+            {'account': 0, 'amount': 2},
+            {'account': 1, 'amount': 2},
+            {'account': 2, 'amount': 2},
+            {'account': 3, 'amount': 2},
+            {'account': 4, 'amount': 2},
+        ]
         key_images8 = [block7_key_images[0]]
         print("Key images spent in Block 8: ", key_images8)
         block8_key_images = ledger1.add_block(credits8, key_images8, fog_pubkey)
@@ -808,7 +842,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        self.mbt.balance_check("from8", [
+        self.multi_balance_checker.balance_check("from8", [
             [{8: 13, 9: 15}, [9]],
             [{8: 10, 9: 12}, [9]],
             [{8: 1, 9: 3}, [9]],
@@ -826,7 +860,13 @@ class FogConformanceTest:
         # Add block 9 to ingest and ledger. This should cause ingest1 to become Idle.
         # Give 1 to everyone
         # Take 2 from wallet0
-        credits9 = [{'account': 0, 'amount': 1}, {'account': 1, 'amount': 1}, {'account': 2, 'amount': 1}, {'account': 3, 'amount': 1}, {'account': 4, 'amount': 1}]
+        credits9 = [
+            {'account': 0, 'amount': 1},
+            {'account': 1, 'amount': 1},
+            {'account': 2, 'amount': 1},
+            {'account': 3, 'amount': 1},
+            {'account': 4, 'amount': 1},
+        ]
         key_images9 = [block8_key_images[0]]
         print("Key images spent in Block 9: ", key_images9)
         block9_key_images = ledger1.add_block(credits9, key_images9, fog_pubkey)
@@ -835,7 +875,7 @@ class FogConformanceTest:
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        self.mbt.balance_check("from9", [
+        self.multi_balance_checker.balance_check("from9", [
             [{9: 15, 10: 14}, [10]],
             [{9: 12, 10: 13}, [10]],
             [{9: 3, 10: 4}, [10]],
@@ -867,7 +907,7 @@ class FogConformanceTest:
         # In theory we could get anything between 0 and 10, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
         # available one (10).
-        self.mbt.balance_check("from10a", [
+        self.multi_balance_checker.balance_check("from10a", [
             [{0: 0, 10: 14}, [10]],
             [{0: 0, 10: 13}, [10]],
             [{0: 0, 10: 4}, [10]],
@@ -878,7 +918,13 @@ class FogConformanceTest:
         # Add block 10 to ingest and ledger. This should get reported by the restarted view server.
         # Give 3 to everyone
         # Take 1 from wallet1
-        credits10 = [{'account': 0, 'amount': 3}, {'account': 1, 'amount': 3}, {'account': 2, 'amount': 3}, {'account': 3, 'amount': 3}, {'account': 4, 'amount': 3}]
+        credits10 = [
+            {'account': 0, 'amount': 3},
+            {'account': 1, 'amount': 3},
+            {'account': 2, 'amount': 3},
+            {'account': 3, 'amount': 3},
+            {'account': 4, 'amount': 3},
+        ]
         key_images10 = [block9_key_images[1]]
         print("Key images spent in Block 10: ", key_images10)
         block10_key_images = ledger1.add_block(credits10, key_images10, fog_pubkey)
@@ -886,13 +932,17 @@ class FogConformanceTest:
         print("Key images for new transactions in Block 10: ", block10_key_images)
         time.sleep(1)
 
-        self.mbt.balance_check("from10b", [
+        self.multi_balance_checker.balance_check("from10b", [
             [{10: 14, 11: 17}, [11]],
             [{10: 13, 11: 15}, [11]],
             [{10: 4, 11: 7}, [11]],
             [{10: 4, 11: 7}, [11]],
             [{10: 13, 11: 16}, [11]],
         ])
+
+        #######################################################################
+        # Done
+        #######################################################################
 
         print("All checks succeeded!")
 
@@ -912,8 +962,8 @@ class FogConformanceTest:
         if self.fog_ingest2:
             self.fog_ingest2.stop()
 
-        if self.mbt:
-            self.mbt.stop()
+        if self.multi_balance_checker:
+            self.multi_balance_checker.stop()
 
 
 if __name__ == '__main__':

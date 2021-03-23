@@ -9,6 +9,8 @@ import signal # To catch timeouts using signal.alarm
 import subprocess
 import sys
 import time
+from urllib.request import urlopen
+
 
 from local_fog import *
 
@@ -164,7 +166,103 @@ def parse_balance_check_output(line):
         raise Exception(f"missing required field 'block_count': {result}");
     return result
 
+
 class BalanceCheckProgram:
+    def __init__(self, name, balance_check_path, keys_dir, ledger_url, view_url, key_num, release):
+        self.name = name
+        self.balance_check_path = balance_check_path
+        self.keys_dir = keys_dir
+        self.ledger_url = ledger_url
+        self.view_url = view_url
+        self.key_num = key_num
+        self.release = release
+        self.client_id = None
+
+    def start(self):
+        assert self.client_id is None
+        key = json.load(open(os.path.join(self.keys_dir, f'account_keys_{self.key_num}.json')))
+        response = self.retrying_http_request({
+            "method": "fresh-balance-check",
+            "root_entropy": key['root_entropy'],
+        })
+        print(f'Key {self.key_num} started: {response}')
+        self.client_id = response["client_id"]
+        return {
+            "balance": response["balance"],
+            "block_count": response["block_index"] + 1,
+        }
+
+    def check(self):
+        assert self.client_id is not None
+        response = self.retrying_http_request({
+            "method": "followup-balance-check",
+            "client_id": self.client_id,
+        })
+        assert response["client_id"] == self.client_id
+        print(f'Key {self.key_num} followup check: {response}')
+        return {
+            "balance": response["balance"],
+            "block_count": response["block_index"] + 1,
+        }
+
+    def debug(self):
+        pass
+
+    def assert_balance(self, acceptable_answers, expected_eventual_block_count):
+        for ebc in expected_eventual_block_count:
+            assert ebc in acceptable_answers
+
+        print(f"Checking account {self.key_num} on {self.name}...")
+        start_time = time.perf_counter()
+
+        result = self.check() if self.client_id else self.start()
+        while True:
+            if result['block_count'] not in acceptable_answers:
+                self.debug()
+                raise Exception(f"{self.name} computed balance {result} for account {self.key_num}, but this block count was not expected. Acceptable answers were {acceptable_answers}")
+
+            if acceptable_answers.get(result['block_count']) != result['balance']:
+                self.debug()
+                raise Exception(f"{self.name} computed balance {result} for account {self.key_num}, but this balance was not expected. Expected balance at that block_count was {acceptable_answers.get(result['block_count'])}")
+
+            if result['block_count'] in expected_eventual_block_count:
+                print(f"Checking account {self.key_num} on {self.name} done: {result}")
+                break
+
+            elapsed = time.perf_counter() - start_time
+            if elapsed > DEADLINE_SECONDS:
+                raise Exception(f"{self.name} did not converge to expected answer within {elapsed} seconds")
+
+            result = self.check()
+
+    def stop(self):
+        while True:
+            print('STOP')
+            time.sleep(10)
+
+
+    def http_request(self, post_data):
+        with urlopen("http://127.0.0.1:8080/", json.dumps(post_data).encode()) as response:
+            response_content = response.read()
+            try:
+                return json.loads(response_content)
+            except Exception as exc:
+                raise Exception('Error: ' + response_content.decode())
+
+    def retrying_http_request(self, post_data):
+        i = 0
+        while True:
+            try:
+                return self.http_request(post_data)
+            except:
+                if i == 30:
+                    raise
+            print(i)
+            time.sleep(1)
+            i += 1
+
+
+class XXXBalanceCheckProgram:
     """An object for starting and controlling the execution of an external balance check program."""
     def __init__(self, name, balance_check_path, keys_dir, ledger_url, view_url, key_num, release):
         self.name = name
@@ -347,8 +445,8 @@ class MultiBalanceChecker:
             name = name,
             balance_check_path = self.balance_check_path,
             keys_dir = self.keys_dir,
-            ledger_url = self.fog_ledger.client_listen_url,
-            view_url = self.fog_view.client_listen_url,
+            ledger_url = f'insecure-fog-ledger://localhost:{self.fog_ledger.client_port}/',
+            view_url = f'insecure-fog-view://localhost:{self.fog_view.client_port}/',
             key_num = key_num,
             release = self.release
         )
@@ -939,6 +1037,9 @@ class FogConformanceTest:
         print("All checks succeeded!")
 
     def stop(self):
+        if self.multi_balance_checker:
+            self.multi_balance_checker.stop()
+
         if self.fog_ledger:
             self.fog_ledger.stop()
 
@@ -953,10 +1054,6 @@ class FogConformanceTest:
 
         if self.fog_ingest2:
             self.fog_ingest2.stop()
-
-        if self.multi_balance_checker:
-            self.multi_balance_checker.stop()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Balance check conformance tester')

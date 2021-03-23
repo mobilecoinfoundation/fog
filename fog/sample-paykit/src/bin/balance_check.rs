@@ -63,7 +63,7 @@ fn main() {
         config.view_uri.clone(),
         config.ledger_uri,
         account_key,
-        logger,
+        logger.clone(),
     )
     .build();
 
@@ -89,7 +89,9 @@ fn main() {
         } else if buffer[0] == b'd' {
             // Our previous reported balance was wrong, we should dump balance data to
             // STDERR, then exit
-            sample_paykit.debug_print_balance();
+            for line in sample_paykit.debug_balance().lines() {
+                log::info!(logger, "{}", line);
+            }
             return;
         }
     }

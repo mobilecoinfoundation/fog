@@ -14,6 +14,10 @@ path = "src/lib.rs"
 name = "balance_check"
 path = "src/bin/balance_check.rs"
 
+[[bin]]
+name = "sample_paykit_remote_wallet"
+path = "src/bin/sample_paykit_remote_wallet.rs"
+
 [dependencies]
 mc-account-keys = { path = "../../mobilecoin/account-keys" }
 mc-attest-core = { path = "../../mobilecoin/attest/core" }
@@ -27,6 +31,7 @@ mc-fog-report-connection = { path = "../../mobilecoin/fog/report/connection" }
 mc-fog-report-validation = { path = "../../mobilecoin/fog/report/validation" }
 mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
 mc-transaction-std = { path = "../../mobilecoin/transaction/std" }
+mc-util-grpc = { path = "../../mobilecoin/util/grpc" }
 mc-util-keyfile = { path = "../../mobilecoin/util/keyfile" }
 mc-util-uri = { path = "../../mobilecoin/util/uri" }
 
@@ -42,8 +47,10 @@ fog-view-enclave-measurement = { path = "../view/enclave/measurement" }
 fog-view-protocol = { path = "../view/protocol" }
 
 displaydoc = { version = "0.2", default-features = false }
+futures = "0.3"
 grpcio = "0.6.0"
 link-cplusplus = "1.0" # This is needed to support building on darwin which only has libc++ and not libstdc++
+protobuf = "2.12"
 rand = "0.7"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 structopt = "0.3"
@@ -51,3 +58,9 @@ structopt = "0.3"
 [dev-dependencies]
 mc-common = { path = "../../mobilecoin/common", features = ["loggers"] }
 mc-transaction-core-test-utils = { path = "../../mobilecoin/transaction/core/test-utils" }
+
+[build-dependencies]
+mc-util-build-grpc = { path = "../../mobilecoin/util/build/grpc" }
+mc-util-build-script = { path = "../../mobilecoin/util/build/script" }
+
+cargo-emit = "0.1.1"

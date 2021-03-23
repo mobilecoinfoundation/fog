@@ -119,11 +119,16 @@ Usage
 -----
 
 1. Set `IAS_API_KEY` and `IAS_SPID` if needed, otherwise they will default to all zeros. In a DEV IAS build that is fine.
-2. `./tools/fog_conformance_test.py path/to/balance_check_program`
-    For example `./tools/fog_conformance_test.py target/debug/balance_check` to run against the rust sample paykit.
+1. Create a new Python3 virtual env: `python3 -mvenv env`
+1. Activate the virtualenv: `. ./env/bin/activate`
+1. Install requirements: `pip install --upgrade pip && pip install -r requirements.txt`
+1. Compile the protobuf files into a python module: `./build.sh`
+1. Start the sample paykit remote wallet server: `cargo run --bin sample_paykit_remote_wallet`
+1. Start the fog conformance test script: `./tools/fog_conformance_test.py`
 
 You can build the servers and test in release mode instead:
-`./tools/fog_conformance_test.py target/release/balance_check --release`
+`cargo run --bin sample_paykit_remote_wallet --release`
+`./tools/fog_conformance_test.py  --release`
 
 If you have already built in mobilecoin and fog, you can skip the build step with `--skip-build`.
 
@@ -136,7 +141,8 @@ The `fog-conformance-tests` works as follows:
   no consensus server or mobilecoind involved, we are essentially mocking those out.
 - A fog pipeline is stood up, invoking the actual release-mode binaries, and standing
   up all servers relevant to balance checking.
-- The `balance_check` binary is exercised and the balance it computes is examined.
+- The `sample_paykit_remote_wallet` binary starts a GRPC server that wraps the sample paykit, providing
+  an a GRPC API the fog conformance test can use to exercise the sample paykit.
 - The conformance test drives the inputs to the servers in a fixed way, ensuring
   that at different steps, view is ahead of ledger, ledger is ahead of view etc.,
   and a correct balance is computed despite this.
@@ -184,38 +190,20 @@ We have experimented with several different strategies for integration testing i
   and we already have something that uses this approach and works well, and we can share a lot of code with it.
 
 So, all things considered, a python script seems like the way to go.
-However, there are not direct python bindngs to the inputs (the databases) or the outputs (the balance checker).
+However, there are not direct python bindngs to the inputs (the databases) or the outputs (the remote wallet).
 
-Additionally, the balance checker interface needs to be language-agnostic, so that the rust `fog-sample-paykit` can be easily
+Additionally, the remote wallet interface needs to be language-agnostic, so that the rust `fog-sample-paykit` can be easily
 swapped out for Swift or Java SDK implementations in the test.
 
-We adopt the following approach:
-A `balance_check` executable tested by the conformance test must satisfy a unix command-line API:
-- Path to private key and network url's are passed on command line (see `src/fog/sample-paykit/src/bin/balance_check.rs` for structopt example)
-- Program computes balance at particular number of blocks and prints on STDOUT
-  The format is a json object, on one line, followed by a new-line character
-  ```
-  { "block_count": 456, "amount": 999 }
-  ```
-  Amount must be an integer number of picomob.
-- Program blocks on STDIN. If a byte is read, the program does another balance check,
-  printing the result on STDOUT. Then blocks again and waits for another prompt.
-- If the byte is `'d'`, this means the previous balance reported was wrong and the program should
-  print to STDERR any debugging info that may help in figuring why how it arrived at that balance value.
-- Program exits after STDIN pipe is closed, i.e. if the blocking read reports EOF.
-
-The conformance test prompts the `balance_check` executable to do balance checks repeatedly.
-- `balance_check` should not serialize anything to the filesystem and its state should be wiped out when it terminates.
-- TX cache SHOULD be preserved across balance checks in an individual run of the program, so that it will be exercised.
+In order to provide a way to easily replace the wallet implementation with a different one, the fog conformance test script interacts with a general-purpose wallet interface (see fog/sample-paykit/proto/remote_wallet.proto) over GRPC. An example implementation, `sample_paykit_remote_wallet` is provided.
 
 This is intended to be as easy as possible to conform to for an SDK in rust, swift, or java, without making python bindings.
-The `balance_check` program may itself be usable by the user at a shell prompt to help debug against a live network or local network.
 
-Similarly, we create CLI tools written in rust to append test blocks to the `ledger_db` and `watcher_db`, so that
+Additionally, we create CLI tools written in rust to append test blocks to the `ledger_db` and `watcher_db`, so that
 python can easily drive the scenario tests.
 
 Note: To work with the conformance test, a client must implement balance checking in a way that it produces both a balance and a time
-that that balance was correct, measured by block index. So, balance checking yields an assertion "my balance was this, after this block",
+that that balance was correct, measured by block count. So, balance checking yields an assertion "my balance was this, after this block",
 rather than simply a number.
 Fog does give the client enough information to do this, so it should be able to do this for purpose of the test.
 The client likely needs to track this sort of information anyways in order to be resilient against the types of race conditions being tested here.

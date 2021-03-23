@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package remote_wallet;
+
+option java_package = "com.example.myapplication.proto";
+option java_outer_classname = "RemoteWalletProto";
+
+service RemoteWallet {
+  rpc FreshBalanceCheck (FreshBalanceCheckRequest) returns (BalanceCheckResponse);
+  rpc FollowupBalanceCheck (FollowupBalanceCheckRequest) returns (BalanceCheckResponse);
+}
+
+message FreshBalanceCheckRequest {
+  bytes root_entropy = 1;
+}
+
+message BalanceCheckResponse {
+  uint32 client_id = 1;
+  uint64 balance = 2;
+  uint64 block_count = 3;
+}
+
+message FollowupBalanceCheckRequest {
+  uint32 client_id = 1;
+}

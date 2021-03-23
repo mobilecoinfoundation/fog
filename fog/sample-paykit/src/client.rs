@@ -144,9 +144,9 @@ impl Client {
         self.tx_data.get_balance()
     }
 
-    /// Debug print the balance data
-    pub fn debug_print_balance(&mut self) {
-        self.tx_data.debug_print_balance()
+    /// Get balance debug print message
+    pub fn debug_balance(&mut self) -> String {
+        self.tx_data.debug_balance()
     }
 
     /// Submits a transaction to the MobileCoin network.

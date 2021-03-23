@@ -510,29 +510,25 @@ impl CachedTxData {
         Ok(())
     }
 
-    /// Debug print balance information (to help debug a wrong balance
+    /// Get debug balance information (to help debug a wrong balance
     /// computation)
-    pub fn debug_print_balance(&mut self) {
-        log::info!(
-            self.logger,
-            "*** Balance is reported incorrect, dumping balance check data:"
-        );
-        log::info!(
-            self.logger,
+    pub fn debug_balance(&mut self) -> String {
+        let mut lines = Vec::new();
+        lines.push(format!(
             "num_blocks = {}, key_image_data_completeness = {}, rng_set_num_blocks = {}\n",
             self.get_num_blocks(),
             self.key_image_data_completeness,
             self.rng_set.get_highest_processed_block_count()
-        );
-        log::info!(
-            self.logger,
+        ));
+        lines.push(format!(
             "num tx_outs = {}, num rngs = {}\n",
             self.owned_tx_outs.len(),
             self.rng_set.get_rngs().len()
-        );
+        ));
         for owned_tx_out in self.owned_tx_outs.values() {
-            log::info!(self.logger, "{:?}\n", owned_tx_out);
+            lines.push(format!("{:?}\n", owned_tx_out));
         }
+        lines.join("\n")
     }
 }
 

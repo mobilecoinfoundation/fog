@@ -429,6 +429,8 @@ mod tests {
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
 
+        sleep(Duration::from_millis(100));
+
         let ingress_keys = db_fetcher.get_highest_processed_block_context();
         assert_eq!(
             ingress_keys,
@@ -473,6 +475,8 @@ mod tests {
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
 
+        sleep(Duration::from_millis(100));
+
         let ingress_keys = db_fetcher.get_highest_processed_block_context();
         assert_eq!(
             ingress_keys,
@@ -502,6 +506,8 @@ mod tests {
         sleep(Duration::from_secs(1)); // Supposedly enough time for at least some blocks to get picked up.
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty());
+
+        sleep(Duration::from_millis(100));
 
         // TODO The last scanned block index gets updated even though we have a hole.
         // I am not sure this is desirable...

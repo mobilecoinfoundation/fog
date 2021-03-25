@@ -88,7 +88,7 @@ impl IngestWorker {
                         Err(LedgerError::NotFound) => {
                             if let Some(rec) = &mut last_not_found_log {
                                 if rec.block_index == next_block_index {
-                                    // Log at debug level every 5 min
+                                    // Log at debug level every 1 min
                                     // This is mainly useful for debugging conformance tests, not
                                     // prod, which uses
                                     // prometheus metrics

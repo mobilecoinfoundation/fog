@@ -209,6 +209,40 @@ pub fn recovery_db_missed_blocks_reporting(
             .any(|range| range.start_block == 10 && range.end_block == 20),
         "Didn't find a missed block range that we expected to find"
     );
+
+    // Make another key, this one overlapping the previous missed range
+    let ingress_key = CompressedRistrettoPublic::from(RistrettoPublic::from_random(rng));
+    db.new_ingress_key(&ingress_key, 15).unwrap();
+    db.set_report(
+        &ingress_key,
+        "",
+        &ReportData {
+            pubkey_expiry: 25,
+            ingest_invocation_id: None,
+            report: Default::default(),
+        },
+    )
+    .unwrap();
+
+    db.report_lost_ingress_key(ingress_key).unwrap();
+    let status = db.get_ingress_key_status(&ingress_key).unwrap().unwrap();
+    assert!(status.lost);
+    assert_eq!(status.start_block, 15);
+    assert_eq!(status.pubkey_expiry, 25);
+
+    let missed_block_ranges = db.get_missed_block_ranges().unwrap();
+    assert!(
+        missed_block_ranges
+            .iter()
+            .any(|range| range.start_block == 10 && range.end_block == 20),
+        "Didn't find a missed block range that we expected to find"
+    );
+    assert!(
+        missed_block_ranges
+            .iter()
+            .any(|range| range.start_block == 15 && range.end_block == 25),
+        "Didn't find a missed block range that we expected to find"
+    );
 }
 
 // Basic tests that rng records decommissioning works as expected

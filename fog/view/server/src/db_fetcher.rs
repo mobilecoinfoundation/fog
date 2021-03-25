@@ -509,8 +509,6 @@ mod tests {
 
         sleep(Duration::from_millis(100));
 
-        // TODO The last scanned block index gets updated even though we have a hole.
-        // I am not sure this is desirable...
         let ingress_keys = db_fetcher.get_highest_processed_block_context();
         assert_eq!(
             ingress_keys,

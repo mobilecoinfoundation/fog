@@ -661,6 +661,7 @@ mod tests {
     }
 
     // A block tracker with a multiple ingestable ranges waits for both of them.
+    // When the slow one is marked lost, that unblocks progress.
     #[test_with_logger]
     fn highest_fully_processed_block_tracks_multiple_recs(logger: Logger) {
         let mut block_tracker = BlockTracker::new(logger.clone());
@@ -757,21 +758,544 @@ mod tests {
         );
     }
 
-    // A block tracker with a multiple ingestable ranges waits for both of them,
-    // but makes progress when the slow one is reported lost
-    #[test_with_logger]
-    #[ignore]
-    fn highest_fully_processed_block_tracks_multiple_recs_some_lost1(_logger: Logger) {
-        todo!()
-    }
-
-    // A block tracker with multiple ingestable ranges waits for both of them,
+    // A block tracker with multiple ingress keys waits for both of them,
     // and if a key is reported lost, it still blocks up until last-scanned for that
     // key is loaded
     #[test_with_logger]
-    #[ignore]
-    fn highest_fully_processed_block_tracks_multiple_recs_some_lost2(_logger: Logger) {
-        todo!()
+    fn highest_fully_processed_block_tracks_multiple_recs_some_lost2(logger: Logger) {
+        let mut block_tracker = BlockTracker::new(logger.clone());
+
+        let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
+        let mut rec1 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 0,
+                pubkey_expiry: 27,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+        let mut rec2 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 10,
+                pubkey_expiry: 57,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        // Initially, we're at 0.
+        assert_eq!(
+            block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+            (0, None)
+        );
+
+        // Advancing the first ingestable range would only get us up to 10 since at that
+        // point we also need the 2nd range to advance.
+        for i in 0..10 {
+            rec1.last_scanned_block = Some(i);
+            block_tracker.block_processed(rec1.key, i);
+
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                (min(rec2.status.start_block, i + 1), None)
+            );
+        }
+
+        // At this point, the reason we are blocked is rec2
+        for i in 10..20 {
+            rec1.last_scanned_block = Some(i);
+            block_tracker.block_processed(rec1.key, i);
+
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                (min(rec2.status.start_block, i + 1), Some(rec2.clone()))
+            );
+        }
+
+        // Advancing the second range would get us all the way to the first one and stop
+        // there.
+        for i in 10..20 {
+            rec2.last_scanned_block = Some(i);
+            block_tracker.block_processed(rec2.key, i);
+
+            // Note: We advanced rec1 20 times in previous loop
+            // The reason we are blocked changes once we reach block 20, because then
+            // neither record is slower
+            let expected = if i == 19 {
+                (20, None)
+            } else {
+                (i + 1, Some(rec2.clone()))
+            };
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // After this point, rec1 is the slow one, so that is the reason we are blocked
+        for i in 20..40 {
+            block_tracker.block_processed(rec2.key, i);
+
+            let expected = (20, Some(rec1.clone()));
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Test that marking rec1 lost still blocks us until we have processed up to
+        // last scanned block of rec1
+        rec1.last_scanned_block = Some(26);
+        rec1.status.lost = true;
+
+        for i in 20..27 {
+            let expected = (i, Some(rec1.clone()));
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+            );
+
+            block_tracker.block_processed(rec1.key, i);
+        }
+
+        // Test that processing the remaining scanned blocks of rec1 allows us to make
+        // progress all the way to rec2
+        let expected = (40, None);
+        assert_eq!(
+            block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+            expected,
+        );
+    }
+
+    /// A block tracker with a retired key, followed by a gap, followed by a new
+    /// key, makes progress
+    #[test_with_logger]
+    fn highest_fully_processed_block_tracks_retired_key_followed_by_gap(logger: Logger) {
+        let mut block_tracker = BlockTracker::new(logger.clone());
+
+        let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
+        let mut rec1 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 10,
+                pubkey_expiry: 17,
+                retired: true,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        for i in 0..7 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Check that next blocks value matches what we expect
+        let expected_state = HashMap::from_iter(vec![]);
+
+        assert_eq!(block_tracker.next_blocks(&[rec1.clone()]), expected_state);
+
+        // Check that highest fully processed block count matches what we expect
+        let expected = (17, None);
+        assert_eq!(
+            block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+            expected
+        );
+
+        // Now add a new key that comes much later and check that we can make progress
+        let rec2 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 30,
+                pubkey_expiry: 47,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        for i in 0..7 {
+            let index = rec2.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec2.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec2.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            // Make the block "exist" and "load" it
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec2.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+    }
+
+    /// A block tracker with a retired key, which is concurrent with a new key,
+    /// makes progress
+    ///
+    /// This is expected to correspond with how we do ingest enclave upgrades,
+    /// when everything works.
+    #[test_with_logger]
+    fn highest_fully_processed_block_tracks_retired_key_concurrent_with_active(logger: Logger) {
+        let mut block_tracker = BlockTracker::new(logger.clone());
+
+        let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
+        let mut rec1 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 10,
+                pubkey_expiry: 22,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        for i in 0..7 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now mark the key retired, and do 2 more blocks. Still 3 more until finished.
+        rec1.status.retired = true;
+
+        for i in 7..9 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now add the second concurrent key
+        let mut rec2 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 19,
+                pubkey_expiry: 32,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        // Now add the next three blocks, after which rec1 should hit expiry
+        for i in 9..12 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index), (rec2.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone(), rec2.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            rec2.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+            block_tracker.block_processed(rec2.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now add three more blocks. rec1 should be out of the picture now
+        for i in 12..15 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec2.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone(), rec2.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec2.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec2.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+    }
+
+    /// A block tracker with a retired key, which is concurrent with a new key,
+    /// which are then both lost, followed by a gap and a new key, makes
+    /// progress.
+    ///
+    /// This is expected to correspond to, doing an ingest enclave upgrade, but
+    /// then everything blows up and we have to restart the service later.
+    #[test_with_logger]
+    fn highest_fully_processed_block_tracks_retired_key_concurrent_with_active_both_lost(
+        logger: Logger,
+    ) {
+        let mut block_tracker = BlockTracker::new(logger.clone());
+
+        let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
+        let mut rec1 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 10,
+                pubkey_expiry: 24,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        for i in 0..7 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now mark the key retired, and do 2 more blocks. Still 5 more until finished.
+        rec1.status.retired = true;
+
+        for i in 7..9 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now add the second concurrent key
+        let mut rec2 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 19,
+                pubkey_expiry: 32,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        // Now add the next three blocks. Still 2 more until first one finished
+        for i in 9..12 {
+            let index = rec1.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec1.key, index), (rec2.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone(), rec2.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec1.last_scanned_block = Some(index);
+            rec2.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec1.key, index);
+            block_tracker.block_processed(rec2.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
+
+        // Now mark both keys lost
+        rec1.status.lost = true;
+        rec2.status.lost = true;
+
+        // Check that next blocks value and highest fully processed count matches what
+        // we expect
+        let expected_state = HashMap::from_iter(vec![]);
+
+        assert_eq!(
+            block_tracker.next_blocks(&[rec1.clone(), rec2.clone()]),
+            expected_state,
+        );
+        assert_eq!(
+            block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
+            (22, None)
+        );
+
+        // Now add a third key much later, check that we can make progress with that key
+        let mut rec3 = IngressPublicKeyRecord {
+            key: CompressedRistrettoPublic::from_random(&mut rng),
+            status: IngressPublicKeyStatus {
+                start_block: 129,
+                pubkey_expiry: 147,
+                retired: false,
+                lost: false,
+            },
+            last_scanned_block: None,
+        };
+
+        // Now add three more blocks at rec3. rec1 and rec2 should be out of the picture
+        // now
+        for i in 0..3 {
+            let index = rec3.status.start_block + i;
+
+            // Check that next blocks value matches what we expect
+            let expected_state = HashMap::from_iter(vec![(rec3.key, index)]);
+
+            assert_eq!(
+                block_tracker.next_blocks(&[rec1.clone(), rec2.clone(), rec3.clone()]),
+                expected_state,
+                "i = {}",
+                i
+            );
+
+            rec3.last_scanned_block = Some(index);
+            block_tracker.block_processed(rec3.key, index);
+
+            // Check that highest fully processed block count matches what we expect
+            let expected = (index + 1, None);
+            assert_eq!(
+                block_tracker.highest_fully_processed_block_count(&[
+                    rec1.clone(),
+                    rec2.clone(),
+                    rec3.clone()
+                ]),
+                expected,
+                "i = {}",
+                i
+            );
+        }
     }
 
     // Highest known block count is 0 when there are no inputs.

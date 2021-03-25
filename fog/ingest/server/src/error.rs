@@ -11,11 +11,13 @@ use fog_sql_recovery_db::Error as SqlRecoveryDbError;
 use fog_uri::IngestPeerUri;
 use grpcio::Error as GrpcError;
 use mc_api::ConversionError;
+use mc_common::ResponderId;
 use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_ledger_db::Error as LedgerDbError;
 use mc_sgx_report_cache_api::Error as ReportableEnclaveError;
 use mc_sgx_report_cache_untrusted::Error as ReportCacheError;
 use mc_util_uri::{UriConversionError, UriParseError};
+use std::collections::BTreeMap;
 
 /// An error returned by the ingest service
 #[derive(Debug, Display)]
@@ -240,6 +242,9 @@ impl From<SetPeersError> for RestoreStateError {
 pub enum SetPeersError {
     /// Statefile contained uri with no responder id: {0}
     ResponderId(UriConversionError),
+    /// When setting our peers, our responder id was missing, so the peer set
+    /// operation was rejected: '{0}' is not a member of {1:?}
+    MissingOurResponderId(ResponderId, BTreeMap<ResponderId, IngestPeerUri>),
 }
 
 impl From<UriConversionError> for SetPeersError {

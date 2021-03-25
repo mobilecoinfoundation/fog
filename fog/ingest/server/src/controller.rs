@@ -17,7 +17,10 @@ use fog_types::{common::BlockRange, ingest::TxsForIngest};
 use fog_uri::IngestPeerUri;
 use mc_attest_enclave_api::{EnclaveMessage, PeerAuthRequest, PeerAuthResponse, PeerSession};
 use mc_attest_net::RaClient;
-use mc_common::logger::{log, Logger};
+use mc_common::{
+    logger::{log, Logger},
+    ResponderId,
+};
 use mc_connection::Connection;
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_sgx_report_cache_api::ReportableEnclave;
@@ -25,7 +28,7 @@ use mc_sgx_report_cache_untrusted::{Error as ReportCacheError, ReportCache};
 use mc_transaction_core::{Block, BlockContents, BlockIndex};
 use mc_util_uri::ConnectionUri;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     io::ErrorKind,
     sync::{Arc, Mutex, MutexGuard},
@@ -810,19 +813,28 @@ where
         state: &mut MutexGuard<IngestControllerState>,
     ) -> Result<(), SetPeersError> {
         // Enforce the invariant that uris in peers list all have valid responder id
-        let mut new_peers = peers
+        let new_peers_by_responder_id = peers
             .iter()
-            .map(|uri| -> Result<IngestPeerUri, SetPeersError> {
-                uri.responder_id()?;
-                Ok(uri.clone())
-            })
-            .collect::<Result<BTreeSet<IngestPeerUri>, SetPeersError>>()?;
-        // Our own URI should always be stored in the list of peers
-        let our_uri = state.get_peers().iter().find(|uri| uri.responder_id().expect("Could not get responder-id for one of our peers, that violates an invariant") == self.config.local_node_id).expect("Our own URI was not found among our current set of peers, that violates an invariant").clone();
-        if !new_peers.contains(&our_uri) {
-            log::warn!(self.logger, "The new set of peers did not contain a URI with our responder-id. We added our URI to the set: {} <-- {}", SeqDisplay(new_peers.iter()), our_uri);
-            new_peers.insert(our_uri);
+            .map(
+                |uri| -> Result<(ResponderId, IngestPeerUri), SetPeersError> {
+                    Ok((uri.responder_id()?, uri.clone()))
+                },
+            )
+            .collect::<Result<BTreeMap<ResponderId, IngestPeerUri>, SetPeersError>>()?;
+        // Our own responder id should correspond to one of the peers
+        if !new_peers_by_responder_id
+            .get(&self.config.local_node_id)
+            .is_some()
+        {
+            return Err(SetPeersError::MissingOurResponderId(
+                self.config.local_node_id.clone(),
+                new_peers_by_responder_id,
+            ));
         }
+        let new_peers = new_peers_by_responder_id
+            .values()
+            .cloned()
+            .collect::<BTreeSet<IngestPeerUri>>();
         state.set_peers(new_peers);
         Ok(())
     }

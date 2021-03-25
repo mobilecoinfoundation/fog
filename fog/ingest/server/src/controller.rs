@@ -822,9 +822,9 @@ where
             )
             .collect::<Result<BTreeMap<ResponderId, IngestPeerUri>, SetPeersError>>()?;
         // Our own responder id should correspond to one of the peers
-        if !new_peers_by_responder_id
+        if new_peers_by_responder_id
             .get(&self.config.local_node_id)
-            .is_some()
+            .is_none()
         {
             return Err(SetPeersError::MissingOurResponderId(
                 self.config.local_node_id.clone(),

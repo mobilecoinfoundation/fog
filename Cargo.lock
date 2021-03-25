@@ -863,16 +863,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "displaydoc"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "proc-macro2 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "displaydoc"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -2622,7 +2612,7 @@ dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crc 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -2642,7 +2632,7 @@ dependencies = [
  "aead 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-crypto-noise 1.0.1-pre1",
@@ -2680,7 +2670,7 @@ dependencies = [
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex_fmt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mbedtls 0.5.1 (git+https://github.com/mobilecoinofficial/rust-mbedtls.git?tag=mc-0.3)",
@@ -2704,7 +2694,7 @@ dependencies = [
 name = "mc-attest-enclave-api"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-ake 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-crypto-noise 1.0.1-pre1",
@@ -2791,7 +2781,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "cookie 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-attest-ake 1.0.1-pre1",
  "mc-attest-api 1.0.1-pre1",
@@ -2911,7 +2901,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fs_extra 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
@@ -3129,7 +3119,7 @@ dependencies = [
 name = "mc-crypto-x509-utils"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-crypto-keys 1.0.1-pre1",
  "pem 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "x509-signature 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3175,7 +3165,7 @@ dependencies = [
 name = "mc-fog-report-connection"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
@@ -3192,7 +3182,7 @@ dependencies = [
 name = "mc-fog-report-validation"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -3215,7 +3205,7 @@ dependencies = [
 name = "mc-fog-sig"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-crypto-x509-utils 1.0.1-pre1",
@@ -3239,7 +3229,7 @@ dependencies = [
 name = "mc-fog-sig-report"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-crypto-digestible-signature 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -3313,7 +3303,7 @@ dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex_fmt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3455,7 +3445,7 @@ dependencies = [
 name = "mc-sgx-css"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3477,7 +3467,7 @@ dependencies = [
 name = "mc-sgx-report-cache-api"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-util-serial 1.0.1-pre1",
@@ -3488,7 +3478,7 @@ dependencies = [
 name = "mc-sgx-report-cache-untrusted"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-attest-net 1.0.1-pre1",
@@ -3538,7 +3528,7 @@ dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bulletproofs 2.0.0 (git+https://github.com/dalek-cryptography/bulletproofs?rev=464acb72432ccc6c5131397fd811a5f01ec2454b)",
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "generic-array 0.14.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex_fmt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3600,7 +3590,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cargo_metadata 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mbedtls 0.5.1 (git+https://github.com/mobilecoinofficial/rust-mbedtls.git?tag=mc-0.3)",
  "mbedtls-sys-auto 2.18.1 (git+https://github.com/mobilecoinofficial/rust-mbedtls.git?tag=mc-0.3)",
  "mc-sgx-css 1.0.1-pre1",
@@ -3639,7 +3629,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.66 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
  "pkg-config 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3650,7 +3640,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "binascii 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-repr-bytes 1.0.1-pre1",
  "serde 1.0.118 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3693,7 +3683,7 @@ version = "1.0.1-pre1"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cookie 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3741,7 +3731,7 @@ dependencies = [
 name = "mc-util-lmdb"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmdb-rkv 0.14.0 (git+https://github.com/mozilla/lmdb-rs?rev=df1c2f5)",
  "mc-util-serial 1.0.1-pre1",
  "prost 0.6.1 (git+https://github.com/danburkert/prost?rev=6113789f70b69709820becba4242824b4fb3ffec)",
@@ -3812,7 +3802,7 @@ name = "mc-util-uri"
 version = "1.0.1-pre1"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-common 1.0.1-pre1",
@@ -3827,7 +3817,7 @@ dependencies = [
 name = "mc-watcher"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmdb-rkv 0.14.0 (git+https://github.com/mozilla/lmdb-rs?rev=df1c2f5)",
@@ -3859,7 +3849,7 @@ dependencies = [
 name = "mc-watcher-api"
 version = "1.0.1-pre1"
 dependencies = [
- "displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.118 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -5869,7 +5859,6 @@ dependencies = [
 "checksum dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
 "checksum dirs-sys 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "afa0b23de8fd801745c471deffa6e12d248f962c9fd4b4c33787b055599bde7b"
 "checksum discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
-"checksum displaydoc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "adc2ab4d5a16117f9029e9a6b5e4e79f4c67f6519bc134210d4d4a04ba31f41b"
 "checksum displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f98e1bbbcbb1b2646d6e900da42974b641eb784851adcd4f0ae4c07c8bc7b42b"
 "checksum downcast 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4bb454f0228b18c7f4c3b0ebbee346ed9c52e7443b0999cd543ff3571205701d"
 "checksum dtoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4358a9e11b9a09cf52383b451b49a169e8d797b68aa02301ff586d70d9661ea3"

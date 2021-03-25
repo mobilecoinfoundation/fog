@@ -2,6 +2,7 @@
 
 //! Configuration parameters for the Fog ingest client
 
+use mc_crypto_keys::CompressedRistrettoPublic;
 use std::{str::FromStr, time::Duration};
 use structopt::StructOpt;
 
@@ -21,6 +22,13 @@ pub struct IngestConfig {
 
 fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntError> {
     Ok(Duration::from_secs(u64::from_str(src)?))
+}
+
+fn parse_ristretto_hex(src: &str) -> Result<CompressedRistrettoPublic, String> {
+    let mut key_bytes = [0u8; 32];
+    hex::decode_to_slice(src.as_bytes(), &mut key_bytes[..])
+        .map_err(|err| format!("Hex decode error: {:?}", err))?;
+    Ok(CompressedRistrettoPublic::from(&key_bytes))
 }
 
 #[derive(Clone, StructOpt)]
@@ -52,15 +60,10 @@ pub enum IngestConfigCommand {
     /// Attempt to take a retired server out of retirement.
     Unretire,
 
-    /// Report a range of missed blocks [start, end).
-    ReportMissedBlockRange {
-        /// The block index of the first missed block.
-        #[structopt(long)]
-        start: u64,
-
-        /// The block index of the last missed block + 1.
-        #[structopt(long)]
-        end: u64,
+    /// Report a lost ingress key, with pubkey bytes specified in hex
+    ReportLostIngressKey {
+        #[structopt(long, short = "k", parse(try_from_str=parse_ristretto_hex))]
+        key: CompressedRistrettoPublic,
     },
 
     /// Gets the list of reported missed block ranges.

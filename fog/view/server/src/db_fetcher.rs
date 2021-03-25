@@ -3,9 +3,10 @@
 //! An object for managing background data fetches from the recovery database.
 
 use crate::{block_tracker::BlockTracker, counters};
-use fog_recovery_db_iface::{IngestInvocationId, IngestableRange, RecoveryDb};
-use fog_types::{common::BlockRange, ETxOutRecord};
+use fog_recovery_db_iface::{IngressPublicKeyRecord, RecoveryDb};
+use fog_types::ETxOutRecord;
 use mc_common::logger::{log, Logger};
+use mc_crypto_keys::CompressedRistrettoPublic;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -30,8 +31,8 @@ pub const MAX_QUEUED_RECORDS: usize = (128 * 1024 * 1024) / 256;
 /// A single block of fetched ETxOutRecords, together with information
 /// identifying where it came from.
 pub struct FetchedRecords {
-    /// The Ingest Invocation ID that produced these ETxOutRecords
-    pub ingest_invocation_id: IngestInvocationId,
+    /// The ingress key associated to these ETxOutRecords
+    pub ingress_key: CompressedRistrettoPublic,
 
     /// The block index the ETxOutRecords belong to.
     pub block_index: u64,
@@ -44,11 +45,8 @@ pub struct FetchedRecords {
 /// of the DbFetcher object.
 #[derive(Default)]
 struct DbFetcherSharedState {
-    /// Information about ingestable ranges we are aware of.
-    ingestable_ranges: Vec<IngestableRange>,
-
-    /// Missing block ranges we are aware of.
-    missing_block_ranges: Vec<BlockRange>,
+    /// Information about ingress public keys we are aware of.
+    ingress_keys: Vec<IngressPublicKeyRecord>,
 
     /// A queue of ETxOutRecords we have fetched from the database.
     /// This is periodically polled by an external thread which grabs this data
@@ -122,16 +120,10 @@ impl DbFetcher {
         Ok(())
     }
 
-    /// Get a copy of the currently known ingestable ranges.
-    /// This updates over time by the background worker thread.
-    pub fn known_ingestable_ranges(&self) -> Vec<IngestableRange> {
-        self.shared_state().ingestable_ranges.clone()
-    }
-
-    /// Get a copy of the currently known missing block ranges.
-    /// This updates over time by the background worker thread.
-    pub fn known_missing_block_ranges(&self) -> Vec<BlockRange> {
-        self.shared_state().missing_block_ranges.clone()
+    /// Get context for the enclave block tracker to compute the highest
+    /// processed block count
+    pub fn get_highest_processed_block_context(&self) -> Vec<IngressPublicKeyRecord> {
+        self.shared_state().ingress_keys.clone()
     }
 
     /// Get the list of FetchedRecords that were obtained by the worker thread.
@@ -205,9 +197,7 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
                 break;
             }
 
-            self.load_ingestable_ranges();
-
-            self.load_missing_block_ranges();
+            self.load_ingress_keys();
 
             // Each call to load_block_data attempts to load one block for each known ingest
             // invocation. We want to keep loading blocks as long as we have data to load,
@@ -219,51 +209,22 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
         }
     }
 
-    /// Sync ingestable ranges from the database. This allows us to learn which
-    /// ingest invocations are currently alive, which block ranges they are
+    /// Sync ingress key records from the database. This allows us to learn
+    /// which ingress keys are currently alive, which block ranges they are
     /// able to cover, and which blocks have they ingested so far.
-    fn load_ingestable_ranges(&self) {
-        let _metrics_timer = counters::LOAD_INGESTABLE_RANGES_TIME.start_timer();
+    fn load_ingress_keys(&self) {
+        let _metrics_timer = counters::LOAD_INGRESS_KEYS_TIME.start_timer();
 
-        match self.db.get_ingestable_ranges() {
-            Ok(ingestable_ranges) => {
-                log::trace!(
-                    self.logger,
-                    "get_ingestable_ranges: {:?}",
-                    ingestable_ranges
-                );
+        match self.db.get_ingress_key_records(0) {
+            Ok(records) => {
+                log::trace!(self.logger, "get_ingress_key_records: {:?}", records);
 
-                self.shared_state().ingestable_ranges = ingestable_ranges;
+                self.shared_state().ingress_keys = records;
             }
 
             Err(err) => {
-                log::warn!(self.logger, "Failed getting ingestable ranges: {:?}", err);
+                log::warn!(self.logger, "Failed getting ingress keys: {}", err);
             }
-        }
-    }
-
-    /// Sync missing block ranges from the database. This allows us to learn
-    /// which block ranges are not going to be fulfilled by any ingest
-    /// invocations.
-    fn load_missing_block_ranges(&self) {
-        let _metrics_timer = counters::LOAD_MISSING_BLOCK_RANGES_TIME.start_timer();
-
-        // TODO this is a very inefficient implementation since it continously reloades
-        // ranges we are already aware of.
-        match self.db.get_missed_block_ranges() {
-            Ok(missing_ranges) => {
-                let mut state = self.shared_state();
-
-                if missing_ranges != state.missing_block_ranges {
-                    log::info!(
-                        self.logger,
-                        "missing block ranges updated: {:?}",
-                        missing_ranges
-                    );
-                    state.missing_block_ranges = missing_ranges;
-                }
-            }
-            Err(err) => log::warn!(self.logger, "Failed getting missing ranges: {:?}", err),
         }
     }
 
@@ -275,111 +236,91 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
 
         // See whats the next block number we need to load for each invocation we are
         // aware of.
-        let (ingestable_ranges, missing_block_ranges) = {
-            let shared_state = self.shared_state();
-            (
-                shared_state.ingestable_ranges.clone(),
-                shared_state.missing_block_ranges.clone(),
-            )
-        };
+        let ingress_keys = self.shared_state().ingress_keys.clone();
 
-        let next_block_index_per_invocation_id = self.block_tracker.next_blocks(&ingestable_ranges);
+        log::trace!(
+            self.logger,
+            "Have {} ingress keys: {:?}",
+            ingress_keys.len(),
+            ingress_keys
+        );
+
+        let next_block_index_per_ingress_key = self.block_tracker.next_blocks(&ingress_keys);
 
         log::trace!(
             self.logger,
             "load_block_data next_blocks: {:?}",
-            next_block_index_per_invocation_id
+            next_block_index_per_ingress_key
         );
 
-        for (ingest_invocation_id, block_index) in next_block_index_per_invocation_id.into_iter() {
-            // Do not attempt to fetch blocks explicitly marked as missing.
-            if BlockTracker::is_missing_block(&missing_block_ranges, block_index) {
-                self.block_tracker
-                    .block_processed(ingest_invocation_id, block_index);
-
-                // This ensures we do not have holes in the blocks processed by the enclave
-                // thread.
-                self.shared_state().fetched_records.push(FetchedRecords {
-                    ingest_invocation_id,
-                    block_index,
-                    records: vec![],
-                });
-
-                continue;
-            }
-
+        for (ingress_key, block_index) in next_block_index_per_ingress_key.into_iter() {
             // Attempt to load data for the next block.
             let get_tx_outs_by_block_result = {
                 let _metrics_timer = counters::GET_TX_OUTS_BY_BLOCK_TIME.start_timer();
                 self.db
-                    .get_tx_outs_by_block(&ingest_invocation_id, block_index)
+                    .get_tx_outs_by_block_and_key(ingress_key, block_index)
             };
 
             match get_tx_outs_by_block_result {
-                Ok(tx_outs) => {
+                Ok(Some(tx_outs)) => {
                     let num_tx_outs = tx_outs.len();
 
-                    // NOTE: This makes a very nuanced and important assumption, which is that
-                    // ingest always produces data ETxOutRecords for each block it has processed,
-                    // EVEN if it actually found NO matches.
-                    // Based on that assumption, tx_outs will be empty only when ingest has not yet
-                    // ingested the block (and wrote the results into the database).
-                    if !tx_outs.is_empty() {
-                        // Log
-                        log::info!(
-                            self.logger,
-                            "invocation id {} fetched {} tx outs for block {}",
-                            ingest_invocation_id,
-                            num_tx_outs,
-                            block_index,
-                        );
+                    // Log
+                    log::info!(
+                        self.logger,
+                        "ingress_key {:?} fetched {} tx outs for block {}",
+                        ingress_key,
+                        num_tx_outs,
+                        block_index,
+                    );
 
-                        // Ingest has produced data for this block, we'd like to keep trying the
-                        // next block on the next loop iteration.
-                        has_more_work = true;
+                    // Ingest has produced data for this block, we'd like to keep trying the
+                    // next block on the next loop iteration.
+                    has_more_work = true;
 
-                        // Mark that we are done fetching data for this block.
-                        self.block_tracker
-                            .block_processed(ingest_invocation_id, block_index);
+                    // Mark that we are done fetching data for this block.
+                    self.block_tracker.block_processed(ingress_key, block_index);
 
-                        // Store the fetched records so that they could be consumed by the enclave
-                        // when its ready.
-                        self.shared_state().fetched_records.push(FetchedRecords {
-                            ingest_invocation_id,
+                    // Store the fetched records so that they could be consumed by the enclave
+                    // when its ready.
+                    {
+                        let mut state = self.shared_state();
+                        state.fetched_records.push(FetchedRecords {
+                            ingress_key,
                             block_index,
                             records: tx_outs,
                         });
-
-                        // Update metrics.
-                        counters::BLOCKS_FETCHED_COUNT.inc();
-                        counters::TXOS_FETCHED_COUNT.inc_by(num_tx_outs as i64);
-
-                        // Block if we have queued up enough records for now.
-                        // (Until the enclave thread drains the queue).
-                        let (lock, condvar) = &*self.num_queued_records_limiter;
-                        let mut num_queued_records = condvar
-                            .wait_while(lock.lock().unwrap(), |num_queued_records| {
-                                *num_queued_records > MAX_QUEUED_RECORDS
-                            })
-                            .expect("condvar wait failed");
-                        *num_queued_records += num_tx_outs;
-
-                        counters::DB_FETCHER_NUM_QUEUED_RECORDS.set(*num_queued_records as i64);
-                    } else {
-                        log::trace!(
-                            self.logger,
-                            "invocation id {} fetched {} tx outs for block {}",
-                            ingest_invocation_id,
-                            num_tx_outs,
-                            block_index,
-                        );
                     }
+
+                    // Update metrics.
+                    counters::BLOCKS_FETCHED_COUNT.inc();
+                    counters::TXOS_FETCHED_COUNT.inc_by(num_tx_outs as i64);
+
+                    // Block if we have queued up enough records for now.
+                    // (Until the enclave thread drains the queue).
+                    let (lock, condvar) = &*self.num_queued_records_limiter;
+                    let mut num_queued_records = condvar
+                        .wait_while(lock.lock().unwrap(), |num_queued_records| {
+                            *num_queued_records > MAX_QUEUED_RECORDS
+                        })
+                        .expect("condvar wait failed");
+                    *num_queued_records += num_tx_outs;
+
+                    counters::DB_FETCHER_NUM_QUEUED_RECORDS.set(*num_queued_records as i64);
+                }
+                Ok(None) => {
+                    log::trace!(
+                        self.logger,
+                        "ingress_key {:?} block {} query missed, no new data yet",
+                        ingress_key,
+                        block_index
+                    );
                 }
                 Err(err) => {
                     log::warn!(
                         self.logger,
-                        "Failed querying tx outs for {}/{}: {}",
-                        ingest_invocation_id,
+                        "Failed querying tx outs for {:?}/{}: {}",
+                        ingress_key,
                         block_index,
                         err
                     );
@@ -398,64 +339,71 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fog_recovery_db_iface::{IngressPublicKeyStatus, ReportData, ReportDb};
     use fog_sql_recovery_db::test_utils::SqlRecoveryDbTestContext;
     use fog_test_infra::db_tests::random_kex_rng_pubkey;
+    use mc_attest_core::VerificationReport;
     use mc_common::logger::test_with_logger;
-    use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
     use mc_util_from_random::FromRandom;
     use rand::{rngs::StdRng, SeedableRng};
     use std::{thread::sleep, time::Duration};
 
     #[test_with_logger]
-    fn basic_single_range(logger: Logger) {
+    fn basic_single_ingress_key(logger: Logger) {
         let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
         let db_test_context = SqlRecoveryDbTestContext::new(logger.clone());
         let db = db_test_context.get_db_instance();
         let db_fetcher = DbFetcher::new(db.clone(), logger);
 
         // Initially, our database starts empty.
-        assert!(db_fetcher.known_ingestable_ranges().is_empty());
-        assert!(db_fetcher.known_missing_block_ranges().is_empty());
+        let ingress_keys = db_fetcher.get_highest_processed_block_context();
+        assert!(ingress_keys.is_empty());
         assert!(db_fetcher.get_pending_fetched_records().is_empty());
 
-        // Register a new ingest invocation with start block 0.
-        // We should see it in known ingestable ranges.
-        let key1 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
-        db.new_ingress_key(&key1, 0).unwrap();
-        let invoc_id1 = db
-            .new_ingest_invocation(None, &key1, &random_kex_rng_pubkey(&mut rng), 0)
-            .unwrap();
+        // Register a new ingress key with start block 10 and check that wer can see it.
+        let ingress_key = CompressedRistrettoPublic::from_random(&mut rng);
+        db.new_ingress_key(&ingress_key, 10).unwrap();
 
         let mut success = false;
         for _i in 0..500 {
-            let ranges = db_fetcher.known_ingestable_ranges();
-            if ranges.is_empty() {
+            let ingress_keys = db_fetcher.get_highest_processed_block_context();
+
+            if ingress_keys.is_empty() {
                 sleep(Duration::from_millis(10));
                 continue;
             }
 
             assert_eq!(
-                ranges,
-                vec![IngestableRange {
-                    id: invoc_id1,
-                    start_block: 0,
-                    decommissioned: false,
-                    last_ingested_block: None,
+                ingress_keys,
+                vec![IngressPublicKeyRecord {
+                    key: ingress_key.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 10,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
                 }]
             );
+
+            assert!(db_fetcher.get_pending_fetched_records().is_empty());
+
             success = true;
             break;
         }
+
         assert!(success);
 
-        assert!(db_fetcher.known_missing_block_ranges().is_empty());
-        assert!(db_fetcher.get_pending_fetched_records().is_empty());
-
         // Add some blocks, they should get picked up and find their way into pending
-        // fetched records.
+        // fetched records and last_scanned_block.
+        let invoc_id1 = db
+            .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 10)
+            .unwrap();
+
         let mut blocks_and_records = Vec::new();
-        for i in 0..10 {
-            let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
+        for block_index in 10..20 {
+            let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, block_index, 5); // 5 outputs per block
 
             db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
             blocks_and_records.push((block, records));
@@ -474,16 +422,33 @@ mod tests {
         assert_eq!(fetched_records.len(), blocks_and_records.len());
 
         for (i, fetched_record) in fetched_records.iter().enumerate() {
-            assert_eq!(fetched_record.ingest_invocation_id, invoc_id1);
-            assert_eq!(fetched_record.block_index, i as u64);
+            assert_eq!(fetched_record.ingress_key, ingress_key);
+            assert_eq!(fetched_record.block_index, i as u64 + 10); // We started at block index 10
             assert_eq!(blocks_and_records[i].1, fetched_record.records);
         }
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
+
+        sleep(Duration::from_millis(100));
+
+        let ingress_keys = db_fetcher.get_highest_processed_block_context();
+        assert_eq!(
+            ingress_keys,
+            vec![IngressPublicKeyRecord {
+                key: ingress_key.clone(),
+                status: IngressPublicKeyStatus {
+                    start_block: 10,
+                    pubkey_expiry: 0,
+                    retired: false,
+                    lost: false,
+                },
+                last_scanned_block: Some(19),
+            }]
+        );
 
         // Add a few more blocks, they should get picked up.
         let mut blocks_and_records = Vec::new();
-        for i in 10..20 {
+        for i in 20..30 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
 
             db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
@@ -503,16 +468,82 @@ mod tests {
         assert_eq!(fetched_records.len(), blocks_and_records.len());
 
         for (i, fetched_record) in fetched_records.iter().enumerate() {
-            assert_eq!(fetched_record.ingest_invocation_id, invoc_id1);
-            assert_eq!(fetched_record.block_index, i as u64 + 10);
+            assert_eq!(fetched_record.ingress_key, ingress_key);
+            assert_eq!(fetched_record.block_index, i as u64 + 20);
             assert_eq!(blocks_and_records[i].1, fetched_record.records);
         }
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
 
+        sleep(Duration::from_millis(100));
+
+        let ingress_keys = db_fetcher.get_highest_processed_block_context();
+        assert_eq!(
+            ingress_keys,
+            vec![IngressPublicKeyRecord {
+                key: ingress_key.clone(),
+                status: IngressPublicKeyStatus {
+                    start_block: 10,
+                    pubkey_expiry: 0,
+                    retired: false,
+                    lost: false,
+                },
+                last_scanned_block: Some(29),
+            }]
+        );
+
         // Add more blocks but this time leave a hole between the previous blocks and
-        // the new ones. They should not get picked up untill a missed blocks
+        // the new ones. They should not get picked up until a missed blocks
         // range is reported.
+        let mut blocks_and_records_40_50 = Vec::new();
+        for i in 40..50 {
+            let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
+
+            db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
+            blocks_and_records_40_50.push((block, records));
+        }
+
+        sleep(Duration::from_secs(1)); // Supposedly enough time for at least some blocks to get picked up.
+
+        assert!(db_fetcher.get_pending_fetched_records().is_empty());
+
+        sleep(Duration::from_millis(100));
+
+        let ingress_keys = db_fetcher.get_highest_processed_block_context();
+        assert_eq!(
+            ingress_keys,
+            vec![IngressPublicKeyRecord {
+                key: ingress_key.clone(),
+                status: IngressPublicKeyStatus {
+                    start_block: 10,
+                    pubkey_expiry: 0,
+                    retired: false,
+                    lost: false,
+                },
+                last_scanned_block: Some(49), // the last block added was 49 (loop is 40..50)
+            }]
+        );
+
+        sleep(Duration::from_secs(1)); // Supposedly enough time for at least some blocks to get picked up.
+
+        assert!(db_fetcher.shared_state().fetched_records.is_empty());
+
+        // Retire our key at block 45, and provide blocks 30-39 (we previously provided
+        // 40-49)
+        // We should only get block data for blocks 30-44, and not bother loading 45 and
+        // later, since the key expired after that.
+        db.set_report(
+            &ingress_key,
+            "",
+            &ReportData {
+                ingest_invocation_id: None,
+                report: create_report(""),
+                pubkey_expiry: 45,
+            },
+        )
+        .unwrap();
+        db.retire_ingress_key(&ingress_key, true).unwrap();
+
         let mut blocks_and_records = Vec::new();
         for i in 30..40 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
@@ -523,20 +554,10 @@ mod tests {
 
         sleep(Duration::from_secs(1)); // Supposedly enough time for at least some blocks to get picked up.
 
-        assert!(db_fetcher.get_pending_fetched_records().is_empty());
-
-        // Report a missing block range.
-        db.report_missed_block_range(&BlockRange::new(20, 30))
-            .unwrap();
-
-        sleep(Duration::from_secs(1)); // Supposedly enough time for at least some blocks to get picked up.
-
-        assert!(!db_fetcher.shared_state().fetched_records.is_empty());
-
         for _i in 0..500 {
             let num_fetched_records = db_fetcher.shared_state().fetched_records.len();
-            // The missed bloks also result in fetched_records, hence the +10
-            if num_fetched_records >= blocks_and_records.len() + 10 {
+            // We expect 15 blocks (30-44)
+            if num_fetched_records >= blocks_and_records.len() + 15 {
                 break;
             }
 
@@ -544,54 +565,50 @@ mod tests {
         }
 
         let fetched_records = db_fetcher.get_pending_fetched_records();
-        assert_eq!(fetched_records.len(), blocks_and_records.len() + 10);
+        assert_eq!(fetched_records.len(), blocks_and_records.len() + 5);
+
+        blocks_and_records.extend(blocks_and_records_40_50);
 
         for (i, fetched_record) in fetched_records.iter().enumerate() {
-            assert_eq!(fetched_record.ingest_invocation_id, invoc_id1);
-            assert_eq!(fetched_record.block_index, i as u64 + 20);
-            // First 10 blocks are missed
-            if i < 10 {
-                assert_eq!(fetched_record.records, vec![]); // missed blocks
-            } else {
-                assert_eq!(fetched_record.records, blocks_and_records[i - 10].1);
-            }
+            assert_eq!(fetched_record.ingress_key, ingress_key);
+            assert_eq!(fetched_record.block_index, i as u64 + 30);
+            assert_eq!(fetched_record.records, blocks_and_records[i].1);
         }
 
         assert!(db_fetcher.get_pending_fetched_records().is_empty()); // The previous call should have drained this
     }
 
     #[test_with_logger]
-    fn test_overlapping_ranges(logger: Logger) {
+    fn test_overlapping_keys(logger: Logger) {
         let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
         let db_test_context = SqlRecoveryDbTestContext::new(logger.clone());
         let db = db_test_context.get_db_instance();
         let db_fetcher = DbFetcher::new(db.clone(), logger);
 
-        // Register two ingest invocations that have some overlap:
-        // invoc_id1 starts at block 0, invoc_id2 starts at block 5.
-        let key1 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        // Register two ingress keys that have some overlap:
+        // key_id1 starts at block 0, key2 starts at block 5.
+        let key1 = CompressedRistrettoPublic::from_random(&mut rng);
         db.new_ingress_key(&key1, 0).unwrap();
         let invoc_id1 = db
             .new_ingest_invocation(None, &key1, &random_kex_rng_pubkey(&mut rng), 0)
             .unwrap();
 
-        let key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        let key2 = CompressedRistrettoPublic::from_random(&mut rng);
         db.new_ingress_key(&key2, 5).unwrap();
         let invoc_id2 = db
             .new_ingest_invocation(None, &key2, &random_kex_rng_pubkey(&mut rng), 5)
             .unwrap();
 
-        // Add 10 blocks to both invocations and see that we are able to get both.
-
+        // Add 10 blocks to both keys and see that we are able to get both.
         let mut blocks_and_records = Vec::new();
         for i in 0..10 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
             db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
-            blocks_and_records.push((invoc_id1, block, records));
+            blocks_and_records.push((key1, block, records));
 
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i + 5, 5); // start block is 5
             db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
-            blocks_and_records.push((invoc_id2, block, records));
+            blocks_and_records.push((key2, block, records));
         }
 
         for _i in 0..500 {
@@ -607,55 +624,55 @@ mod tests {
         assert_eq!(fetched_records.len(), blocks_and_records.len());
 
         // Sort to make comparing easier
-        fetched_records.sort_by_key(|fr| (fr.ingest_invocation_id, fr.block_index));
+        fetched_records.sort_by_key(|fr| (fr.ingress_key, fr.block_index));
         blocks_and_records
-            .sort_by_key(|(invoc_id, block, _records)| (invoc_id.clone(), block.index));
+            .sort_by_key(|(ingress_key, block, _records)| (ingress_key.clone(), block.index));
 
         for (i, fetched_record) in fetched_records.iter().enumerate() {
-            assert_eq!(fetched_record.ingest_invocation_id, blocks_and_records[i].0);
+            assert_eq!(fetched_record.ingress_key, blocks_and_records[i].0);
             assert_eq!(fetched_record.block_index, blocks_and_records[i].1.index);
             assert_eq!(blocks_and_records[i].2, fetched_record.records);
         }
     }
 
     #[test_with_logger]
-    fn test_non_overlapping_ranges(logger: Logger) {
+    fn test_non_overlapping_keys(logger: Logger) {
         let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
         let db_test_context = SqlRecoveryDbTestContext::new(logger.clone());
         let db = db_test_context.get_db_instance();
         let db_fetcher = DbFetcher::new(db.clone(), logger);
 
-        // Register two ingest invocations that have some overlap:
+        // Register two ingress keys that have some overlap:
         // invoc_id1 starts at block 0, invoc_id2 starts at block 50.
-        let key1 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        let key1 = CompressedRistrettoPublic::from_random(&mut rng);
         db.new_ingress_key(&key1, 0).unwrap();
         let invoc_id1 = db
             .new_ingest_invocation(None, &key1, &random_kex_rng_pubkey(&mut rng), 0)
             .unwrap();
 
-        let key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        let key2 = CompressedRistrettoPublic::from_random(&mut rng);
         db.new_ingress_key(&key2, 50).unwrap();
         let invoc_id2 = db
             .new_ingest_invocation(None, &key2, &random_kex_rng_pubkey(&mut rng), 50)
             .unwrap();
 
-        // Add 10 blocks to both invocations and see that we are able to get both.
+        // Add 10 blocks to both keys and see that we are able to get both.
         let mut blocks_and_records = Vec::new();
         for i in 0..10 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block
             db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
-            blocks_and_records.push((invoc_id1, block, records));
+            blocks_and_records.push((key1, block, records));
 
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i + 50, 5); // start block is 50
             db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
-            blocks_and_records.push((invoc_id2, block, records));
+            blocks_and_records.push((key2, block, records));
         }
 
         // Add a few more blocks to invoc_id2
         for i in 10..20 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i + 50, 5); // start block is 50
             db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
-            blocks_and_records.push((invoc_id2, block, records));
+            blocks_and_records.push((key2, block, records));
         }
 
         for _i in 0..500 {
@@ -671,14 +688,27 @@ mod tests {
         assert_eq!(fetched_records.len(), blocks_and_records.len());
 
         // Sort to make comparing easier
-        fetched_records.sort_by_key(|fr| (fr.ingest_invocation_id, fr.block_index));
+        fetched_records.sort_by_key(|fr| (fr.ingress_key, fr.block_index));
         blocks_and_records
-            .sort_by_key(|(invoc_id, block, _records)| (invoc_id.clone(), block.index));
+            .sort_by_key(|(ingress_key, block, _records)| (ingress_key.clone(), block.index));
 
         for (i, fetched_record) in fetched_records.iter().enumerate() {
-            assert_eq!(fetched_record.ingest_invocation_id, blocks_and_records[i].0);
+            assert_eq!(fetched_record.ingress_key, blocks_and_records[i].0);
             assert_eq!(fetched_record.block_index, blocks_and_records[i].1.index);
             assert_eq!(blocks_and_records[i].2, fetched_record.records);
+        }
+    }
+
+    fn create_report(name: &str) -> VerificationReport {
+        let chain = pem::parse_many(mc_crypto_x509_test_vectors::ok_rsa_chain_25519_leaf().0)
+            .into_iter()
+            .map(|p| p.contents)
+            .collect();
+
+        VerificationReport {
+            sig: format!("{} sig", name).into_bytes().into(),
+            chain,
+            http_body: format!("{} body", name),
         }
     }
 }

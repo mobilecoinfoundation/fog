@@ -54,7 +54,7 @@ impl<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> FogViewService<E, DB> {
 
     /// Unwrap and forward to enclave
     pub fn query_impl(&mut self, request: attest::Message) -> Result<attest::Message, RpcStatus> {
-        log::debug!(self.logger, "Getting encrypted request");
+        log::trace!(self.logger, "Getting encrypted request");
 
         // Attempt and deserialize the untrusted portion of this request.
         let query_request_aad: QueryRequestAAD = mc_util_serial::decode(request.get_aad())

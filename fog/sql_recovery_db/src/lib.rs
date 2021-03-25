@@ -16,7 +16,7 @@ mod proto_types;
 mod schema;
 mod sql_types;
 
-use crate::sql_types::UserEventType;
+use crate::sql_types::{SqlCompressedRistrettoPublic, UserEventType};
 use diesel::{
     pg::PgConnection,
     prelude::*,
@@ -24,8 +24,8 @@ use diesel::{
 };
 use fog_kex_rng::KexRngPubkey;
 use fog_recovery_db_iface::{
-    AddBlockDataStatus, FogUserEvent, IngestInvocationId, IngressPublicKeyStatus, RecoveryDb,
-    ReportData, ReportDb,
+    AddBlockDataStatus, FogUserEvent, IngestInvocationId, IngressPublicKeyRecord,
+    IngressPublicKeyStatus, RecoveryDb, ReportData, ReportDb,
 };
 use fog_types::{
     common::BlockRange,
@@ -168,6 +168,7 @@ impl SqlRecoveryDb {
                 start_block: key_records[0].start_block as u64,
                 pubkey_expiry: key_records[0].pubkey_expiry as u64,
                 retired: key_records[0].retired,
+                lost: key_records[0].lost,
             }))
         } else {
             Err(Error::IngressKeysSchemaViolation(format!(
@@ -201,6 +202,7 @@ impl RecoveryDb for SqlRecoveryDb {
             start_block: start_block as i64,
             pubkey_expiry: 0,
             retired: false,
+            lost: false,
         };
 
         let inserted_row_count = diesel::insert_into(schema::ingress_keys::table)
@@ -241,6 +243,64 @@ impl RecoveryDb for SqlRecoveryDb {
             .first(&conn)?;
 
         Ok(maybe_index.map(|val| val as u64))
+    }
+
+    fn get_ingress_key_records(
+        &self,
+        start_block_at_least: u64,
+    ) -> Result<Vec<IngressPublicKeyRecord>, Error> {
+        let conn = self.pool.get()?;
+
+        use schema::ingress_keys::dsl;
+        let query = dsl::ingress_keys
+            .select((
+                dsl::ingress_public_key,
+                dsl::start_block,
+                dsl::pubkey_expiry,
+                dsl::retired,
+                dsl::lost,
+                diesel::dsl::sql::<diesel::sql_types::BigInt>(
+                    "(SELECT MAX(block_number) FROM ingested_blocks WHERE ingress_keys.ingress_public_key = ingested_blocks.ingress_public_key)"
+                ).nullable(),
+
+            ))
+            .filter(dsl::start_block.ge(start_block_at_least as i64));
+
+        // The list of fields here must match the .select() clause above.
+        Ok(query
+            .load::<(
+                SqlCompressedRistrettoPublic,
+                i64,
+                i64,
+                bool,
+                bool,
+                Option<i64>,
+            )>(&conn)?
+            .into_iter()
+            .map(
+                |(
+                    ingress_public_key,
+                    start_block,
+                    pubkey_expiry,
+                    retired,
+                    lost,
+                    last_scanned_block,
+                )| {
+                    let status = IngressPublicKeyStatus {
+                        start_block: start_block as u64,
+                        pubkey_expiry: pubkey_expiry as u64,
+                        retired,
+                        lost,
+                    };
+
+                    IngressPublicKeyRecord {
+                        key: *ingress_public_key,
+                        status,
+                        last_scanned_block: last_scanned_block.map(|v| v as u64),
+                    }
+                },
+            )
+            .collect())
     }
 
     fn new_ingest_invocation(
@@ -414,27 +474,69 @@ impl RecoveryDb for SqlRecoveryDb {
         }
     }
 
-    fn report_missed_block_range(&self, block_range: &BlockRange) -> Result<(), Self::Error> {
-        if !block_range.is_valid() {
-            return Err(Error::InvalidMissedBlocksRange(block_range.clone()));
-        }
-
+    fn report_lost_ingress_key(
+        &self,
+        lost_ingress_key: CompressedRistrettoPublic,
+    ) -> Result<(), Self::Error> {
         let conn = self.pool.get()?;
 
         conn.build_transaction().read_write().run(|| {
-            // Check that there is no overlap with current ranges.
-            let missing_ranges = self.get_missed_block_ranges_impl(&conn)?;
-            for range in missing_ranges {
-                if range.overlaps(block_range) {
-                    return Err(Error::OverlappingMissedBlocksRange(
-                        block_range.clone(),
-                        range,
-                    ));
+            // Find the ingress key and update it to be marked lost
+            let key_bytes: &[u8] = lost_ingress_key.as_ref();
+            use schema::ingress_keys::dsl;
+            let key_records: Vec<models::IngressKey> =
+                diesel::update(dsl::ingress_keys.filter(dsl::ingress_public_key.eq(key_bytes)))
+                    .set(dsl::lost.eq(true))
+                    .get_results(&conn)?;
+
+            // Compute a missed block range based on looking at the key status,
+            // which is correct if no blocks have actually been scanned using the key.
+            let mut missed_block_range = if key_records.is_empty() {
+                return Err(Error::MissingIngressKey(lost_ingress_key));
+            } else if key_records.len() == 1 {
+                BlockRange {
+                    start_block: key_records[0].start_block as u64,
+                    end_block: key_records[0].pubkey_expiry as u64,
+                }
+            } else {
+                return Err(Error::IngressKeysSchemaViolation(format!(
+                    "Found multiple entries for key: {:?}",
+                    lost_ingress_key
+                )));
+            };
+
+            // Find the last scanned block index (if any block has been scanned with this
+            // key)
+            let maybe_block_index: Option<i64> = {
+                use schema::ingested_blocks::dsl;
+                dsl::ingested_blocks
+                    .filter(dsl::ingress_public_key.eq(key_bytes))
+                    .select(diesel::dsl::max(dsl::block_number))
+                    .first(&conn)?
+            };
+
+            if let Some(block_index) = maybe_block_index {
+                let block_index = block_index as u64;
+                if block_index + 1 >= missed_block_range.end_block {
+                    // There aren't actually any blocks that need to be scanned, so we are done
+                    // without creating a user event.
+                    return Ok(());
+                }
+                // If we did actually scan some blocks, then report a smaller range
+                if block_index + 1 > missed_block_range.start_block {
+                    missed_block_range.start_block = block_index + 1;
                 }
             }
 
+            // If the missed block range is invalid (empty), we don't have to add it.
+            // This can happen if the ingress key was never actually published to the report
+            // server, and then pubkey_expiry is zero.
+            if !missed_block_range.is_valid() {
+                return Ok(());
+            }
+
             // Add new range.
-            let new_event = models::NewUserEvent::missing_blocks(block_range);
+            let new_event = models::NewUserEvent::missing_blocks(&missed_block_range);
 
             diesel::insert_into(schema::user_events::table)
                 .values(&new_event)
@@ -671,34 +773,69 @@ impl RecoveryDb for SqlRecoveryDb {
         self.update_last_active_at_impl(&conn, ingest_invocation_id)
     }
 
-    /// Get any ETxOutRecords produced by a given IngestInvocationId for a given
+    /// Get any ETxOutRecords produced by a given ingress key for a given
     /// block index.
     ///
     /// Arguments:
-    /// * ingest_invocation_id: The ingest invocation we need ETxOutRecords from
+    /// * ingress_key: The ingress key we need ETxOutRecords from
     /// * block_index: The block we need ETxOutRecords from
     ///
     /// Returns:
-    /// * The ETxOutRecord's from when this block was added, or, an error
-    fn get_tx_outs_by_block(
+    /// * The ETxOutRecord's from when this block was added, or None if the
+    ///   block doesn't exist yet or, an error
+    fn get_tx_outs_by_block_and_key(
         &self,
-        ingest_invocation_id: &IngestInvocationId,
+        ingress_key: CompressedRistrettoPublic,
         block_index: u64,
-    ) -> Result<Vec<ETxOutRecord>, Self::Error> {
+    ) -> Result<Option<Vec<ETxOutRecord>>, Self::Error> {
         let conn = self.pool.get()?;
 
+        let key_bytes: &[u8] = ingress_key.as_ref();
         let query = schema::ingested_blocks::dsl::ingested_blocks
-            .filter(schema::ingested_blocks::dsl::ingest_invocation_id.eq(**ingest_invocation_id))
+            .filter(schema::ingested_blocks::dsl::ingress_public_key.eq(key_bytes))
             .filter(schema::ingested_blocks::dsl::block_number.eq(block_index as i64))
             .select(schema::ingested_blocks::dsl::proto_ingested_block_data);
 
-        // The list of fields here must match the .select() clause above.
-        let mut result = Vec::default();
-        for proto_bytes in query.load::<Vec<u8>>(&conn)? {
-            let mut proto = ProtoIngestedBlockData::decode(&*proto_bytes)?;
-            result.append(&mut proto.e_tx_out_records);
+        // The result of load should be 0 or 1, since there is a database constraint
+        // around ingress keys and block indices
+        let protos: Vec<Vec<u8>> = query.load::<Vec<u8>>(&conn)?;
+
+        if protos.is_empty() {
+            Ok(None)
+        } else if protos.len() == 1 {
+            let proto = ProtoIngestedBlockData::decode(&*protos[0])?;
+            Ok(Some(proto.e_tx_out_records))
+        } else {
+            Err(Error::IngestedBlockSchemaViolation(format!("Found {} different entries for ingress_key {:?} and block_index {}, which goes against the constraint", protos.len(), ingress_key, block_index)))
         }
-        Ok(result)
+    }
+
+    /// Get iid that produced data for given ingress key and a given block
+    /// index.
+    fn get_invocation_id_by_block_and_key(
+        &self,
+        ingress_key: CompressedRistrettoPublic,
+        block_index: u64,
+    ) -> Result<Option<IngestInvocationId>, Self::Error> {
+        let conn = self.pool.get()?;
+
+        let key_bytes: &[u8] = ingress_key.as_ref();
+        let query = schema::ingested_blocks::dsl::ingested_blocks
+            .filter(schema::ingested_blocks::dsl::ingress_public_key.eq(key_bytes))
+            .filter(schema::ingested_blocks::dsl::block_number.eq(block_index as i64))
+            .select(schema::ingested_blocks::dsl::ingest_invocation_id);
+
+        // The result of load should be 0 or 1, since there is a database constraint
+        // around ingress keys and block indices
+        let iids: Vec<i64> = query.load::<i64>(&conn)?;
+
+        if iids.is_empty() {
+            Ok(None)
+        } else if iids.len() == 1 {
+            Ok(Some(iids[0].into()))
+        } else {
+            Err(Error::IngestedBlockSchemaViolation(format!("Found {} different entries for ingress_key {:?} and block_index {}, which goes against the constraint", iids.len(), ingress_key, block_index)))
+        }
     }
 
     /// Get the cumulative txo count for a given block number.
@@ -850,6 +987,7 @@ impl ReportDb for SqlRecoveryDb {
                             start_block: key_records[0].start_block as u64,
                             pubkey_expiry: key_records[0].pubkey_expiry as u64,
                             retired: key_records[0].retired,
+                            lost: key_records[0].lost,
                         }
                     }
                 };
@@ -905,6 +1043,7 @@ mod tests {
     use mc_crypto_keys::RistrettoPublic;
     use mc_util_from_random::FromRandom;
     use rand::{rngs::StdRng, SeedableRng};
+    use std::{collections::HashSet, iter::FromIterator};
 
     #[test_with_logger]
     fn test_new_ingest_invocation(logger: Logger) {
@@ -1259,7 +1398,10 @@ mod tests {
             block1.cumulative_txo_count
         );
 
-        let e_tx_out_records = db.get_tx_outs_by_block(&invoc_id1, block1.index).unwrap();
+        let e_tx_out_records = db
+            .get_tx_outs_by_block_and_key(ingress_key, block1.index)
+            .unwrap()
+            .unwrap();
         assert_eq!(e_tx_out_records.len(), 10);
         assert_eq!(e_tx_out_records.len(), records1.len());
         for (expected_record, written_record) in records1.iter().zip(e_tx_out_records.iter()) {
@@ -1344,8 +1486,14 @@ mod tests {
             block2.cumulative_txo_count
         );
 
-        let mut e_tx_out_records = db.get_tx_outs_by_block(&invoc_id1, block1.index).unwrap();
-        let mut e_tx_out_records_b1 = db.get_tx_outs_by_block(&invoc_id2, block2.index).unwrap();
+        let mut e_tx_out_records = db
+            .get_tx_outs_by_block_and_key(ingress_key, block1.index)
+            .unwrap()
+            .unwrap();
+        let mut e_tx_out_records_b1 = db
+            .get_tx_outs_by_block_and_key(ingress_key, block2.index)
+            .unwrap()
+            .unwrap();
         e_tx_out_records.append(&mut e_tx_out_records_b1);
         assert_eq!(e_tx_out_records.len(), 25);
         assert_eq!(e_tx_out_records.len(), records1.len() + records2.len());
@@ -1359,49 +1507,6 @@ mod tests {
                 .unwrap();
         assert_eq!(invocs_last_active_at[0], invoc1_orig_last_active_at);
         assert!(invocs_last_active_at[1] > invoc2_orig_last_active_at);
-    }
-
-    #[test_with_logger]
-    fn test_report_missed_block_range(logger: Logger) {
-        let db_test_context = test_utils::SqlRecoveryDbTestContext::new(logger);
-        let db = db_test_context.get_db_instance();
-
-        // Reporting an invalid range should error.
-        assert!(db
-            .report_missed_block_range(&BlockRange::new(10, 10))
-            .is_err());
-        assert!(db
-            .report_missed_block_range(&BlockRange::new(11, 10))
-            .is_err());
-
-        // Reporting a valid range should succeed and generate the appropriate user
-        // events.
-        db.report_missed_block_range(&BlockRange::new(10, 20))
-            .unwrap();
-
-        let missed_ranges = db.get_missed_block_ranges().unwrap();
-        assert_eq!(missed_ranges.len(), 1);
-        assert_eq!(missed_ranges[0], BlockRange::new(10, 20));
-
-        // Attempting to add overlapping ranges should fail.
-        assert!(db
-            .report_missed_block_range(&BlockRange::new(5, 11))
-            .is_err());
-        assert!(db
-            .report_missed_block_range(&BlockRange::new(19, 30))
-            .is_err());
-        assert!(db
-            .report_missed_block_range(&BlockRange::new(1, 100))
-            .is_err());
-
-        // Adding a non-overlapping range should succeed.
-        db.report_missed_block_range(&BlockRange::new(0, 10))
-            .unwrap();
-
-        let missed_ranges = db.get_missed_block_ranges().unwrap();
-        assert_eq!(missed_ranges.len(), 2);
-        assert_eq!(missed_ranges[0], BlockRange::new(10, 20));
-        assert_eq!(missed_ranges[1], BlockRange::new(0, 10));
     }
 
     #[test_with_logger]
@@ -1429,10 +1534,33 @@ mod tests {
         db.decommission_ingest_invocation(&invoc_ids[1]).unwrap();
 
         // Add two missing block records.
-        db.report_missed_block_range(&BlockRange::new(10, 20))
-            .unwrap();
-        db.report_missed_block_range(&BlockRange::new(30, 40))
-            .unwrap();
+        let ingress_key1 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        db.new_ingress_key(&ingress_key1, 10).unwrap();
+        db.set_report(
+            &ingress_key1,
+            "",
+            &ReportData {
+                pubkey_expiry: 20,
+                ingest_invocation_id: None,
+                report: Default::default(),
+            },
+        )
+        .unwrap();
+        db.report_lost_ingress_key(ingress_key1).unwrap();
+
+        let ingress_key2 = CompressedRistrettoPublic::from(RistrettoPublic::from_random(&mut rng));
+        db.new_ingress_key(&ingress_key2, 30).unwrap();
+        db.set_report(
+            &ingress_key2,
+            "",
+            &ReportData {
+                pubkey_expiry: 40,
+                ingest_invocation_id: None,
+                report: Default::default(),
+            },
+        )
+        .unwrap();
+        db.report_lost_ingress_key(ingress_key2).unwrap();
 
         // Search for events and verify the results.
         let (events, _) = db.search_user_events(0).unwrap();
@@ -1679,7 +1807,7 @@ mod tests {
     }
 
     #[test_with_logger]
-    fn test_get_tx_outs_by_block(logger: Logger) {
+    fn test_get_tx_outs_by_block_and_key(logger: Logger) {
         let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
         let db_test_context = test_utils::SqlRecoveryDbTestContext::new(logger);
         let db = db_test_context.get_db_instance();
@@ -1703,22 +1831,28 @@ mod tests {
         db.add_block_data(&invoc_id2, &block2, 0, &records2)
             .unwrap();
 
-        // Get tx outs for an invocation id we're not aware of or a block id we're not
-        // aware of should return an empty array.
-        let tx_outs = db.get_tx_outs_by_block(&invoc_id1, 124).unwrap();
-        assert_eq!(tx_outs, vec![]);
+        // Get tx outs for a key we're not aware of or a block id we're not aware of
+        // should return None
+        let tx_outs = db.get_tx_outs_by_block_and_key(ingress_key, 124).unwrap();
+        assert_eq!(tx_outs, None);
 
         let tx_outs = db
-            .get_tx_outs_by_block(&IngestInvocationId::from(666), 123)
+            .get_tx_outs_by_block_and_key(CompressedRistrettoPublic::from_random(&mut rng), 123)
             .unwrap();
-        assert_eq!(tx_outs, vec![]);
+        assert_eq!(tx_outs, None);
 
-        // Getting tx outs for invocation id and block number that were previously
-        // written should work as expected.
-        let tx_outs = db.get_tx_outs_by_block(&invoc_id1, block1.index).unwrap();
+        // Getting tx outs for ingress key and block number that were previously written
+        // should work as expected.
+        let tx_outs = db
+            .get_tx_outs_by_block_and_key(ingress_key, block1.index)
+            .unwrap()
+            .unwrap();
         assert_eq!(tx_outs, records1);
 
-        let tx_outs = db.get_tx_outs_by_block(&invoc_id2, block2.index).unwrap();
+        let tx_outs = db
+            .get_tx_outs_by_block_and_key(ingress_key, block2.index)
+            .unwrap()
+            .unwrap();
         assert_eq!(tx_outs, records2);
     }
 
@@ -1884,6 +2018,259 @@ mod tests {
         assert_eq!(
             key_status.pubkey_expiry, 10203060,
             "pubkey expiry should have increased again after unretiring the key"
+        );
+    }
+
+    #[test_with_logger]
+    fn test_get_ingress_key_records(logger: Logger) {
+        let mut rng: StdRng = SeedableRng::from_seed([123u8; 32]);
+        let db_test_context = test_utils::SqlRecoveryDbTestContext::new(logger);
+        let db = db_test_context.get_db_instance();
+
+        // At first, there are no records.
+        assert_eq!(db.get_ingress_key_records(0).unwrap(), vec![],);
+
+        // Add an ingress key and see that we can retreive it.
+        let ingress_key1 = CompressedRistrettoPublic::from_random(&mut rng);
+        db.new_ingress_key(&ingress_key1, 123).unwrap();
+
+        assert_eq!(
+            db.get_ingress_key_records(0).unwrap(),
+            vec![IngressPublicKeyRecord {
+                key: ingress_key1.clone(),
+                status: IngressPublicKeyStatus {
+                    start_block: 123,
+                    pubkey_expiry: 0,
+                    retired: false,
+                    lost: false,
+                },
+                last_scanned_block: None,
+            }],
+        );
+
+        // Add another ingress key and check that we can find it as well.
+        let ingress_key2 = CompressedRistrettoPublic::from_random(&mut rng);
+        db.new_ingress_key(&ingress_key2, 456).unwrap();
+
+        assert_eq!(
+            HashSet::<IngressPublicKeyRecord>::from_iter(db.get_ingress_key_records(0).unwrap()),
+            HashSet::from_iter(vec![
+                IngressPublicKeyRecord {
+                    key: ingress_key1.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 123,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
+                },
+                IngressPublicKeyRecord {
+                    key: ingress_key2.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 456,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
+                }
+            ])
+        );
+
+        // Publish a few blocks and check that last_scanned_block gets updated as
+        // expected.
+        let invoc_id1 = db
+            .new_ingest_invocation(None, &ingress_key1, &random_kex_rng_pubkey(&mut rng), 123)
+            .unwrap();
+
+        for block_id in 123..=130 {
+            let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, block_id, 10);
+            db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
+
+            assert_eq!(
+                HashSet::<IngressPublicKeyRecord>::from_iter(
+                    db.get_ingress_key_records(0).unwrap()
+                ),
+                HashSet::from_iter(vec![
+                    IngressPublicKeyRecord {
+                        key: ingress_key1.clone(),
+                        status: IngressPublicKeyStatus {
+                            start_block: 123,
+                            pubkey_expiry: 0,
+                            retired: false,
+                            lost: false,
+                        },
+                        last_scanned_block: Some(block_id),
+                    },
+                    IngressPublicKeyRecord {
+                        key: ingress_key2.clone(),
+                        status: IngressPublicKeyStatus {
+                            start_block: 456,
+                            pubkey_expiry: 0,
+                            retired: false,
+                            lost: false,
+                        },
+                        last_scanned_block: None,
+                    }
+                ])
+            );
+        }
+
+        // Publishing an old block should not afftect last_scanned_block.
+        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 50, 10);
+        db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
+
+        assert_eq!(
+            HashSet::<IngressPublicKeyRecord>::from_iter(db.get_ingress_key_records(0).unwrap()),
+            HashSet::from_iter(vec![
+                IngressPublicKeyRecord {
+                    key: ingress_key1.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 123,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: Some(130),
+                },
+                IngressPublicKeyRecord {
+                    key: ingress_key2.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 456,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
+                }
+            ])
+        );
+
+        // Check that retiring behaves as expected.
+        db.retire_ingress_key(&ingress_key1, true).unwrap();
+
+        assert_eq!(
+            HashSet::<IngressPublicKeyRecord>::from_iter(db.get_ingress_key_records(0).unwrap()),
+            HashSet::from_iter(vec![
+                IngressPublicKeyRecord {
+                    key: ingress_key1.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 123,
+                        pubkey_expiry: 0,
+                        retired: true,
+                        lost: false,
+                    },
+                    last_scanned_block: Some(130),
+                },
+                IngressPublicKeyRecord {
+                    key: ingress_key2.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 456,
+                        pubkey_expiry: 0,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
+                }
+            ])
+        );
+
+        // Check that pubkey expiry behaves as expected
+        db.set_report(
+            &ingress_key2,
+            "",
+            &ReportData {
+                ingest_invocation_id: None,
+                report: create_report(""),
+                pubkey_expiry: 888,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            HashSet::<IngressPublicKeyRecord>::from_iter(db.get_ingress_key_records(0).unwrap()),
+            HashSet::from_iter(vec![
+                IngressPublicKeyRecord {
+                    key: ingress_key1.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 123,
+                        pubkey_expiry: 0,
+                        retired: true,
+                        lost: false,
+                    },
+                    last_scanned_block: Some(130),
+                },
+                IngressPublicKeyRecord {
+                    key: ingress_key2.clone(),
+                    status: IngressPublicKeyStatus {
+                        start_block: 456,
+                        pubkey_expiry: 888,
+                        retired: false,
+                        lost: false,
+                    },
+                    last_scanned_block: None,
+                }
+            ])
+        );
+
+        // Which invocation id published the block shouldn't matter, last_scanned_block
+        // should continue to move forward.
+        for block_id in 456..=460 {
+            let invoc_id = db
+                .new_ingest_invocation(
+                    None,
+                    &ingress_key2,
+                    &random_kex_rng_pubkey(&mut rng),
+                    block_id,
+                )
+                .unwrap();
+
+            let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, block_id, 10);
+            db.add_block_data(&invoc_id, &block, 0, &records).unwrap();
+
+            assert_eq!(
+                HashSet::<IngressPublicKeyRecord>::from_iter(
+                    db.get_ingress_key_records(0).unwrap()
+                ),
+                HashSet::from_iter(vec![
+                    IngressPublicKeyRecord {
+                        key: ingress_key1.clone(),
+                        status: IngressPublicKeyStatus {
+                            start_block: 123,
+                            pubkey_expiry: 0,
+                            retired: true,
+                            lost: false,
+                        },
+                        last_scanned_block: Some(130),
+                    },
+                    IngressPublicKeyRecord {
+                        key: ingress_key2.clone(),
+                        status: IngressPublicKeyStatus {
+                            start_block: 456,
+                            pubkey_expiry: 888,
+                            retired: false,
+                            lost: false,
+                        },
+                        last_scanned_block: Some(block_id),
+                    }
+                ])
+            );
+        }
+
+        // start_block_at_least filtering works as expected.
+        assert_eq!(
+            db.get_ingress_key_records(400).unwrap(),
+            vec![IngressPublicKeyRecord {
+                key: ingress_key2.clone(),
+                status: IngressPublicKeyStatus {
+                    start_block: 456,
+                    pubkey_expiry: 888,
+                    retired: false,
+                    lost: false,
+                },
+                last_scanned_block: Some(460),
+            }]
         );
     }
 }

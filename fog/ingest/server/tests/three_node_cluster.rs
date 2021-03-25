@@ -7,7 +7,7 @@ use fog_ingest_server::{
     server::{IngestServer, IngestServerConfig},
     state_file::StateFile,
 };
-use fog_recovery_db_iface::{BlockRange, IngestInvocationId, RecoveryDb};
+use fog_recovery_db_iface::{IngestInvocationId, RecoveryDb};
 use fog_sql_recovery_db::{test_utils::SqlRecoveryDbTestContext, SqlRecoveryDb};
 use fog_test_infra::get_enclave_path;
 use fog_uri::{FogIngestUri, IngestPeerUri};
@@ -233,14 +233,6 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
         .append_block(&origin_block, &origin_contents, None)
         .expect("failed writing initial transactions");
 
-    // report a missed block corresponding to origin block, until fog-393
-    recovery_db
-        .report_missed_block_range(&BlockRange {
-            start_block: 0,
-            end_block: 1,
-        })
-        .unwrap();
-
     // there will be 3 peers in the cluster
     let peer_indices = vec![0u16, 1u16, 2u16];
 
@@ -456,14 +448,6 @@ fn three_node_cluster_fencing(logger: Logger) {
         .append_block(&origin_block, &origin_contents, None)
         .expect("failed writing initial transactions");
 
-    // report a missed block, until fog-393
-    recovery_db
-        .report_missed_block_range(&BlockRange {
-            start_block: 0,
-            end_block: 1,
-        })
-        .unwrap();
-
     // Do three repetitions of the whole thing
     for _ in 0..3 {
         // Note: These nodes are not peers, and so do not check eachother when
@@ -517,6 +501,8 @@ fn three_node_cluster_fencing(logger: Logger) {
 
         assert_eq!(node7_key, node8_key);
         assert_eq!(node7_key, node9_key);
+
+        let ingress_key = CompressedRistrettoPublic::try_from(&node7_key).unwrap();
 
         for _reps in 0..2 {
             // Now activate them all, which should work (without raciness) since they can't
@@ -575,22 +561,12 @@ fn three_node_cluster_fencing(logger: Logger) {
 
             let num_blocks = ledger.num_blocks().unwrap();
 
-            for node in &[&node7, &node8, &node9] {
-                let node_summary = node.get_ingest_summary();
+            let invocation_id = recovery_db
+                .get_invocation_id_by_block_and_key(ingress_key, num_blocks - 1)
+                .unwrap()
+                .unwrap();
 
-                let node_iid = IngestInvocationId::from(node_summary.get_ingest_invocation_id());
-
-                if node_iid == active_iid {
-                    assert_eq!(node_summary.get_next_block_index(), num_blocks);
-                } else {
-                    assert_ne!(node_summary.get_next_block_index(), num_blocks);
-                }
-
-                let tx_outs = recovery_db
-                    .get_tx_outs_by_block(&node_iid, num_blocks - 1)
-                    .unwrap();
-                assert_eq!(tx_outs.is_empty(), node_iid != active_iid);
-            }
+            assert_eq!(active_iid, invocation_id);
         }
 
         // At this point we will have one active node and two inactive ones. The active
@@ -666,10 +642,10 @@ fn three_node_cluster_fencing(logger: Logger) {
             IngestInvocationId::from(node_summary.get_ingest_invocation_id())
         };
 
-        let tx_outs = recovery_db
-            .get_tx_outs_by_block(&node_iid, num_blocks - 1)
+        let invocation_id = recovery_db
+            .get_invocation_id_by_block_and_key(ingress_key, num_blocks - 1)
             .unwrap();
-        assert!(!tx_outs.is_empty());
+        assert_eq!(invocation_id, Some(node_iid));
 
         // Stop all nodes.
         drop(node7);

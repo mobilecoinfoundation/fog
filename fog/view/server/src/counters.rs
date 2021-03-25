@@ -26,8 +26,8 @@ lazy_static::lazy_static! {
     // Time it takes to perform the db get_tx_outs_by_block call.
     pub static ref GET_TX_OUTS_BY_BLOCK_TIME: Histogram = OP_COUNTERS.histogram("get_tx_outs_by_block_time");
 
-    // Time it takes to perform the load_ingestable_ranges call.
-    pub static ref LOAD_INGESTABLE_RANGES_TIME: Histogram = OP_COUNTERS.histogram("load_ingestable_ranges_time");
+    // Time it takes to perform the load_ingress_keys call.
+    pub static ref LOAD_INGRESS_KEYS_TIME: Histogram = OP_COUNTERS.histogram("load_ingress_keys_time");
 
     // Time it takes to perform the load_missing_block_ranges call.
     pub static ref LOAD_MISSING_BLOCK_RANGES_TIME: Histogram = OP_COUNTERS.histogram("load_missing_block_ranges_time");

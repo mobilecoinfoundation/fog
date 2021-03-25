@@ -15,10 +15,15 @@ CREATE TABLE ingress_keys (
     -- then enter the idle state.
     --
     -- Keys are marked retired when the operator decides to shut down a cluster.
-    retired BOOLEAN NOT NULL DEFAULT false
-    -- TODO: Add a field for "lost", and make this the mechanism for reporting missed blocks.
-    -- The missed block range is then implicitly, from the last block scanned with this key,
-    -- up to the keys pubkey expiry value.
+    retired BOOLEAN NOT NULL DEFAULT false,
+    -- Whether this key is lost.
+    -- When it is lost, all servers that had the private key are gone and we can never scan
+    -- any new blocks with it.
+    -- This means that the range from last-scanned-block-index to pubkey-expiry is a "missed block range",
+    -- if there are any blocks like that.
+    -- This is the only way that missed block ranges can occur.
+    -- Note: If everything is scanned up to pubkey-expiry then there are no missed blocks, even if lost is true.
+    lost BOOLEAN NOT NULL DEFAULT false
 );
 
 -- Ingest invocations

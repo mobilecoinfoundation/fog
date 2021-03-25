@@ -41,6 +41,7 @@ table! {
         start_block -> Int8,
         pubkey_expiry -> Int8,
         retired -> Bool,
+        lost -> Bool,
     }
 }
 

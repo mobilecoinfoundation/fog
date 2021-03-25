@@ -44,7 +44,7 @@ impl FogViewConnection for FogViewGrpcClient {
     ) -> Result<fog_types::view::QueryResponse, Self::Error> {
         trace_time!(self.logger, "FogViewGrpcClient::request");
 
-        log::debug!(
+        log::trace!(
             self.logger,
             "request: start_from_user_event_id={} start_from_block_index={} num_search_keys={}",
             start_from_user_event_id,

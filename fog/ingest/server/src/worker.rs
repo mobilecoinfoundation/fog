@@ -88,11 +88,14 @@ impl IngestWorker {
                         Err(LedgerError::NotFound) => {
                             if let Some(rec) = &mut last_not_found_log {
                                 if rec.block_index == next_block_index {
-                                    // Log at debug level every 5 min
-                                    if rec.time.elapsed() > Duration::from_secs(300) {
+                                    // Log at debug level every 1 min
+                                    // This is mainly useful for debugging conformance tests, not
+                                    // prod, which uses
+                                    // prometheus metrics
+                                    if rec.time.elapsed() > Duration::from_secs(60) {
                                         log::debug!(
                                             logger,
-                                            "Waited 5 min for block {}",
+                                            "Waited 1 min for block {}",
                                             next_block_index
                                         );
                                         rec.time = Instant::now();

@@ -9,7 +9,7 @@ use crate::{
     fog_view_service::FogViewService,
 };
 use fog_api::view_grpc;
-use fog_recovery_db_iface::{IngestInvocationId, RecoveryDb};
+use fog_recovery_db_iface::RecoveryDb;
 use fog_types::ETxOutRecord;
 use fog_uri::ConnectionUri;
 use fog_view_enclave::ViewEnclaveProxy;
@@ -20,6 +20,7 @@ use mc_common::{
     time::TimeProvider,
     trace_time,
 };
+use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_sgx_report_cache_untrusted::ReportCacheThread;
 use mc_util_grpc::{
     AnonymousAuthenticator, Authenticator, ConnectionUriGrpcioServer, TokenAuthenticator,
@@ -30,7 +31,7 @@ use std::{
         Arc, Mutex,
     },
     thread::{sleep, Builder as ThreadBuilder, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub struct ViewServer<E, RC, DB>
@@ -346,6 +347,11 @@ where
     /// Keeps track of which blocks we have fed into the enclave.
     enclave_block_tracker: BlockTracker,
 
+    /// Keeps track how long ago it since we made progress, (or complained about
+    /// not making progress) When this gets too distant in the past, we log
+    /// a warning
+    last_unblocked_at: Instant,
+
     /// Logger
     logger: Logger,
 }
@@ -375,6 +381,7 @@ where
             shared_state,
             db_fetcher: DbFetcher::new(db, logger.clone()),
             enclave_block_tracker: BlockTracker::new(logger.clone()),
+            last_unblocked_at: Instant::now(),
             logger,
         }
     }
@@ -400,22 +407,32 @@ where
 
             // Insert the records into the enclave.
             self.add_records_to_enclave(
-                fetched_records.ingest_invocation_id,
+                fetched_records.ingress_key,
                 fetched_records.block_index,
                 fetched_records.records,
             );
         }
 
-        // Figure out the higehst fully processed block count and put that in the shared
+        // Figure out the highest fully processed block count and put that in the shared
         // state.
-        let ingestable_ranges = self.db_fetcher.known_ingestable_ranges();
-        let missing_block_ranges = self.db_fetcher.known_missing_block_ranges();
+        let ingress_keys = self.db_fetcher.get_highest_processed_block_context();
+        let (highest_processed_block_count, reason_we_stopped) = self
+            .enclave_block_tracker
+            .highest_fully_processed_block_count(&ingress_keys);
 
         let mut shared_state = self.shared_state.lock().expect("mutex poisoned");
-        let highest_processed_block_count = self
-            .enclave_block_tracker
-            .highest_fully_processed_block_count(&ingestable_ranges, &missing_block_ranges);
-        shared_state.highest_processed_block_count = highest_processed_block_count;
+        if shared_state.highest_processed_block_count != highest_processed_block_count {
+            shared_state.highest_processed_block_count = highest_processed_block_count;
+            self.last_unblocked_at = Instant::now();
+        } else if self.last_unblocked_at.elapsed() >= Duration::from_secs(60) {
+            if let Some(reason_we_stopped) = reason_we_stopped {
+                log::warn!(self.logger, "We seem to be stuck at highest_processed_block_count = {} for at least a minute... we are blocked on an ingress key making progress: {:?}", highest_processed_block_count, reason_we_stopped);
+            } else {
+                log::debug!(self.logger, "We seem to be stuck at highest_processed_block_count = {} for at least a minute... we have processed all blocks known to the recovery database", highest_processed_block_count);
+            }
+            // We are still blocked but we don't need to log for another minute
+            self.last_unblocked_at = Instant::now();
+        }
 
         counters::HIGHEST_PROCESSED_BLOCK_COUNT
             .set(shared_state.highest_processed_block_count as i64);
@@ -469,7 +486,7 @@ where
 
     fn add_records_to_enclave(
         &mut self,
-        ingest_invocation_id: IngestInvocationId,
+        ingress_key: CompressedRistrettoPublic,
         block_index: u64,
         records: Vec<ETxOutRecord>,
     ) {
@@ -495,9 +512,9 @@ where
                 loop {
                     log::crit!(
                         self.logger,
-                        "Failed adding {} tx_outs for {}/{} into enclave: {}",
+                        "Failed adding {} tx_outs for {:?}/{} into enclave: {}",
                         num_records,
-                        ingest_invocation_id,
+                        ingress_key,
                         block_index,
                         err
                     );
@@ -508,15 +525,15 @@ where
             Ok(_) => {
                 log::info!(
                     self.logger,
-                    "Added {} tx outs for {}/{} into the enclave",
+                    "Added {} tx outs for {:?}/{} into the enclave",
                     num_records,
-                    ingest_invocation_id,
+                    ingress_key,
                     block_index
                 );
 
                 // Track that this block was processed.
                 self.enclave_block_tracker
-                    .block_processed(ingest_invocation_id, block_index);
+                    .block_processed(ingress_key, block_index);
 
                 // Update metrics
                 counters::BLOCKS_ADDED_COUNT.inc();
@@ -531,7 +548,8 @@ where
     // your balance at 8:45 PM. So, ask the database.
     // If it doesn't work, hopefully it will work next time.
     fn get_block_signature_timestamp_for_block_count(&self, block_count: u64) -> Option<u64> {
-        if block_count == 0 {
+        // The origin block has no block signature and hence no timestamp
+        if block_count <= 1 {
             return None;
         }
         match self

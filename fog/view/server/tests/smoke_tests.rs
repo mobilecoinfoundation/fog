@@ -203,7 +203,8 @@ fn test_view_integration(view_omap_capacity: u64, logger: Logger) {
     db.report_lost_ingress_key(ingress_key2).unwrap();
 
     // Block 3 has no data for the original key
-    // (view server must support this, ingest skips some TxOuts if the decrypted fog hint is junk)
+    // (view server must support this, ingest skips some TxOuts if the decrypted fog
+    // hint is junk)
     db.add_block_data(
         &invoc_id2,
         &Block::new(
@@ -756,8 +757,9 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         expected_records.extend(records);
     }
 
-    // At this point we should be at highest processed block 5, and highest known 5, because ingress key 2
-    // doesn't start until 10, and doesn't have any blocks associated to it yet.
+    // At this point we should be at highest processed block 5, and highest known 5,
+    // because ingress key 2 doesn't start until 10, and doesn't have any blocks
+    // associated to it yet.
     let mut allowed_tries = 60usize;
     loop {
         let result = view_client.request(0, 0, Default::default()).unwrap();
@@ -795,8 +797,8 @@ fn test_middle_missing_range_with_decommission(logger: Logger) {
         expected_records.extend(records);
     }
 
-    // At this point invoc_id1 is marked lost, so we should be at highest processed block 10
-    // but the last known block should be 15.
+    // At this point invoc_id1 is marked lost, so we should be at highest processed
+    // block 10 but the last known block should be 15.
     let mut allowed_tries = 60usize;
     loop {
         let result = view_client.request(0, 0, Default::default()).unwrap();

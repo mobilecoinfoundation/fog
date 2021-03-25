@@ -347,8 +347,9 @@ where
     /// Keeps track of which blocks we have fed into the enclave.
     enclave_block_tracker: BlockTracker,
 
-    /// Keeps track how long ago it since we made progress, (or complained about not making progress)
-    /// When this gets too distant in the past, we log a warning
+    /// Keeps track how long ago it since we made progress, (or complained about
+    /// not making progress) When this gets too distant in the past, we log
+    /// a warning
     last_unblocked_at: Instant,
 
     /// Logger
@@ -412,7 +413,8 @@ where
             );
         }
 
-        // Figure out the highest fully processed block count and put that in the shared state.
+        // Figure out the highest fully processed block count and put that in the shared
+        // state.
         let ingress_keys = self.db_fetcher.get_highest_processed_block_context();
         let (highest_processed_block_count, reason_we_stopped) = self
             .enclave_block_tracker

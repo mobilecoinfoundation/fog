@@ -5,12 +5,13 @@ use mc_common::logger::{log, Logger};
 use mc_crypto_keys::CompressedRistrettoPublic;
 use std::collections::HashMap;
 
-/// A utility object that keeps track of which block number was processed for every known
-/// ingress key. This provides utilities such as:
-/// - Finding out what is the next block that needs processing for any of the ingress keys.
+/// A utility object that keeps track of which block number was processed for
+/// every known ingress key. This provides utilities such as:
+/// - Finding out what is the next block that needs processing for any of the
+///   ingress keys.
 /// - Finding out what is the highest block index we have encountered so far.
-/// - Finding out for which block index have we processed data for all ingress keys, while
-///   taking into account ingress keys reported lost
+/// - Finding out for which block index have we processed data for all ingress
+///   keys, while taking into account ingress keys reported lost
 pub struct BlockTracker {
     processed_block_per_ingress_key: HashMap<CompressedRistrettoPublic, u64>,
     last_highest_processed_block_count: u64,
@@ -37,8 +38,8 @@ impl BlockTracker {
         for rec in ingress_key_records {
             if let Some(last_processed_block) = self.processed_block_per_ingress_key.get(&rec.key) {
                 // A block has previously been processed for this ingress key. See if the
-                // next one can be provided by it, and if so add it to the list of next blocks we
-                // would like to process.
+                // next one can be provided by it, and if so add it to the list of next blocks
+                // we would like to process.
                 let next_block = last_processed_block + 1;
                 if rec.covers_block_index(next_block) {
                     next_blocks.insert(rec.key, next_block);
@@ -57,7 +58,8 @@ impl BlockTracker {
         next_blocks
     }
 
-    /// Notify the tracker that a block has been processed (loaded into enclave and is now available)
+    /// Notify the tracker that a block has been processed (loaded into enclave
+    /// and is now available)
     pub fn block_processed(&mut self, ingress_key: CompressedRistrettoPublic, block_index: u64) {
         if let Some(previous_block_index) = self
             .processed_block_per_ingress_key
@@ -68,37 +70,40 @@ impl BlockTracker {
         }
     }
 
-    /// Given a list of ingress keys, missing blocks and current state, calculate the highest
-    /// processed block count number. The highest processed block count number is the block count
-    /// for which we know we have loaded all required data, so the users can potentially compute
+    /// Given a list of ingress keys, missing blocks and current state,
+    /// calculate the highest processed block count number. The highest
+    /// processed block count number is the block count for which we know we
+    /// have loaded all required data, so the users can potentially compute
     /// their balance up to this block without missing any transactions.
     ///
     /// Arguments:
-    /// * ingress_keys:
-    ///   IngressPublicKeyRecord's that exist in the database right now.
-    ///   This indicates their start block, their last-scanned block, their expiry block,
-    ///   and whether they are retired or lost.
-    ///   If the key is marked lost, this may imply a missing block range, which affects
+    /// * ingress_keys: IngressPublicKeyRecord's that exist in the database
+    ///   right now. This indicates their start block, their last-scanned block,
+    ///   their expiry block, and whether they are retired or lost. If the key
+    ///   is marked lost, this may imply a missing block range, which affects
     ///   whether we can be blocked on that key for progress.
-    /// * missing_block_ranges:
-    ///   Any manually entered missing block ranges.
+    /// * missing_block_ranges: Any manually entered missing block ranges.
     ///
     /// Returns:
-    /// * The highest fully processed block count, which may be 0 if nothing is processed
-    /// * Optionally, an IngressPublicKeyRecord which is the *reason* that the previous number
-    ///   is less than highest_known_block_index -- the next thing we are waiting on for data.
+    /// * The highest fully processed block count, which may be 0 if nothing is
+    ///   processed
+    /// * Optionally, an IngressPublicKeyRecord which is the *reason* that the
+    ///   previous number is less than highest_known_block_index -- the next
+    ///   thing we are waiting on for data.
     pub fn highest_fully_processed_block_count(
         &mut self,
         ingress_keys: &[IngressPublicKeyRecord],
     ) -> (u64, Option<IngressPublicKeyRecord>) {
-        // The highest fully processed block count cannot exceed the highest known block count
+        // The highest fully processed block count cannot exceed the highest known block
+        // count
         let highest_known_block_count = self.highest_known_block_count();
 
         let initial_last_highest_processed_block_count = self.last_highest_processed_block_count;
         let mut reason_we_stopped: Option<IngressPublicKeyRecord> = None;
 
-        // Each pass through the loop attempts to increase self.last_highest_processed_block_count
-        // or break the loop and indicate the reason we can't increase it
+        // Each pass through the loop attempts to increase
+        // self.last_highest_processed_block_count or break the loop and
+        // indicate the reason we can't increase it
         'outer: loop {
             let next_block_index = self.last_highest_processed_block_count;
             let next_block_count = self.last_highest_processed_block_count + 1;
@@ -123,13 +128,14 @@ impl BlockTracker {
             // Go over all known ingress keys and check if
             // any of them need to provide this block and have not provided it
             for rec in ingress_keys {
-                // If this ingress key isn't responsible to provide this block index, we can move on
+                // If this ingress key isn't responsible to provide this block index, we can
+                // move on
                 if !rec.covers_block_index(next_block_index) {
                     continue;
                 }
 
-                // Check if the last block we actually loaded with this key is less than next_block_index,
-                // if so then this is what we are stuck on
+                // Check if the last block we actually loaded with this key is less than
+                // next_block_index, if so then this is what we are stuck on
                 if let Some(last_processed_block) =
                     self.processed_block_per_ingress_key.get(&rec.key)
                 {
@@ -149,9 +155,10 @@ impl BlockTracker {
                 }
             }
 
-            // If we got here it means there was no reason we cannot advance the highest processed block count
-            // 1) next_block_index did not exceed highest_known_block_index
-            // 2) next_block_index is not covered by any ingress public key that has not provided it or been declared lost
+            // If we got here it means there was no reason we cannot advance the highest
+            // processed block count 1) next_block_index did not exceed
+            // highest_known_block_index 2) next_block_index is not covered by
+            // any ingress public key that has not provided it or been declared lost
             self.last_highest_processed_block_count = next_block_count;
         }
 
@@ -316,7 +323,8 @@ mod tests {
         }
         block_tracker.block_processed(rec.key, rec.status.start_block + 49);
 
-        // Now, we have scanned everything we have promised to scan, next blocks should return empty.
+        // Now, we have scanned everything we have promised to scan, next blocks should
+        // return empty.
         let expected_state = HashMap::from_iter(vec![]);
         assert_eq!(block_tracker.next_blocks(&[rec.clone()]), expected_state);
     }
@@ -384,7 +392,8 @@ mod tests {
         };
 
         // This is the expected state because, even though we promised to scan
-        // some things, the key is now reported lost, so we only have to go up to last-scanned block
+        // some things, the key is now reported lost, so we only have to go up to
+        // last-scanned block
         let expected_state = HashMap::from_iter(vec![]);
 
         assert_eq!(block_tracker.next_blocks(&[rec.clone()]), expected_state);
@@ -409,7 +418,8 @@ mod tests {
         };
 
         // This is the expected state because, even though we lost the key,
-        // the key did scan some things before it was lost, so now we have to go up to last-sacnned block
+        // the key did scan some things before it was lost, so now we have to go up to
+        // last-sacnned block
         let expected_state = HashMap::from_iter(vec![(rec.key, rec.status.start_block)]);
 
         assert_eq!(block_tracker.next_blocks(&[rec.clone()]), expected_state);
@@ -639,13 +649,14 @@ mod tests {
 
         rec.status.lost = true;
 
-        // The highest processed block is still 15, but the reason we are blocked is now None,
-        // and not the record, because the record was marked lost.
+        // The highest processed block is still 15, but the reason we are blocked is now
+        // None, and not the record, because the record was marked lost.
         assert_eq!(
             block_tracker.highest_fully_processed_block_count(&[rec.clone()]),
             (15, None)
         );
-        // When the reason is None, that is supposed to mean that highest fully processed = highest known.
+        // When the reason is None, that is supposed to mean that highest fully
+        // processed = highest known.
         assert_eq!(block_tracker.highest_known_block_count(), 15);
     }
 
@@ -682,8 +693,8 @@ mod tests {
             (0, None)
         );
 
-        // Advancing the first ingestable range would only get us up to 10 since at that point we
-        // also need the 2nd range to advance.
+        // Advancing the first ingestable range would only get us up to 10 since at that
+        // point we also need the 2nd range to advance.
         for i in 0..10 {
             block_tracker.block_processed(rec1.key, i);
 
@@ -703,12 +714,14 @@ mod tests {
             );
         }
 
-        // Advancing the second range would get us all the way to the first one and stop there.
+        // Advancing the second range would get us all the way to the first one and stop
+        // there.
         for i in 0..10 {
             block_tracker.block_processed(rec2.key, rec2.status.start_block + i);
 
             // Note: We advanced rec1 20 times in previous loop
-            // The reason we are blocked changes once we reach block 20, because then neither record is slower
+            // The reason we are blocked changes once we reach block 20, because then
+            // neither record is slower
             let expected = if i == 9 {
                 (20, None)
             } else {
@@ -753,7 +766,8 @@ mod tests {
     }
 
     // A block tracker with multiple ingestable ranges waits for both of them,
-    // and if a key is reported lost, it still blocks up until last-scanned for that key is loaded
+    // and if a key is reported lost, it still blocks up until last-scanned for that
+    // key is loaded
     #[test_with_logger]
     #[ignore]
     fn highest_fully_processed_block_tracks_multiple_recs_some_lost2(_logger: Logger) {

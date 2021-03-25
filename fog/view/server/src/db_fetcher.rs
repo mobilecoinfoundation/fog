@@ -120,7 +120,8 @@ impl DbFetcher {
         Ok(())
     }
 
-    /// Get context for the enclave block tracker to compute the highest processed block count
+    /// Get context for the enclave block tracker to compute the highest
+    /// processed block count
     pub fn get_highest_processed_block_context(&self) -> Vec<IngressPublicKeyRecord> {
         self.shared_state().ingress_keys.clone()
     }
@@ -208,9 +209,9 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
         }
     }
 
-    /// Sync ingress key records from the database. This allows us to learn which ingress keys
-    /// are currently alive, which block ranges they are able to cover, and which blocks have they
-    /// ingested so far.
+    /// Sync ingress key records from the database. This allows us to learn
+    /// which ingress keys are currently alive, which block ranges they are
+    /// able to cover, and which blocks have they ingested so far.
     fn load_ingress_keys(&self) {
         let _metrics_timer = counters::LOAD_INGRESS_KEYS_TIME.start_timer();
 
@@ -233,7 +234,8 @@ impl<DB: RecoveryDb + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
     fn load_block_data(&mut self) -> bool {
         let mut has_more_work = false;
 
-        // See whats the next block number we need to load for each invocation we are aware of.
+        // See whats the next block number we need to load for each invocation we are
+        // aware of.
         let ingress_keys = self.shared_state().ingress_keys.clone();
 
         log::trace!(
@@ -393,8 +395,8 @@ mod tests {
 
         assert!(success);
 
-        // Add some blocks, they should get picked up and find their way into pending fetched
-        // records and last_scanned_block.
+        // Add some blocks, they should get picked up and find their way into pending
+        // fetched records and last_scanned_block.
         let invoc_id1 = db
             .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 10)
             .unwrap();
@@ -486,8 +488,9 @@ mod tests {
             }]
         );
 
-        // Add more blocks but this time leave a hole between the previous blocks and the new ones.
-        // They should not get picked up untill a missed blocks range is reported.
+        // Add more blocks but this time leave a hole between the previous blocks and
+        // the new ones. They should not get picked up untill a missed blocks
+        // range is reported.
         let mut blocks_and_records_40_50 = Vec::new();
         for i in 40..50 {
             let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, i, 5); // 5 outputs per block

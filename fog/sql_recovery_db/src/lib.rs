@@ -505,7 +505,8 @@ impl RecoveryDb for SqlRecoveryDb {
                 )));
             };
 
-            // Find the last scanned block index (if any block has been scanned with this key)
+            // Find the last scanned block index (if any block has been scanned with this
+            // key)
             let maybe_block_index: Option<i64> = {
                 use schema::ingested_blocks::dsl;
                 dsl::ingested_blocks
@@ -528,8 +529,8 @@ impl RecoveryDb for SqlRecoveryDb {
             }
 
             // If the missed block range is invalid (empty), we don't have to add it.
-            // This can happen if the ingress key was never actually published to the report server,
-            // and then pubkey_expiry is zero.
+            // This can happen if the ingress key was never actually published to the report
+            // server, and then pubkey_expiry is zero.
             if !missed_block_range.is_valid() {
                 return Ok(());
             }
@@ -780,7 +781,8 @@ impl RecoveryDb for SqlRecoveryDb {
     /// * block_index: The block we need ETxOutRecords from
     ///
     /// Returns:
-    /// * The ETxOutRecord's from when this block was added, or None if the block doesn't exist yet or, an error
+    /// * The ETxOutRecord's from when this block was added, or None if the
+    ///   block doesn't exist yet or, an error
     fn get_tx_outs_by_block_and_key(
         &self,
         ingress_key: CompressedRistrettoPublic,
@@ -808,8 +810,8 @@ impl RecoveryDb for SqlRecoveryDb {
         }
     }
 
-    /// Get iid that produced data for given ingress key and a given block index.
-    ///
+    /// Get iid that produced data for given ingress key and a given block
+    /// index.
     fn get_invocation_id_by_block_and_key(
         &self,
         ingress_key: CompressedRistrettoPublic,
@@ -1839,8 +1841,8 @@ mod tests {
             .unwrap();
         assert_eq!(tx_outs, None);
 
-        // Getting tx outs for ingress key and block number that were previously written should
-        // work as expected.
+        // Getting tx outs for ingress key and block number that were previously written
+        // should work as expected.
         let tx_outs = db
             .get_tx_outs_by_block_and_key(ingress_key, block1.index)
             .unwrap()
@@ -2076,7 +2078,8 @@ mod tests {
             ])
         );
 
-        // Publish a few blocks and check that last_scanned_block gets updated as expected.
+        // Publish a few blocks and check that last_scanned_block gets updated as
+        // expected.
         let invoc_id1 = db
             .new_ingest_invocation(None, &ingress_key1, &random_kex_rng_pubkey(&mut rng), 123)
             .unwrap();
@@ -2211,8 +2214,8 @@ mod tests {
             ])
         );
 
-        // Which invocation id published the block shouldn't matter, last_scanned_block should
-        // continue to move forward.
+        // Which invocation id published the block shouldn't matter, last_scanned_block
+        // should continue to move forward.
         for block_id in 456..=460 {
             let invoc_id = db
                 .new_ingest_invocation(

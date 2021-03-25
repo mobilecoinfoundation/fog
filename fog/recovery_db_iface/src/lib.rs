@@ -79,14 +79,15 @@ pub trait RecoveryDb {
 
     /// Get all ingress key records in the database.
     ///
-    /// The records will be filtered so that records whose start block is less than the given
-    /// number won't be returned.
+    /// The records will be filtered so that records whose start block is less
+    /// than the given number won't be returned.
     fn get_ingress_key_records(
         &self,
         start_block_at_least: u64,
     ) -> Result<Vec<IngressPublicKeyRecord>, Self::Error>;
 
-    /// Adds a new ingest invocation to the database, optionally decommissioning an older one.
+    /// Adds a new ingest invocation to the database, optionally decommissioning
+    /// an older one.
     ///
     /// This should be done when the ingest enclave is processing block data,
     /// and the ORAM overflows and the KexRngPubkey is rotated by the enclave.
@@ -149,22 +150,26 @@ pub trait RecoveryDb {
     ///
     /// This occurs if all the enclaves that have the key are lost.
     /// If we have not scanned all the blocks up to pubkey_expiry for this key,
-    /// then the remaining blocks are "missed blocks", and clients will have to download
-    /// these blocks and view-key scan them.
+    /// then the remaining blocks are "missed blocks", and clients will have to
+    /// download these blocks and view-key scan them.
     ///
     /// When this call is made,
     /// * the key is marked as lost in the database,
-    /// * the half-open range [last-scanned + 1, pubkey_expiry) is registered as a missed block range,
-    ///   if that range is not empty.
+    /// * the half-open range [last-scanned + 1, pubkey_expiry) is registered as
+    ///   a missed block range, if that range is not empty.
     ///
-    /// When all the enclaves that have the key are lost, but the key is not reported lost,
-    /// the view server will be blocked from increasing "highest_processed_block_count" value,
-    /// because it is still expecting more data to be produced against this key.
-    /// From the client's point of view, it is as if fog stopped making progress relative to the ledger,
-    /// but the balance check process still returns a balance that was correct at that point in time.
+    /// When all the enclaves that have the key are lost, but the key is not
+    /// reported lost, the view server will be blocked from increasing
+    /// "highest_processed_block_count" value, because it is still expecting
+    /// more data to be produced against this key. From the client's point
+    /// of view, it is as if fog stopped making progress relative to the ledger,
+    /// but the balance check process still returns a balance that was correct
+    /// at that point in time.
     ///
-    /// Once a key is published to the users, producing more blocks scanned with it, or reporting the key lost,
-    /// is the only way to allow the view server to make progress, so that clients do not compute incorrect balances.
+    /// Once a key is published to the users, producing more blocks scanned with
+    /// it, or reporting the key lost, is the only way to allow the view
+    /// server to make progress, so that clients do not compute incorrect
+    /// balances.
     ///
     /// Arguments:
     /// * ingress_key: The ingress key that is marked lost.
@@ -236,7 +241,8 @@ pub trait RecoveryDb {
 
     /// Get the invocation id that published this block with this key.
     ///
-    /// Note: This is only used by TESTS right now, but it is important to be able to test this
+    /// Note: This is only used by TESTS right now, but it is important to be
+    /// able to test this
     ///
     /// Arguments:
     /// * ingress_key: The ingress key we are interested in
@@ -244,8 +250,8 @@ pub trait RecoveryDb {
     ///
     /// Returns:
     /// * Ok(None) if this block has not been scanned with this key
-    ///   Ok(Some(iid)) if this block has been scanned with this key, and iid is the invocation id that did it
-    ///   An error if there was a database error
+    ///   Ok(Some(iid)) if this block has been scanned with this key, and iid is
+    ///   the invocation id that did it An error if there was a database error
     fn get_invocation_id_by_block_and_key(
         &self,
         ingress_key: CompressedRistrettoPublic,

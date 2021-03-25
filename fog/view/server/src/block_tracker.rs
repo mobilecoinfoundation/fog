@@ -932,7 +932,7 @@ mod tests {
         );
 
         // Now add a new key that comes much later and check that we can make progress
-        let rec2 = IngressPublicKeyRecord {
+        let mut rec2 = IngressPublicKeyRecord {
             key: CompressedRistrettoPublic::from_random(&mut rng),
             status: IngressPublicKeyStatus {
                 start_block: 30,
@@ -950,20 +950,20 @@ mod tests {
             let expected_state = HashMap::from_iter(vec![(rec2.key, index)]);
 
             assert_eq!(
-                block_tracker.next_blocks(&[rec2.clone()]),
+                block_tracker.next_blocks(&[rec1.clone(), rec2.clone()]),
                 expected_state,
                 "i = {}",
                 i
             );
 
             // Make the block "exist" and "load" it
-            rec1.last_scanned_block = Some(index);
+            rec2.last_scanned_block = Some(index);
             block_tracker.block_processed(rec2.key, index);
 
             // Check that highest fully processed block count matches what we expect
             let expected = (index + 1, None);
             assert_eq!(
-                block_tracker.highest_fully_processed_block_count(&[rec2.clone()]),
+                block_tracker.highest_fully_processed_block_count(&[rec1.clone(), rec2.clone()]),
                 expected,
                 "i = {}",
                 i

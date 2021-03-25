@@ -493,7 +493,7 @@ mod tests {
         );
 
         // Add more blocks but this time leave a hole between the previous blocks and
-        // the new ones. They should not get picked up untill a missed blocks
+        // the new ones. They should not get picked up until a missed blocks
         // range is reported.
         let mut blocks_and_records_40_50 = Vec::new();
         for i in 40..50 {

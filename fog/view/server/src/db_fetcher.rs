@@ -520,7 +520,7 @@ mod tests {
                     retired: false,
                     lost: false,
                 },
-                last_scanned_block: Some(49),
+                last_scanned_block: Some(49), // the last block added was 49 (loop is 40..50)
             }]
         );
 
@@ -530,7 +530,8 @@ mod tests {
 
         // Retire our key at block 45, and provide blocks 30-39 (we previously provided
         // 40-49)
-        // We should only get block data for blocks 30-34.
+        // We should only get block data for blocks 30-44, and not bother loading 45 and
+        // later, since the key expired after that.
         db.set_report(
             &ingress_key,
             "",

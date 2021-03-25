@@ -1064,7 +1064,6 @@ dependencies = [
 name = "fog-ingest-client"
 version = "0.13.0"
 dependencies = [
- "binascii 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 0.13.0",
  "fog-types 0.13.0",

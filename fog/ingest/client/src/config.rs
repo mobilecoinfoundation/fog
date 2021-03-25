@@ -2,7 +2,6 @@
 
 //! Configuration parameters for the Fog ingest client
 
-use binascii::hex2bin;
 use mc_crypto_keys::CompressedRistrettoPublic;
 use std::{str::FromStr, time::Duration};
 use structopt::StructOpt;
@@ -27,7 +26,7 @@ fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntEr
 
 fn parse_ristretto_hex(src: &str) -> Result<CompressedRistrettoPublic, String> {
     let mut key_bytes = [0u8; 32];
-    hex2bin(src.as_bytes(), &mut key_bytes[..])
+    hex::decode_to_slice(src.as_bytes(), &mut key_bytes[..])
         .map_err(|err| format!("Hex decode error: {:?}", err))?;
     Ok(CompressedRistrettoPublic::from(&key_bytes))
 }

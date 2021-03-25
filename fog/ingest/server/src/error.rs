@@ -242,8 +242,10 @@ impl From<SetPeersError> for RestoreStateError {
 pub enum SetPeersError {
     /// Statefile contained uri with no responder id: {0}
     ResponderId(UriConversionError),
-    /// When setting our peers, our responder id was missing, so the peer set
-    /// operation was rejected: '{0}' is not a member of {1:?}
+    /**
+     * When setting our peers, our responder id was missing, so the peer set
+     * operation was rejected: '{0}' is not a member of {1:?}
+     */
     MissingOurResponderId(ResponderId, BTreeMap<ResponderId, IngestPeerUri>),
 }
 

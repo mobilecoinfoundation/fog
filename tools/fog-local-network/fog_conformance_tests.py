@@ -180,6 +180,7 @@ class BalanceCheckProgram:
 
     def start(self):
         assert self.client_id is None
+        print(f'Starting fresh balance check for {self.key_num}...')
         key = json.load(open(os.path.join(self.keys_dir, f'account_keys_{self.key_num}.json')))
         response = self.retrying_http_request({
             "method": "fresh-balance-check",
@@ -206,6 +207,7 @@ class BalanceCheckProgram:
         }
 
     def debug(self):
+        # Debugging is not currently supported with the android balance checker.
         pass
 
     def assert_balance(self, acceptable_answers, expected_eventual_block_count):
@@ -236,10 +238,13 @@ class BalanceCheckProgram:
             result = self.check()
 
     def stop(self):
-        while True:
-            print('STOP')
-            time.sleep(10)
-
+        if self.client_id:
+            self.http_request({
+                "method": "stop",
+                "client_id": self.client_id,
+            })
+            print(f'Client {self.client_id} stopped')
+            self.client_id = None
 
     def http_request(self, post_data):
         with urlopen("http://127.0.0.1:8080/", json.dumps(post_data).encode()) as response:

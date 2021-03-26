@@ -375,12 +375,13 @@ class MultiBalanceChecker:
     # The number of wallets we are playing with at each step.
     NUM_WALLETS = 5
 
-    def __init__(self, balance_check_path, keys_dir, fog_ledger, fog_view, release):
+    def __init__(self, balance_check_path, keys_dir, fog_ledger, fog_view, release, skip_followup_balance_checks):
         self.balance_check_path = balance_check_path
         self.keys_dir = keys_dir
         self.fog_ledger = fog_ledger
         self.fog_view = fog_view
         self.release = release
+        self.skip_followup_balance_checks = skip_followup_balance_checks
 
         self.steps = []
 
@@ -409,7 +410,7 @@ class MultiBalanceChecker:
             for wallet_num, (acceptable_balances, expected_eventual_block_count) in enumerate(acceptable_answers_per_wallet)
         ]
 
-        if self.steps:
+        if self.steps and not self.skip_followup_balance_checks:
             print(f'{step_name}: Performing followup balance checks')
             for wallets in self.steps:
                 for wallet, (acceptable_balances, expected_eventual_block_count) in zip(wallets, acceptable_answers_per_wallet):
@@ -522,7 +523,7 @@ class FogConformanceTest:
         return test_ledger
 
     # Create the databases and servers in the workdir and run the actual test
-    def run(self):
+    def run(self, skip_followup_balance_checks):
         #######################################################################
         # Set up the fog network
         #######################################################################
@@ -635,6 +636,7 @@ class FogConformanceTest:
             self.fog_ledger,
             self.fog_view,
             self.release,
+            skip_followup_balance_checks,
         )
 
         # Check all accounts
@@ -999,15 +1001,17 @@ class FogConformanceTest:
         time.sleep(10 if self.release else 30)
 
         # We will encounter 0: 0 while we wait for the view server to come up.
+        # Android will encounter 1: 0 because the SDK returns block index=0 when in fact block
+        # count=0, so that would result in block count being 1...
         # In theory we could get anything between 0 and 10, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
         # available one (10).
         self.multi_balance_checker.balance_check("from10a", [
-            [{0: 0, 10: 14}, [10]],
-            [{0: 0, 10: 13}, [10]],
-            [{0: 0, 10: 4}, [10]],
-            [{0: 0, 10: 4}, [10]],
-            [{0: 0, 10: 13}, [10]],
+            [{0: 0, 1: 0, 10: 14}, [10]],
+            [{0: 0, 1: 0, 10: 13}, [10]],
+            [{0: 0, 1: 0, 10: 4}, [10]],
+            [{0: 0, 1: 0, 10: 4}, [10]],
+            [{0: 0, 1: 0, 10: 13}, [10]],
         ])
 
         # Add block 10 to ingest and ledger. This should get reported by the restarted view server.
@@ -1064,6 +1068,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Balance check conformance tester')
     parser.add_argument('--skip-build', help='Skip building binaries', action='store_true')
     parser.add_argument('--release', help='Use release mode binaries', action='store_true')
+    parser.add_argument('--skip-followup-balance-checks', help='Skip followup balance checks', action='store_true')
     parser.add_argument('balance_check', help='Balance check program to test conformance of')
     args = parser.parse_args()
 
@@ -1077,4 +1082,4 @@ if __name__ == '__main__':
     # Install signal handler for SIGALRM
     signal.signal(signal.SIGALRM, handler)
     with FogConformanceTest(work_dir, args) as test:
-        test.run()
+        test.run(args.skip_followup_balance_checks)

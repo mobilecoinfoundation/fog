@@ -1446,7 +1446,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Verifier_add_1mr_1enclave(
                 .get_object_array_element(hardening_advisories, i as i32)?
                 .into();
             let hardening_advisory_string: String = env.get_string(hardening_advisory)?.into();
-            mr_enclave_verifier.allow_config_advisory(&hardening_advisory_string);
+            mr_enclave_verifier.allow_hardening_advisory(&hardening_advisory_string);
         }
 
         let mut verifier: MutexGuard<Verifier> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;

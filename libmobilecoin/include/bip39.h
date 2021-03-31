@@ -22,6 +22,21 @@ MC_ATTRIBUTE_NONNULL(1);
 
 /// # Preconditions
 ///
+/// * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
+/// * `out_entropy` - must be null or else length must be >= `entropy.len`.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+ssize_t mc_bip39_entropy_from_mnemonic(
+  const char* MC_NONNULL mnemonic,
+  McMutableBuffer* MC_NULLABLE out_entropy,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1);
+
+/// # Preconditions
+///
 /// * `prefix` - must be a nul-terminated C string containing valid UTF-8.
 char* MC_NULLABLE mc_bip39_words_by_prefix(
   const char* MC_NONNULL prefix

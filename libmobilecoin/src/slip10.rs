@@ -25,9 +25,9 @@ pub extern "C" fn mc_slip10_account_private_keys_from_mnemonic(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> bool {
     ffi_boundary_with_error(out_error, || {
-        let mnemonic_phrase = String::try_from_ffi(mnemonic).expect("mnemonic is invalid");
+        let mnemonic = <&str>::try_from_ffi(mnemonic).expect("mnemonic is invalid");
 
-        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase, Language::English)
+        let mnemonic = Mnemonic::from_phrase(mnemonic, Language::English)
             .map_err(|err| LibMcError::InvalidInput(format!("Invalid mnemonic: {}", err)))?;
         let key = mnemonic.derive_slip10_key(account_index);
         let account_key = AccountKey::from(key);

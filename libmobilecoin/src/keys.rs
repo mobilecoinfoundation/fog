@@ -1,7 +1,7 @@
 // Copyright 2018-2021 The MobileCoin Foundation
 
 use crate::{common::*, LibMcError};
-use mc_account_keys::{AccountKey, PublicAddress, RootIdentity};
+use mc_account_keys::{AccountKey, PublicAddress};
 use mc_crypto_keys::{ReprBytes, RistrettoPrivate, RistrettoPublic};
 use mc_util_ffi::*;
 
@@ -42,35 +42,6 @@ impl<'a> TryFromFfi<&McAccountKey<'a>> for AccountKey {
             Ok(AccountKey::new(&spend_private_key, &view_private_key))
         }
     }
-}
-
-/// # Preconditions
-///
-/// * `root_entropy` - must be 32 bytes in length.
-/// * `out_view_private_key` - length must be >= 32.
-/// * `out_spend_private_key` - length must be >= 32.
-#[no_mangle]
-pub extern "C" fn mc_account_private_keys_from_root_entropy(
-    root_entropy: FfiRefPtr<McBuffer>,
-    out_view_private_key: FfiMutPtr<McMutableBuffer>,
-    out_spend_private_key: FfiMutPtr<McMutableBuffer>,
-) -> bool {
-    ffi_boundary(|| {
-        let root_entropy = <&[u8; 32]>::try_from_ffi(&root_entropy)
-            .expect("root_entropy must be 32 bytes in length");
-        let out_view_private_key = out_view_private_key
-            .into_mut()
-            .as_slice_mut_of_len(RistrettoPrivate::size())
-            .expect("out_view_private_key length is insufficient");
-        let out_spend_private_key = out_spend_private_key
-            .into_mut()
-            .as_slice_mut_of_len(RistrettoPrivate::size())
-            .expect("out_spend_private_key length is insufficient");
-
-        let account_key = AccountKey::from(&RootIdentity::from(root_entropy));
-        out_view_private_key.copy_from_slice(account_key.view_private_key().as_ref());
-        out_spend_private_key.copy_from_slice(account_key.spend_private_key().as_ref());
-    })
 }
 
 /// # Preconditions

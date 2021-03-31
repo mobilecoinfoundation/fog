@@ -1,7 +1,7 @@
 // Copyright 2018-2021 The MobileCoin Foundation
 
 use crate::{common::*, LibMcError};
-use bip39::{Language, Mnemonic};
+use bip39::{Language, Mnemonic, Seed};
 use libc::ssize_t;
 use mc_util_ffi::*;
 
@@ -22,9 +22,9 @@ pub extern "C" fn mc_bip39_entropy_from_mnemonic(
     ffi_boundary_with_error(out_error, || {
         let mnemonic = String::try_from_ffi(mnemonic).expect("mnemonic is invalid");
 
-        let mnemonic = Mnemonic::parse(mnemonic)
+        let mnemonic = Mnemonic::from_phrase(&mnemonic, Language::English)
             .map_err(|err| LibMcError::InvalidInput(format!("Invalid mnemonic: {}", err)))?;
-        let entropy = mnemonic.to_entropy();
+        let entropy = mnemonic.entropy();
 
         if let Some(out_entropy) = out_entropy.into_option() {
             let out_entropy = out_entropy
@@ -46,8 +46,8 @@ pub extern "C" fn mc_bip39_entropy_from_mnemonic(
 #[no_mangle]
 pub extern "C" fn mc_bip39_entropy_to_mnemonic(entropy: FfiRefPtr<McBuffer>) -> FfiOptOwnedStr {
     ffi_boundary(|| {
-        let mnemonic =
-            Mnemonic::from_entropy(&entropy).expect("entropy could not be converted to a mnemonic");
+        let mnemonic = Mnemonic::from_entropy(&entropy, Language::English)
+            .expect("entropy could not be converted to a mnemonic");
         FfiOwnedStr::ffi_try_from(mnemonic.to_string())
             .expect("mnemonic could not be converted to a C string")
     })
@@ -74,16 +74,16 @@ pub extern "C" fn mc_bip39_get_seed(
         let mnemonic = String::try_from_ffi(mnemonic).expect("mnemonic is invalid");
         let passphrase = String::try_from_ffi(passphrase).expect("passphrase is invalid");
 
-        let mnemonic = Mnemonic::parse(mnemonic)
+        let mnemonic = Mnemonic::from_phrase(&mnemonic, Language::English)
             .map_err(|err| LibMcError::InvalidInput(format!("Invalid mnemonic: {}", err)))?;
-        let seed = mnemonic.to_seed(&passphrase);
+        let seed = Seed::new(&mnemonic, &passphrase);
 
         let out_seed = out_seed
             .into_mut()
-            .as_slice_mut_of_len(seed.len())
+            .as_slice_mut_of_len(seed.as_bytes().len())
             .expect("out_seed length is insufficient");
 
-        out_seed.copy_from_slice(&seed);
+        out_seed.copy_from_slice(seed.as_bytes());
 
         Ok(())
     })
@@ -96,7 +96,7 @@ pub extern "C" fn mc_bip39_get_seed(
 pub extern "C" fn mc_bip39_words_by_prefix(prefix: FfiStr) -> FfiOptOwnedStr {
     ffi_boundary(|| {
         let prefix = String::try_from_ffi(prefix).expect("prefix is invalid");
-        let words = Language::English.words_by_prefix(&prefix);
+        let words = Language::English.wordlist().get_words_by_prefix(&prefix);
         let joined_words = words.join(",");
         FfiOwnedStr::ffi_try_from(joined_words)
             .expect("joined_words could not be converted to a C string")

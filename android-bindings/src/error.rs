@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-use bip39::Error as Bip39Error;
+use bip39::ErrorKind as Bip39Error;
 use displaydoc::Display;
 use fog_kex_rng::Error as KexRngError;
 use mc_attest_ake::Error as AkeError;
@@ -87,6 +87,9 @@ pub enum McError {
 
     /// Bip39: {0}
     Bip39(Bip39Error),
+
+    /// Downcast from Anyhow Error failed: {0}
+    DowncastAnyFailed(anyhow::Error),
 }
 
 impl From<FromUtf8Error> for McError {
@@ -206,6 +209,15 @@ impl From<EncodingsError> for McError {
 impl From<jni::errors::Error> for McError {
     fn from(src: jni::errors::Error) -> Self {
         Self::JNI(src.to_string())
+    }
+}
+
+impl From<anyhow::Error> for McError {
+    fn from(src: anyhow::Error) -> Self {
+        match src.downcast::<Bip39Error>() {
+            Ok(error_kind) => error_kind.into(),
+            Err(e) => Self::DowncastAnyFailed(e),
+        }
     }
 }
 

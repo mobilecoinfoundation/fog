@@ -10,7 +10,7 @@ use crate::{
     ffi::{jni_big_int_to_u64, jni_ffi_call, jni_ffi_call_or, RUST_OBJ_FIELD},
 };
 use aes_gcm::Aes256Gcm;
-use bip39::Mnemonic;
+use bip39::{Language, Mnemonic, Seed};
 use core::convert::TryFrom;
 use fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, VersionedKexRng};
 use jni::{
@@ -1707,9 +1707,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1from_1mnemon
         |env| {
             let mnemonic: String = env.get_string(mnemonic)?.into();
 
-            let mnemonic = Mnemonic::parse(mnemonic)?;
+            let mnemonic = Mnemonic::from_phrase(&mnemonic, Language::English)?;
 
-            let entropy = mnemonic.to_entropy();
+            let entropy = mnemonic.entropy();
 
             Ok(env.byte_array_from_slice(&entropy)?)
         },
@@ -1727,7 +1727,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1to_1mnemonic
         &env,
         |env| {
             let bytes = env.convert_byte_array(entropy)?;
-            let mnemonic = Mnemonic::from_entropy(&bytes)?;
+            let mnemonic = Mnemonic::from_entropy(&bytes, Language::English)?;
             Ok(env.new_string(mnemonic.to_string())?.into_inner())
         },
     )
@@ -1744,11 +1744,11 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_get_1bip39_1seed(
         &env,
         |env| {
             let mnemonic: String = env.get_string(mnemonic)?.into();
-            let mnemonic = Mnemonic::parse(mnemonic)?;
+            let mnemonic = Mnemonic::from_phrase(&mnemonic, Language::English)?;
 
-            let bip39_seed = mnemonic.to_seed("");
+            let bip39_seed = Seed::new(&mnemonic, "");
 
-            Ok(env.byte_array_from_slice(&bip39_seed.as_slice())?)
+            Ok(env.byte_array_from_slice(&bip39_seed.as_bytes())?)
         },
     )
 }
@@ -1764,7 +1764,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
         &env,
         |env| {
             let prefix: String = env.get_string(prefix)?.into();
-            let words = bip39::Language::English.words_by_prefix(&prefix);
+            let words = bip39::Language::English
+                .wordlist()
+                .get_words_by_prefix(&prefix);
             let joined_words = words.join(",");
             Ok(env.new_string(joined_words)?.into_inner())
         },

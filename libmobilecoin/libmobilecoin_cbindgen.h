@@ -32,8 +32,6 @@ typedef struct McTransactionBuilderRing McTransactionBuilderRing;
 
 typedef struct Option_TransactionBuilder_FogResolver Option_TransactionBuilder_FogResolver;
 
-typedef struct Vec_u32 Vec_u32;
-
 typedef struct Vec_u8 Vec_u8;
 
 typedef struct Vec_u8 McData;
@@ -115,8 +113,6 @@ typedef struct McAccountKey {
   FfiRefPtr<McBuffer> spend_private_key;
   FfiOptRefPtr<McAccountKeyFogInfo> fog_info;
 } McAccountKey;
-
-typedef struct Vec_u32 McSlip10Indices;
 
 typedef struct McTxOutAmount {
   /**
@@ -354,41 +350,10 @@ ssize_t mc_attest_ake_decrypt(FfiMutPtr<McAttestAke> attest_ake,
 /**
  * # Preconditions
  *
- * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
- * * `out_entropy` - must be null or else length must be >= `entropy.len`.
- *
- * # Errors
- *
- * * `LibMcError::InvalidInput`
- */
-ssize_t mc_bip39_entropy_from_mnemonic(FfiStr mnemonic,
-                                       FfiOptMutPtr<McMutableBuffer> out_entropy,
-                                       FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
-
-/**
- * # Preconditions
- *
  * * `entropy` - length must be a multiple of 4 and between 16 and 32,
- *   inclusive.
+ *   inclusive, in bytes.
  */
-FfiOptOwnedStr mc_bip39_entropy_to_mnemonic(FfiRefPtr<McBuffer> entropy);
-
-/**
- * # Preconditions
- *
- * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
- * * `passphrase` - must be a nul-terminated C string containing valid UTF-8.
- *   Can be empty.
- * * `out_seed` - length must be >= 64.
- *
- * # Errors
- *
- * * `LibMcError::InvalidInput`
- */
-bool mc_bip39_get_seed(FfiStr mnemonic,
-                       FfiStr passphrase,
-                       FfiMutPtr<McMutableBuffer> out_seed,
-                       FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+FfiOptOwnedStr mc_bip39_mnemonic_from_entropy(FfiRefPtr<McBuffer> entropy);
 
 /**
  * # Preconditions
@@ -547,17 +512,6 @@ bool mc_fog_rng_advance(FfiMutPtr<McFogRng> fog_rng, FfiOptMutPtr<McMutableBuffe
 /**
  * # Preconditions
  *
- * * `root_entropy` - must be 32 bytes in length.
- * * `out_view_private_key` - length must be >= 32.
- * * `out_spend_private_key` - length must be >= 32.
- */
-bool mc_account_private_keys_from_root_entropy(FfiRefPtr<McBuffer> root_entropy,
-                                               FfiMutPtr<McMutableBuffer> out_view_private_key,
-                                               FfiMutPtr<McMutableBuffer> out_spend_private_key);
-
-/**
- * # Preconditions
- *
  * * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
  * * `spend_private_key` - must be a valid 32-byte Ristretto-format scalar.
  * * `out_subaddress_view_private_key` - length must be >= 32.
@@ -593,20 +547,22 @@ bool mc_account_key_get_public_address_fog_authority_sig(FfiRefPtr<McAccountKey>
                                                          uint64_t subaddress_index,
                                                          FfiMutPtr<McMutableBuffer> out_fog_authority_sig);
 
-FfiOptOwnedPtr<McSlip10Indices> mc_slip10_indices_create(void);
-
-void mc_slip10_indices_free(FfiOptOwnedPtr<McSlip10Indices> indices);
-
-bool mc_slip10_indices_add(FfiMutPtr<McSlip10Indices> indices, uint32_t index);
-
 /**
  * # Preconditions
  *
- * * `out_key` - length must be >= 32.
+ * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
+ * * `out_view_private_key` - length must be >= 32.
+ * * `out_spend_private_key` - length must be >= 32.
+ *
+ * # Errors
+ *
+ * * `LibMcError::InvalidInput`
  */
-bool mc_slip10_derive_ed25519_private_key(FfiRefPtr<McBuffer> seed,
-                                          FfiRefPtr<McSlip10Indices> path,
-                                          FfiMutPtr<McMutableBuffer> out_key);
+bool mc_slip10_account_private_keys_from_mnemonic(FfiStr mnemonic,
+                                                  uint32_t account_index,
+                                                  FfiMutPtr<McMutableBuffer> out_view_private_key,
+                                                  FfiMutPtr<McMutableBuffer> out_spend_private_key,
+                                                  FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
 
 /**
  * # Preconditions

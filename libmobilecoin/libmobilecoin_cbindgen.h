@@ -358,6 +358,20 @@ FfiOptOwnedStr mc_bip39_mnemonic_from_entropy(FfiRefPtr<McBuffer> entropy);
 /**
  * # Preconditions
  *
+ * * `mnemonic` - must be a nul-terminated C string containing valid UTF-8.
+ * * `out_entropy` - must be null or else length must be >= `entropy.len`.
+ *
+ * # Errors
+ *
+ * * `LibMcError::InvalidInput`
+ */
+ssize_t mc_bip39_entropy_from_mnemonic(FfiStr mnemonic,
+                                       FfiOptMutPtr<McMutableBuffer> out_entropy,
+                                       FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+/**
+ * # Preconditions
+ *
  * * `prefix` - must be a nul-terminated C string containing valid UTF-8.
  */
 FfiOptOwnedStr mc_bip39_words_by_prefix(FfiStr prefix);

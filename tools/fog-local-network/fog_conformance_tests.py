@@ -199,7 +199,7 @@ class RemoteWallet:
         print(f"Checking account {self.key_num} on {self.name}...")
         start_time = time.perf_counter()
 
-        result = self.check() if self.client_id else self.start()
+        result = self.check() if self.client_id is not None else self.start()
         while True:
             if result['block_count'] not in acceptable_answers:
                 self.debug()

@@ -1756,7 +1756,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
  */
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_accountKey_1from_1mnemonic(
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_AccountKeyDeriver_accountKey_1from_1mnemonic(
     env: JNIEnv,
     _obj: JObject,
     mnemonic_phrase: JString,

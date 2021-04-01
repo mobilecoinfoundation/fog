@@ -3318,6 +3318,7 @@ dependencies = [
  "libz-sys 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmdb-rkv 0.14.0 (git+https://github.com/mozilla/lmdb-rs?rev=df1c2f5)",
  "mc-account-keys 1.0.1-pre1",
+ "mc-account-keys-slip10 1.0.1-pre1",
  "mc-api 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -3352,6 +3353,7 @@ dependencies = [
  "serde_json 1.0.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tiny-bip39 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

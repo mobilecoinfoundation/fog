@@ -2583,6 +2583,7 @@ dependencies = [
  "fog-kex-rng 0.13.0",
  "jni 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
+ "mc-account-keys-slip10 1.0.1-pre1",
  "mc-api 1.0.1-pre1",
  "mc-attest-ake 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",

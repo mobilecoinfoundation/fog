@@ -10,18 +10,16 @@ use crate::{
     ffi::{jni_big_int_to_u64, jni_ffi_call, jni_ffi_call_or, RUST_OBJ_FIELD},
 };
 use aes_gcm::Aes256Gcm;
-use bip39::{Language, Mnemonic, Seed};
+use bip39::{Language, Mnemonic};
 use core::convert::TryFrom;
 use fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, VersionedKexRng};
 use jni::{
     objects::{JObject, JString},
-    sys::{
-        jboolean, jbyteArray, jint, jintArray, jlong, jobject, jobjectArray, jshort, jstring,
-        JNI_FALSE,
-    },
+    sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray, jshort, jstring, JNI_FALSE},
     JNIEnv,
 };
 use mc_account_keys::{AccountKey, PublicAddress, RootEntropy, RootIdentity};
+use mc_account_keys_slip10::Slip10KeyGenerator;
 use mc_api::printable::PrintableWrapper;
 use mc_attest_ake::{
     AuthPending, AuthResponseInput, AuthResponseOutput, ClientInitiate, Ready, Start, Transition,
@@ -1734,26 +1732,6 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_entropy_1to_1mnemonic
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_get_1bip39_1seed(
-    env: JNIEnv,
-    _obj: JObject,
-    mnemonic: JString,
-) -> jbyteArray {
-    jni_ffi_call_or(
-        || Ok(JObject::null().into_inner()),
-        &env,
-        |env| {
-            let mnemonic: String = env.get_string(mnemonic)?.into();
-            let mnemonic = Mnemonic::from_phrase(&mnemonic, Language::English)?;
-
-            let bip39_seed = Seed::new(&mnemonic, "");
-
-            Ok(env.byte_array_from_slice(&bip39_seed.as_bytes())?)
-        },
-    )
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
     env: JNIEnv,
     _obj: JObject,
@@ -1778,27 +1756,23 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Mnemonics_words_1by_1prefix(
  */
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_derive_1ed25519_1private_1key(
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Slip10_accountKey_1from_1mnemonic(
     env: JNIEnv,
     _obj: JObject,
-    seed: jbyteArray,
-    path: jintArray,
-) -> jbyteArray {
+    mnemonic_phrase: JString,
+    account_index: jint,
+) -> jlong {
     jni_ffi_call_or(
-        || Ok(JObject::null().into_inner()),
+        || Ok(0),
         &env,
         |env| {
-            let seed = env.convert_byte_array(seed)?;
-
-            let path_length = env.get_array_length(path)?;
-            let mut path_vec = vec![0; path_length as usize];
-            env.get_int_array_region(path, 0, path_vec.as_mut_slice())?;
-
-            let path_vec_u32: Vec<u32> = path_vec.iter().map(|i| *i as u32).collect();
-
-            let key = slip10_ed25519::derive_ed25519_private_key(&seed, &path_vec_u32);
-
-            Ok(env.byte_array_from_slice(&key)?)
+            let mnemonic_phrase: String = env.get_string(mnemonic_phrase)?.into();
+            let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase, Language::English)?;
+            let key = mnemonic.derive_slip10_key(account_index as u32);
+            let account_key = AccountKey::from(key);
+            let mbox = Box::new(Mutex::new(account_key));
+            let ptr: *mut Mutex<AccountKey> = Box::into_raw(mbox);
+            Ok(ptr as jlong)
         },
     )
 }

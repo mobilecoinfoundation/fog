@@ -16,7 +16,7 @@
 
 use fog_sample_paykit::ClientBuilder;
 use mc_account_keys::AccountKey;
-use mc_common::logger::create_root_logger;
+use mc_common::logger::{create_root_logger, log};
 use mc_util_uri::ConsensusClientUri;
 use serde_json::json;
 use std::{

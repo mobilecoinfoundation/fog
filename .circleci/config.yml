@@ -365,8 +365,6 @@ commands:
             export LEDGER_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
             export VIEW_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
 
-            env
-
             apt-get update && apt-get install -y python3-venv
             cd tools/fog-local-network
             python3 -m venv env
@@ -375,6 +373,7 @@ commands:
             pip install -r requirements.txt
             ./build.sh
             cd ../..
+
             cargo build --bin sample_paykit_remote_wallet
             ./target/debug/sample_paykit_remote_wallet &
             python ./tools/fog-local-network/fog_conformance_tests.py

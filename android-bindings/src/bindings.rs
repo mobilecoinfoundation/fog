@@ -15,10 +15,7 @@ use core::convert::TryFrom;
 use fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, VersionedKexRng};
 use jni::{
     objects::{JObject, JString},
-    sys::{
-        jboolean, jbyteArray, jint, jlong, jobject, jobjectArray, jshort, jstring,
-        JNI_FALSE,
-    },
+    sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray, jshort, jstring, JNI_FALSE},
     JNIEnv,
 };
 use mc_account_keys::{AccountKey, PublicAddress, RootEntropy, RootIdentity};

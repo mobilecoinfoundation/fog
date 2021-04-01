@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 
-LISTEN_HOST = '127.0.0.1'
+LISTEN_HOST = os.getenv('LISTEN_HOST', '127.0.0.1')
 
 BASE_INGEST_CLIENT_PORT = 4200
 BASE_INGEST_PEER_PORT = 4300

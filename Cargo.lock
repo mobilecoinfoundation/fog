@@ -214,7 +214,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "benchmarks"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-common 1.0.1-pre1",
@@ -969,13 +969,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "fog-api"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-enclave-connection 0.13.0",
- "fog-kex-rng 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
+ "fog-enclave-connection 1.0.0",
+ "fog-kex-rng 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-api 1.0.1-pre1",
@@ -998,11 +998,11 @@ dependencies = [
 
 [[package]]
 name = "fog-distribution"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "crossbeam-channel 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ingest-enclave-measurement 0.13.0",
+ "fog-ingest-enclave-measurement 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -1027,7 +1027,7 @@ dependencies = [
 
 [[package]]
 name = "fog-enclave-connection"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1048,12 +1048,12 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-client"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
+ "fog-api 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -1071,18 +1071,18 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ingest-enclave-api 0.13.0",
- "fog-ingest-enclave-edl 0.13.0",
- "fog-kex-rng 0.13.0",
+ "fog-ingest-enclave-api 1.0.0",
+ "fog-ingest-enclave-edl 1.0.0",
+ "fog-kex-rng 1.0.0",
  "fog-ocall-oram-storage-edl 0.5.0",
  "fog-ocall-oram-storage-untrusted 0.5.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-types 0.13.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1104,11 +1104,11 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-api"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
- "fog-types 0.13.0",
+ "fog-kex-rng 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1121,7 +1121,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-edl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
@@ -1129,14 +1129,14 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-impl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ingest-enclave-api 0.13.0",
- "fog-kex-rng 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-ingest-enclave-api 1.0.0",
+ "fog-kex-rng 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-types 1.0.0",
+ "fog-view-protocol 1.0.0",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-measurement"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
@@ -1174,20 +1174,20 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-server"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-ingest-client 0.13.0",
- "fog-ingest-enclave 0.13.0",
- "fog-ingest-enclave-api 0.13.0",
- "fog-ingest-enclave-measurement 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-sql-recovery-db 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
+ "fog-api 1.0.0",
+ "fog-ingest-client 1.0.0",
+ "fog-ingest-enclave 1.0.0",
+ "fog-ingest-enclave-api 1.0.0",
+ "fog-ingest-enclave-measurement 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-sql-recovery-db 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1228,7 +1228,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1243,13 +1243,13 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-connection"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-enclave-connection 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
+ "fog-api 1.0.0",
+ "fog-enclave-connection 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-api 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
@@ -1263,11 +1263,11 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ledger-enclave-api 0.13.0",
- "fog-ledger-enclave-edl 0.13.0",
+ "fog-ledger-enclave-api 1.0.0",
+ "fog-ledger-enclave-edl 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1287,10 +1287,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-api"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-types 0.13.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1305,7 +1305,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-edl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
@@ -1313,10 +1313,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-impl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
- "fog-ledger-enclave-api 0.13.0",
- "fog-types 0.13.0",
+ "fog-ledger-enclave-api 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1328,7 +1328,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-measurement"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
@@ -1340,18 +1340,18 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-server"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-ledger-connection 0.13.0",
- "fog-ledger-enclave 0.13.0",
- "fog-ledger-enclave-api 0.13.0",
- "fog-ledger-enclave-measurement 0.13.0",
- "fog-ledger-test-infra 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-uri 0.13.0",
+ "fog-api 1.0.0",
+ "fog-ledger-connection 1.0.0",
+ "fog-ledger-enclave 1.0.0",
+ "fog-ledger-enclave-api 1.0.0",
+ "fog-ledger-enclave-measurement 1.0.0",
+ "fog-ledger-test-infra 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-uri 1.0.0",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1387,10 +1387,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-test-infra"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ledger-enclave 0.13.0",
+ "fog-ledger-enclave 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1402,15 +1402,15 @@ dependencies = [
 
 [[package]]
 name = "fog-load-testing"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-ingest-client 0.13.0",
- "fog-ingest-server 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-sql-recovery-db 0.13.0",
- "fog-uri 0.13.0",
+ "fog-api 1.0.0",
+ "fog-ingest-client 1.0.0",
+ "fog-ingest-server 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-sql-recovery-db 1.0.0",
+ "fog-uri 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "libc 0.2.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -1475,11 +1475,11 @@ dependencies = [
 
 [[package]]
 name = "fog-recovery-db-iface"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
- "fog-types 0.13.0",
+ "fog-kex-rng 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -1492,7 +1492,7 @@ name = "fog-report-cli"
 version = "0.9.0"
 dependencies = [
  "binascii 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ingest-enclave-measurement 0.13.0",
+ "fog-ingest-enclave-measurement 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
@@ -1507,13 +1507,13 @@ dependencies = [
 
 [[package]]
 name = "fog-report-server"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-sql-recovery-db 0.13.0",
- "fog-test-infra 0.13.0",
+ "fog-api 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-sql-recovery-db 1.0.0",
+ "fog-test-infra 1.0.0",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-attest-core 1.0.1-pre1",
@@ -1541,19 +1541,19 @@ dependencies = [
 
 [[package]]
 name = "fog-sample-paykit"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-enclave-connection 0.13.0",
- "fog-ingest-enclave-measurement 0.13.0",
- "fog-ledger-connection 0.13.0",
- "fog-ledger-enclave-measurement 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
- "fog-view-connection 0.13.0",
- "fog-view-enclave-measurement 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-api 1.0.0",
+ "fog-enclave-connection 1.0.0",
+ "fog-ingest-enclave-measurement 1.0.0",
+ "fog-ledger-connection 1.0.0",
+ "fog-ledger-enclave-measurement 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
+ "fog-view-connection 1.0.0",
+ "fog-view-enclave-measurement 1.0.0",
+ "fog-view-protocol 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "link-cplusplus 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -1578,17 +1578,17 @@ dependencies = [
 
 [[package]]
 name = "fog-sql-recovery-db"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "diesel 1.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "diesel-derive-enum 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "diesel_migrations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-types 0.13.0",
+ "fog-kex-rng 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
@@ -1607,9 +1607,9 @@ dependencies = [
 
 [[package]]
 name = "fog-test-client"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
- "fog-sample-paykit 0.13.0",
+ "fog-sample-paykit 1.0.0",
  "mc-common 1.0.1-pre1",
  "mc-crypto-rand 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
@@ -1621,15 +1621,15 @@ dependencies = [
 
 [[package]]
 name = "fog-test-infra"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-ingest-client 0.13.0",
- "fog-kex-rng 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-ingest-client 1.0.0",
+ "fog-kex-rng 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-types 1.0.0",
+ "fog-view-protocol 1.0.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1653,11 +1653,11 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
+ "fog-kex-rng 1.0.0",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
  "mc-util-test-helper 1.0.1-pre1",
@@ -1668,7 +1668,7 @@ dependencies = [
 
 [[package]]
 name = "fog-uri"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "mc-common 1.0.1-pre1",
  "mc-util-uri 1.0.1-pre1",
@@ -1676,13 +1676,13 @@ dependencies = [
 
 [[package]]
 name = "fog-view-connection"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
- "fog-api 0.13.0",
- "fog-enclave-connection 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-api 1.0.0",
+ "fog-enclave-connection 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
+ "fog-view-protocol 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-attest-core 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1693,18 +1693,18 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-ocall-oram-storage-edl 0.5.0",
  "fog-ocall-oram-storage-untrusted 0.5.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-types 0.13.0",
- "fog-view-enclave-api 0.13.0",
- "fog-view-enclave-edl 0.13.0",
- "fog-view-enclave-measurement 0.13.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-types 1.0.0",
+ "fog-view-enclave-api 1.0.0",
+ "fog-view-enclave-edl 1.0.0",
+ "fog-view-enclave-measurement 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1730,11 +1730,11 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-api"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1748,7 +1748,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-edl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-build-script 1.0.1-pre1",
@@ -1756,12 +1756,12 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-impl"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-recovery-db-iface 0.13.0",
- "fog-types 0.13.0",
- "fog-view-enclave-api 0.13.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-types 1.0.0",
+ "fog-view-enclave-api 1.0.0",
  "mc-attest-core 1.0.1-pre1",
  "mc-attest-enclave-api 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
@@ -1778,7 +1778,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-measurement"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-attest-core 1.0.1-pre1",
@@ -1792,11 +1792,11 @@ dependencies = [
 name = "fog-view-load-test"
 version = "0.10.0"
 dependencies = [
- "fog-kex-rng 0.13.0",
- "fog-uri 0.13.0",
- "fog-view-connection 0.13.0",
- "fog-view-enclave-measurement 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-kex-rng 1.0.0",
+ "fog-uri 1.0.0",
+ "fog-view-connection 1.0.0",
+ "fog-view-enclave-measurement 1.0.0",
+ "fog-view-protocol 1.0.0",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-account-keys 1.0.1-pre1",
  "mc-attest-core 1.0.1-pre1",
@@ -1807,12 +1807,12 @@ dependencies = [
 
 [[package]]
 name = "fog-view-protocol"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
- "fog-types 0.13.0",
+ "fog-kex-rng 1.0.0",
+ "fog-types 1.0.0",
  "mc-account-keys 1.0.1-pre1",
  "mc-common 1.0.1-pre1",
  "mc-crypto-box 1.0.1-pre1",
@@ -1830,21 +1830,21 @@ dependencies = [
 
 [[package]]
 name = "fog-view-server"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-api 0.13.0",
- "fog-kex-rng 0.13.0",
- "fog-recovery-db-iface 0.13.0",
- "fog-sql-recovery-db 0.13.0",
- "fog-test-infra 0.13.0",
- "fog-types 0.13.0",
- "fog-uri 0.13.0",
- "fog-view-connection 0.13.0",
- "fog-view-enclave 0.13.0",
- "fog-view-enclave-api 0.13.0",
- "fog-view-enclave-measurement 0.13.0",
- "fog-view-protocol 0.13.0",
+ "fog-api 1.0.0",
+ "fog-kex-rng 1.0.0",
+ "fog-recovery-db-iface 1.0.0",
+ "fog-sql-recovery-db 1.0.0",
+ "fog-test-infra 1.0.0",
+ "fog-types 1.0.0",
+ "fog-uri 1.0.0",
+ "fog-view-connection 1.0.0",
+ "fog-view-enclave 1.0.0",
+ "fog-view-enclave-api 1.0.0",
+ "fog-view-enclave-measurement 1.0.0",
+ "fog-view-protocol 1.0.0",
  "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1991,7 +1991,7 @@ dependencies = [
 
 [[package]]
 name = "generate_test_foundation_key"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "mc-account-keys 1.0.1-pre1",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2404,13 +2404,13 @@ dependencies = [
 
 [[package]]
 name = "libmobilecoin"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "cbindgen 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cmake 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
+ "fog-kex-rng 1.0.0",
  "libc 0.2.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-account-keys-slip10 1.0.1-pre1",
@@ -2426,7 +2426,7 @@ dependencies = [
  "mc-fog-report-validation 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
  "mc-transaction-std 1.0.1-pre1",
- "mc-util-ffi 0.13.0",
+ "mc-util-ffi 1.0.0",
  "mc-util-serial 1.0.1-pre1",
  "mc-util-uri 1.0.1-pre1",
  "protobuf 2.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2575,12 +2575,12 @@ dependencies = [
 
 [[package]]
 name = "mc-android-bindings"
-version = "0.13.0"
+version = "1.0.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
  "anyhow 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fog-kex-rng 0.13.0",
+ "fog-kex-rng 1.0.0",
  "jni 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
  "mc-account-keys-slip10 1.0.1-pre1",
@@ -3658,7 +3658,7 @@ dependencies = [
 
 [[package]]
 name = "mc-util-ffi"
-version = "0.13.0"
+version = "1.0.0"
 
 [[package]]
 name = "mc-util-from-random"

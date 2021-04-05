@@ -359,7 +359,24 @@ commands:
       - run:
           name: fog_conformance_tests.py
           command: |
-            ./tools/fog-local-network/fog_conformance_tests.py target/debug/balance_check
+            openssl genrsa -out mobilecoin/Enclave_private.pem -3 3072
+            export CONSENSUS_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
+            export INGEST_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
+            export LEDGER_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
+            export VIEW_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
+
+            apt-get update && apt-get install -y python3-venv
+            cd tools/fog-local-network
+            python3 -m venv env
+            . ./env/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            ./build.sh
+            cd ../..
+
+            cargo build --bin sample_paykit_remote_wallet
+            ./target/debug/sample_paykit_remote_wallet &
+            python ./tools/fog-local-network/fog_conformance_tests.py
 
   run-tests:
     parameters:

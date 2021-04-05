@@ -5,12 +5,16 @@ import argparse
 import json
 import os
 import shutil
-import signal # To catch timeouts using signal.alarm
 import subprocess
 import sys
 import time
+import grpc
+
+import remote_wallet_pb2
+import remote_wallet_pb2_grpc
 
 from local_fog import *
+
 
 # If a balance check process doesn't respond in 60 seconds, SIGALRM is sent and the test is aborted
 RESPOND_SECONDS = 60
@@ -19,38 +23,6 @@ DEADLINE_SECONDS = 60
 # Number of seconds to retry before for ingest publishes report
 FOG_REPORT_RETRY_SECONDS = 30
 
-# Global variable tracking which balance_check instance we are waiting on during SIGALRM period
-sigalrm_watched_prog = None
-# Handler used with SIGALRM
-def handler(signum, frame):
-    if signum == signal.SIGALRM:
-        # If watched_prog is not None, it is expected to be an instance of class BalanceCheckProgram
-        if sigalrm_watched_prog is not None:
-            raise Exception(f"Program `{sigalrm_watched_prog.balance_check_path}` instance \"{sigalrm_watched_prog.name}\" did not respond in {RESPOND_SECONDS} seconds while checking balance for account {sigalrm_watched_prog.key_num}")
-        else:
-            raise Exception(f"SIGALRM occurred at an unexpected time")
-
-# A context-manager guard class that sets the alarm and watches an instance of BalanceCheckProgram for timeouts, while we do a blocking read from it
-# It unsets the alarm and unsets the watched program variable, when we exit the scope
-class AlarmGuard:
-    # The AlarmGuard watches an instance of class BalanceCheckProgram
-    def __init__(self, watched):
-        assert isinstance(watched, BalanceCheckProgram)
-        self.watched = watched
-
-    # When we enter the scope, set the sigalrm_watched_prog variable and arm the alarm
-    def __enter__(self):
-        global sigalrm_watched_prog
-        assert sigalrm_watched_prog is None
-        sigalrm_watched_prog = self.watched
-        signal.alarm(RESPOND_SECONDS)
-
-    # When we enter the scope, disarm the alarm and unset sigalrm_watched_prog
-    def __exit__(self, tp, value, tb):
-        global sigalrm_watched_prog
-        signal.alarm(0)
-        assert sigalrm_watched_prog is not None
-        sigalrm_watched_prog = None
 
 # Log a command and then call subprocess.run
 def log_and_run_shell(cmd):
@@ -164,72 +136,62 @@ def parse_balance_check_output(line):
         raise Exception(f"missing required field 'block_count': {result}");
     return result
 
-class BalanceCheckProgram:
-    """An object for starting and controlling the execution of an external balance check program."""
-    def __init__(self, name, balance_check_path, keys_dir, ledger_url, view_url, key_num, release):
+
+class RemoteWallet:
+    def __init__(self, name, remote_wallet_host_port, keys_dir, ledger_url, view_url, key_num):
         self.name = name
-        self.balance_check_path = balance_check_path
+        self.remote_wallet_host_port = remote_wallet_host_port
         self.keys_dir = keys_dir
         self.ledger_url = ledger_url
         self.view_url = view_url
         self.key_num = key_num
-        self.release = release
-        self.popen = None
+        self.client_id = None
 
-    # Run the program, and return a balance check result (json object => python dict)
     def start(self):
-        assert self.popen is None
-        # Note: {self.key_dir}/{self.key_num}.json must match mc-util-keyfile::keygen
-        cmd = [
-            self.balance_check_path,
-            "--keyfile",
-            f"{self.keys_dir}/account_keys_{self.key_num}.json",
-            "--view-uri",
-            f"{self.view_url}",
-            "--ledger-uri",
-            f"{self.ledger_url}",
-        ]
-        with AlarmGuard(self):
-            print(cmd)
-            self.popen = subprocess.Popen(cmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            line = self.popen.stdout.readline()
-        return parse_balance_check_output(line)
+        assert self.client_id is None
+        print(f'Starting fresh balance check for {self.key_num}...')
+        key = json.load(open(os.path.join(self.keys_dir, f'account_keys_{self.key_num}.json')))
 
-    # With the program still running, print ' ' to prompt another balance check result,
-    # then return the parsed result.
+        with grpc.insecure_channel(self.remote_wallet_host_port) as channel:
+            stub = remote_wallet_pb2_grpc.RemoteWalletApiStub(channel)
+            response = self._retrying_grpc_request(stub.FreshBalanceCheck, remote_wallet_pb2.FreshBalanceCheckRequest(
+                root_entropy=bytes(key['root_entropy']),
+                view_server_uri=self.view_url,
+                ledger_server_uri=self.ledger_url,
+            ))
+
+        print(f'Key {self.key_num} started: {response}')
+        self.client_id = response.client_id
+        return {
+            "balance": response.balance,
+            "block_count": response.block_count,
+        }
+
     def check(self):
-        assert self.popen is not None
-        self.popen.stdin.write(b' ')
-        with AlarmGuard(self):
-            line = self.popen.stdout.readline()
-        return parse_balance_check_output(line)
+        assert self.client_id is not None
 
-    # With the program still running, print 'd' to prompt the program to dump debug output to STDERR,
-    # then pause for it to be finished, signaled by a newline on STDOUT.
-    # This is used when a wrong balance was returned, to aid debugging.
+        with grpc.insecure_channel(self.remote_wallet_host_port) as channel:
+            stub = remote_wallet_pb2_grpc.RemoteWalletApiStub(channel)
+            response = self._retrying_grpc_request(stub.FollowupBalanceCheck, remote_wallet_pb2.FollowupBalanceCheckRequest(client_id=self.client_id))
+
+        print(f'Key {self.key_num} followup check: {response}')
+        return {
+            "balance": response.balance,
+            "block_count": response.block_count,
+        }
+
     def debug(self):
-        assert self.popen is not None
-        print('requesting debug dump')
-        self.popen.stdin.write(b'd')
-        with AlarmGuard(self):
-            # wait for program to be done printing on STDERR
-            # this will block until a new line on STDOUT or until STDOUT is closed
-            _ = self.popen.stdout.readline()
+        assert self.client_id is not None
 
-    # Stop the program
-    def stop(self):
-        assert self.popen is not None
-        self.popen.terminate()
-        self.popen = None
+        with grpc.insecure_channel(self.remote_wallet_host_port) as channel:
+            stub = remote_wallet_pb2_grpc.RemoteWalletApiStub(channel)
+            response = self._retrying_grpc_request(stub.Debug, remote_wallet_pb2.DebugRequest(client_id=self.client_id))
 
-    # Check that the wallet is able to compute expected balance and reach an expected
-    # block count.
-    #
-    # Arguments:
-    # * acceptable_answers: a dict mapping block_counts to balance values which would be considered correct
-    # * expected_eventual_block_count: The block counts which we expect to eventually see in order to be satisfied
-    #                                  otherwise, we continue testing.
-    #                                  This is a list because in some cases a client could reasonably stop at one place or another.
+        print('-------------------')
+        print(f'Key {self.key_num} debug:')
+        print(response.debug_info)
+        print('-------------------')
+
     def assert_balance(self, acceptable_answers, expected_eventual_block_count):
         for ebc in expected_eventual_block_count:
             assert ebc in acceptable_answers
@@ -237,7 +199,7 @@ class BalanceCheckProgram:
         print(f"Checking account {self.key_num} on {self.name}...")
         start_time = time.perf_counter()
 
-        result = self.check() if self.popen else self.start()
+        result = self.check() if self.client_id is not None else self.start()
         while True:
             if result['block_count'] not in acceptable_answers:
                 self.debug()
@@ -257,9 +219,27 @@ class BalanceCheckProgram:
 
             result = self.check()
 
+    def stop(self):
+        with grpc.insecure_channel(self.remote_wallet_host_port) as channel:
+            stub = remote_wallet_pb2_grpc.RemoteWalletApiStub(channel)
+            self._retrying_grpc_request(stub.Debug, remote_wallet_pb2.StopRequest(client_id=self.client_id))
+
+    def _retrying_grpc_request(self, method, request):
+        """A helper method that retries a grpc request a few times before giving up"""
+        max_attempts = 10
+        attempt = 0
+        while True:
+            try:
+                return method(request)
+            except:
+                attempt += 1
+                if attempt == max_attempts:
+                    raise
+                time.sleep(1)
+
 
 class MultiBalanceChecker:
-    """The MultiBalanceChecker keeps track of an ever-growing set of BalanceCheckProgram
+    """The MultiBalanceChecker keeps track of an ever-growing set of RemoteWallet
     instances.
 
     At each step of the conformance tests we want to verify:
@@ -272,12 +252,12 @@ class MultiBalanceChecker:
     # The number of wallets we are playing with at each step.
     NUM_WALLETS = 5
 
-    def __init__(self, balance_check_path, keys_dir, fog_ledger, fog_view, release):
-        self.balance_check_path = balance_check_path
+    def __init__(self, remote_wallet_host_port, keys_dir, fog_ledger, fog_view, skip_followup_balance_checks):
+        self.remote_wallet_host_port = remote_wallet_host_port
         self.keys_dir = keys_dir
         self.fog_ledger = fog_ledger
         self.fog_view = fog_view
-        self.release = release
+        self.skip_followup_balance_checks = skip_followup_balance_checks
 
         self.steps = []
 
@@ -306,7 +286,7 @@ class MultiBalanceChecker:
             for wallet_num, (acceptable_balances, expected_eventual_block_count) in enumerate(acceptable_answers_per_wallet)
         ]
 
-        if self.steps:
+        if self.steps and not self.skip_followup_balance_checks:
             print(f'{step_name}: Performing followup balance checks')
             for wallets in self.steps:
                 for wallet, (acceptable_balances, expected_eventual_block_count) in zip(wallets, acceptable_answers_per_wallet):
@@ -343,14 +323,13 @@ class MultiBalanceChecker:
             assert ebc in acceptable_answers
 
         print(f"Fresh-checking account {key_num} on {name}...")
-        prog = BalanceCheckProgram(
+        prog = RemoteWallet(
             name = name,
-            balance_check_path = self.balance_check_path,
+            remote_wallet_host_port = self.remote_wallet_host_port,
             keys_dir = self.keys_dir,
-            ledger_url = self.fog_ledger.client_listen_url,
-            view_url = self.fog_view.client_listen_url,
+            ledger_url = f'insecure-fog-ledger://localhost:{self.fog_ledger.client_port}/',
+            view_url = f'insecure-fog-view://localhost:{self.fog_view.client_port}/',
             key_num = key_num,
-            release = self.release
         )
 
         prog.assert_balance(acceptable_answers, expected_eventual_block_count)
@@ -391,9 +370,8 @@ class FogConformanceTest:
         self.release = args.release
         # Directory for fog to store its databases
         self.work_dir = work_dir
-        # Balance check
-        self.balance_check_path = os.path.abspath(args.balance_check)
-        assert os.path.exists(self.balance_check_path)
+        # Remote wallet
+        self.remote_wallet_host_port = args.remote_wallet
 
         self.fog_ingest = None
         self.fog_ingest2 = None
@@ -419,7 +397,7 @@ class FogConformanceTest:
         return test_ledger
 
     # Create the databases and servers in the workdir and run the actual test
-    def run(self):
+    def run(self, skip_followup_balance_checks):
         #######################################################################
         # Set up the fog network
         #######################################################################
@@ -527,11 +505,11 @@ class FogConformanceTest:
 
         # Create the multi balance checker
         self.multi_balance_checker = MultiBalanceChecker(
-            self.balance_check_path,
+            self.remote_wallet_host_port,
             self.keys_dir,
             self.fog_ledger,
             self.fog_view,
-            self.release,
+            skip_followup_balance_checks,
         )
 
         # Check all accounts
@@ -896,15 +874,17 @@ class FogConformanceTest:
         time.sleep(10 if self.release else 30)
 
         # We will encounter 0: 0 while we wait for the view server to come up.
+        # Android will encounter 1: 0 because the SDK returns block index=0 when in fact block
+        # count=0, so that would result in block count being 1...
         # In theory we could get anything between 0 and 10, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
         # available one (10).
         self.multi_balance_checker.balance_check("from10a", [
-            [{0: 0, 10: 14}, [10]],
-            [{0: 0, 10: 13}, [10]],
-            [{0: 0, 10: 4}, [10]],
-            [{0: 0, 10: 4}, [10]],
-            [{0: 0, 10: 13}, [10]],
+            [{0: 0, 1: 0, 10: 14}, [10]],
+            [{0: 0, 1: 0, 10: 13}, [10]],
+            [{0: 0, 1: 0, 10: 4}, [10]],
+            [{0: 0, 1: 0, 10: 4}, [10]],
+            [{0: 0, 1: 0, 10: 13}, [10]],
         ])
 
         # Add block 10 to ingest and ledger. This should get reported by the restarted view server.
@@ -939,6 +919,9 @@ class FogConformanceTest:
         print("All checks succeeded!")
 
     def stop(self):
+        if self.multi_balance_checker:
+            self.multi_balance_checker.stop()
+
         if self.fog_ledger:
             self.fog_ledger.stop()
 
@@ -954,15 +937,12 @@ class FogConformanceTest:
         if self.fog_ingest2:
             self.fog_ingest2.stop()
 
-        if self.multi_balance_checker:
-            self.multi_balance_checker.stop()
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Balance check conformance tester')
     parser.add_argument('--skip-build', help='Skip building binaries', action='store_true')
     parser.add_argument('--release', help='Use release mode binaries', action='store_true')
-    parser.add_argument('balance_check', help='Balance check program to test conformance of')
+    parser.add_argument('--skip-followup-balance-checks', help='Skip followup balance checks', action='store_true')
+    parser.add_argument('--remote-wallet', help='The host:port of the remote wallet grpc server', default='127.0.0.1:9090')
     args = parser.parse_args()
 
     if not args.skip_build:
@@ -972,7 +952,5 @@ if __name__ == '__main__':
     shutil.rmtree(work_dir, ignore_errors=True)
     os.makedirs(work_dir)
 
-    # Install signal handler for SIGALRM
-    signal.signal(signal.SIGALRM, handler)
     with FogConformanceTest(work_dir, args) as test:
-        test.run()
+        test.run(args.skip_followup_balance_checks)

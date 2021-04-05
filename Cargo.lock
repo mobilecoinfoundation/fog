@@ -1543,6 +1543,7 @@ dependencies = [
 name = "fog-sample-paykit"
 version = "1.0.0"
 dependencies = [
+ "cargo-emit 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-api 1.0.0",
  "fog-enclave-connection 1.0.0",
@@ -1554,6 +1555,7 @@ dependencies = [
  "fog-view-connection 1.0.0",
  "fog-view-enclave-measurement 1.0.0",
  "fog-view-protocol 1.0.0",
+ "futures 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "link-cplusplus 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-account-keys 1.0.1-pre1",
@@ -1569,8 +1571,12 @@ dependencies = [
  "mc-transaction-core 1.0.1-pre1",
  "mc-transaction-core-test-utils 1.0.1-pre1",
  "mc-transaction-std 1.0.1-pre1",
+ "mc-util-build-grpc 1.0.1-pre1",
+ "mc-util-build-script 1.0.1-pre1",
+ "mc-util-grpc 1.0.1-pre1",
  "mc-util-keyfile 1.0.1-pre1",
  "mc-util-uri 1.0.1-pre1",
+ "protobuf 2.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.21 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 
+LISTEN_HOST = os.getenv('LISTEN_HOST', '127.0.0.1')
+
 BASE_INGEST_CLIENT_PORT = 4200
 BASE_INGEST_PEER_PORT = 4300
 BASE_INGEST_ADMIN_PORT = 4400
@@ -55,7 +57,7 @@ class FogIngest:
         self.watcher_db_path = watcher_db_path
 
         self.client_port = client_port
-        self.client_listen_url = f"insecure-fog-ingest://localhost:{self.client_port}/"
+        self.client_listen_url = f"insecure-fog-ingest://{LISTEN_HOST}:{self.client_port}/"
 
         self.peer_port = peer_port
         self.admin_port = admin_port
@@ -78,13 +80,13 @@ class FogIngest:
             f'cd {FOG_PROJECT_DIR} && MC_LOG=trace DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} exec {target_dir(self.release)}/fog_ingest_server',
             f'--ledger-db={self.ledger_db_path}',
             f'--client-listen-uri={self.client_listen_url}',
-            f'--peer-listen-uri=insecure-igp://localhost:{self.peer_port}/',
+            f'--peer-listen-uri=insecure-igp://{LISTEN_HOST}:{self.peer_port}/',
             f'--peers=insecure-igp://localhost:{self.peer_port}/',
             f'--ias-api-key={IAS_API_KEY}',
             f'--ias-spid={IAS_SPID}',
             f'--local-node-id localhost:{self.peer_port}',
             f'--state-file {self.state_file_path}',
-            f'--admin-listen-uri=insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-listen-uri=insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
             f'--watcher-db {self.watcher_db_path}',
         ])
 
@@ -96,9 +98,9 @@ class FogIngest:
 
         cmd = ' '.join([
             f'cd {PROJECT_DIR} && export ROCKET_CLI_COLORS=0 && exec {target_dir(self.release)}/mc-admin-http-gateway',
-            f'--listen-host localhost',
+            f'--listen-host {LISTEN_HOST}',
             f'--listen-port {self.admin_http_gateway_port}',
-            f'--admin-uri insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-uri insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
         ])
         print(f'Starting admin http gateway for fog ingest: {cmd}')
         self.admin_http_gateway_process = subprocess.Popen(cmd, shell=True)
@@ -169,7 +171,7 @@ class FogView:
         self.name = name
 
         self.client_port = client_port
-        self.client_listen_url = f'insecure-fog-view://localhost:{self.client_port}/'
+        self.client_listen_url = f'insecure-fog-view://{LISTEN_HOST}:{self.client_port}/'
 
         self.admin_port = admin_port
         self.admin_http_gateway_port = admin_http_gateway_port
@@ -191,7 +193,7 @@ class FogView:
             f'--client-responder-id=localhost:{self.client_port}',
             f'--ias-api-key={IAS_API_KEY}',
             f'--ias-spid={IAS_SPID}',
-            f'--admin-listen-uri=insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-listen-uri=insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
         ])
 
         print(f'Starting fog view {self.name}')
@@ -202,9 +204,9 @@ class FogView:
 
         cmd = ' '.join([
             f'cd {PROJECT_DIR} && export ROCKET_CLI_COLORS=0 && exec {target_dir(self.release)}/mc-admin-http-gateway',
-            f'--listen-host localhost',
+            f'--listen-host {LISTEN_HOST}',
             f'--listen-port {self.admin_http_gateway_port}',
-            f'--admin-uri insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-uri insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
         ])
         print(f'Starting admin http gateway for fog view: {cmd}')
         self.admin_http_gateway_process = subprocess.Popen(cmd, shell=True)
@@ -223,7 +225,7 @@ class FogReport:
     def __init__(self, name, client_port, admin_port, admin_http_gateway_port, release, chain, key):
         self.name = name
         self.client_port = client_port
-        self.client_listen_url = f"insecure-fog://localhost:{self.client_port}/"
+        self.client_listen_url = f"insecure-fog://{LISTEN_HOST}:{self.client_port}/"
 
         self.admin_port = admin_port
         self.admin_http_gateway_port = admin_http_gateway_port
@@ -245,7 +247,7 @@ class FogReport:
         cmd = ' '.join([
             f'cd {FOG_PROJECT_DIR} && DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} exec {target_dir(self.release)}/report_server',
             f'--client-listen-uri={self.client_listen_url}',
-            f'--admin-listen-uri=insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-listen-uri=insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
             f'--signing-chain={self.chain}',
             f'--signing-key={self.key}'
         ])
@@ -258,9 +260,9 @@ class FogReport:
 
         cmd = ' '.join([
             f'cd {PROJECT_DIR} && export ROCKET_CLI_COLORS=0 && exec {target_dir(self.release)}/mc-admin-http-gateway',
-            f'--listen-host localhost',
+            f'--listen-host {LISTEN_HOST}',
             f'--listen-port {self.admin_http_gateway_port}',
-            f'--admin-uri insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-uri insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
         ])
         print(f'Starting admin http gateway for fog report : {cmd}')
         self.admin_http_gateway_process = subprocess.Popen(cmd, shell=True)
@@ -282,7 +284,7 @@ class FogLedger:
         self.watcher_db_path = watcher_db_path
 
         self.client_port = client_port
-        self.client_listen_url = f'insecure-fog-ledger://localhost:{self.client_port}/'
+        self.client_listen_url = f'insecure-fog-ledger://{LISTEN_HOST}:{self.client_port}/'
 
         self.admin_port = admin_port
         self.admin_http_gateway_port = admin_http_gateway_port
@@ -306,7 +308,7 @@ class FogLedger:
             f'--client-responder-id=localhost:{self.client_port}',
             f'--ias-api-key={IAS_API_KEY}',
             f'--ias-spid={IAS_SPID}',
-            f'--admin-listen-uri=insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-listen-uri=insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
             f'--watcher-db {self.watcher_db_path}',
         ])
 
@@ -318,9 +320,9 @@ class FogLedger:
 
         cmd = ' '.join([
             f'cd {PROJECT_DIR} && export ROCKET_CLI_COLORS=0 && exec {target_dir(self.release)}/mc-admin-http-gateway',
-            f'--listen-host localhost',
+            f'--listen-host {LISTEN_HOST}',
             f'--listen-port {self.admin_http_gateway_port}',
-            f'--admin-uri insecure-mca://127.0.0.1:{self.admin_port}/',
+            f'--admin-uri insecure-mca://{LISTEN_HOST}:{self.admin_port}/',
         ])
         print(f'Starting admin http gateway for fog ledger: {cmd}')
         self.admin_http_gateway_process = subprocess.Popen(cmd, shell=True)

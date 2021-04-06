@@ -58,17 +58,14 @@ In order to use it, the following steps are necessary.
     # Create a set of target keys. They would be identical to the first N keys inside `keys/`. This is needed if you don't
     # want to send to transactions to all 1000 keys created at step 1.
     # Notice the addition of the --output-dir argument
-    cargo run -p mc-util-keyfile --bin sample-keys --release --manifest-path ../mobilecoin/Cargo.toml -- --num 10 --output-dir fog_keys --fog-report-url 'insecure-fog://localhost:6200'
-
-    # Run fog ingest client
-    SGX_MODE=SW IAS_MODE=DEV cargo run -p fog-ingest-client --release -- --uri insecure-fog-ingest://localhost:4200/ add-users --keys-path ./fog_keys
+    cargo run -p mc-util-keyfile --bin sample-keys --release --manifest-path ../mobilecoin/Cargo.toml -- --num 10 --output-dir fog_keys --fog-report-url 'insecure-fog://localhost:6200' --fog-authority-root $(../mobilecoin/target/release/mc-crypto-x509-test-vectors --type=chain --test-name=ok_rsa_head)
 
     # Run the distribution script. This takes awhile and you should see transactions going through by looking at the logs.
     SGX_MODE=SW IAS_MODE=DEV MC_LOG=debug \
-    INGEST_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    LEDGER_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    VIEW_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    CONSENSUS_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
+    INGEST_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    LEDGER_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    VIEW_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    CONSENSUS_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
         cargo run -p fog-distribution --release -- \
         --sample-data-dir . \
         --peer insecure-mc://localhost:3200/ \
@@ -84,10 +81,10 @@ In order to use it, the following steps are necessary.
 6) When its done, wait for consensus to complete processing the transactions (by looking at the logs). Afterwards you should be able to successfully run the test client:
     ```
     SGX_MODE=SW IAS_MODE=DEV MC_LOG=trace \
-    INGEST_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    LEDGER_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    VIEW_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
-    CONSENSUS_ENCLAVE_PRIVKEY=$(pwd)/../Enclave_private.pem \
+    INGEST_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    LEDGER_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    VIEW_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
+    CONSENSUS_ENCLAVE_PRIVKEY=$(pwd)/../mobilecoin/Enclave_private.pem \
         cargo run -p fog-test-client -- \
         --consensus insecure-mc://localhost:3200/ \
         --consensus insecure-mc://localhost:3201/ \
@@ -98,8 +95,8 @@ In order to use it, the following steps are necessary.
         --num-transactions 32 \
         --consensus-wait 300 \
         --transfer-amount 20 \
-        --fog-view insecure-fog-view://localhost:5200 \
-        --fog-ledger insecure-fog-ledger://localhost:7200 \
+        --fog-view insecure-fog-view://localhost:8200 \
+        --fog-ledger insecure-fog-ledger://localhost:8200 \
         --key-dir $(pwd)/fog_keys
     ```
 

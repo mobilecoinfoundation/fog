@@ -92,17 +92,13 @@ impl RemoteWalletService {
         let fog_uri = request.get_fog_uri();
         let (fog_view_uri, fog_ledger_uri) = if fog_uri.starts_with("fog://") {
             (
-                fog_uri.replace("fog://", "fog-view://").to_string(),
-                fog_uri.replace("fog://", "fog-ledger://").to_string(),
+                fog_uri.replace("fog://", "fog-view://"),
+                fog_uri.replace("fog://", "fog-ledger://"),
             )
         } else if fog_uri.starts_with("insecure-fog://") {
             (
-                fog_uri
-                    .replace("insecure-fog://", "insecure-fog-view://")
-                    .to_string(),
-                fog_uri
-                    .replace("insecure-fog://", "insecure-fog-ledger://")
-                    .to_string(),
+                fog_uri.replace("insecure-fog://", "insecure-fog-view://"),
+                fog_uri.replace("insecure-fog://", "insecure-fog-ledger://"),
             )
         } else {
             return Err(rpc_internal_error(

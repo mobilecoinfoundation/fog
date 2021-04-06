@@ -365,7 +365,7 @@ commands:
             export LEDGER_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
             export VIEW_ENCLAVE_PRIVKEY=$(pwd)/mobilecoin/Enclave_private.pem
 
-            apt-get update && apt-get install -y python3-venv
+            apt-get update && apt-get install -y python3-venv nginx
             cd tools/fog-local-network
             python3 -m venv env
             . ./env/bin/activate

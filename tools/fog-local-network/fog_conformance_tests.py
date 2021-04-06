@@ -250,11 +250,12 @@ class MultiBalanceChecker:
     # The number of wallets we are playing with at each step.
     NUM_WALLETS = 5
 
-    def __init__(self, remote_wallet_host_port, keys_dir, fog_nginx, skip_followup_balance_checks):
+    def __init__(self, remote_wallet_host_port, keys_dir, fog_nginx, skip_followup_balance_checks, override_remote_wallet_fog_uri):
         self.remote_wallet_host_port = remote_wallet_host_port
         self.keys_dir = keys_dir
         self.fog_nginx = fog_nginx
         self.skip_followup_balance_checks = skip_followup_balance_checks
+        self.override_remote_wallet_fog_uri = override_remote_wallet_fog_uri
 
         self.steps = []
 
@@ -319,12 +320,14 @@ class MultiBalanceChecker:
         for ebc in expected_eventual_block_count:
             assert ebc in acceptable_answers
 
+        fog_url = self.override_remote_wallet_fog_uri or f'insecure-fog://localhost:{self.fog_nginx.client_port}/'
+
         print(f"Fresh-checking account {key_num} on {name}...")
         prog = RemoteWallet(
             name = name,
             remote_wallet_host_port = self.remote_wallet_host_port,
             keys_dir = self.keys_dir,
-            fog_url = f'insecure-fog://localhost:{self.fog_nginx.client_port}/',
+            fog_url = fog_url,
             key_num = key_num,
         )
 
@@ -394,7 +397,7 @@ class FogConformanceTest:
         return test_ledger
 
     # Create the databases and servers in the workdir and run the actual test
-    def run(self, skip_followup_balance_checks):
+    def run(self, skip_followup_balance_checks, override_remote_wallet_fog_uri):
         #######################################################################
         # Set up the fog network
         #######################################################################
@@ -517,6 +520,7 @@ class FogConformanceTest:
             self.keys_dir,
             self.fog_nginx,
             skip_followup_balance_checks,
+            override_remote_wallet_fog_uri,
         )
 
         # Check all accounts
@@ -954,6 +958,7 @@ if __name__ == '__main__':
     parser.add_argument('--release', help='Use release mode binaries', action='store_true')
     parser.add_argument('--skip-followup-balance-checks', help='Skip followup balance checks', action='store_true')
     parser.add_argument('--remote-wallet', help='The host:port of the remote wallet grpc server', default='127.0.0.1:9090')
+    parser.add_argument('--override-remote-wallet-fog-uri', help='Override the default fog URI handed to the remote wallet. This is useful when the remote wallet is running on a different machine and needs to connect to the fog network started by the script')
     args = parser.parse_args()
 
     if not args.skip_build:
@@ -965,6 +970,6 @@ if __name__ == '__main__':
 
     with FogConformanceTest(work_dir, args) as test:
         try:
-            test.run(args.skip_followup_balance_checks)
+            test.run(args.skip_followup_balance_checks, args.override_remote_wallet_fog_uri)
         finally:
             test.stop()

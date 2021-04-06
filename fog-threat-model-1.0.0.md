@@ -191,8 +191,8 @@ Darth can:
 
 The system has a forward-secrecy property:
 
-* If SGX is patched and Fog enclaves are rebuilt and redeployed, this adversary no longer has any more information
-  than its earlier adversaries, for transactions and interactions that occur after that point. This does not require
+* If SGX is patched and Fog enclaves are rebuilt and redeployed, Darth-level adversaries no longer have any additional information,
+  and are degraded to the Mallory-level for transactions and interactions that occur after that point. This does not require
   the users to change their private keys, but may require them to update their app in order to trust the new enclave.
 
 ### SGX-compromising Adversary without root on Fog infrastructure (Trudy)

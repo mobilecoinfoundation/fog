@@ -374,8 +374,6 @@ commands:
             ./build.sh
             cd ../..
 
-            cargo build --bin sample_paykit_remote_wallet
-            ./target/debug/sample_paykit_remote_wallet &
             python ./tools/fog-local-network/fog_conformance_tests.py
 
   run-tests:

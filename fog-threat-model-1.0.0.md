@@ -18,7 +18,7 @@ system specifically cannot do.
 # Terms
 
 For the reader's ease, we have chosen simpler terms for some of the elements of MobileCoin. In particular,
-while in documentation, a transaction produces "transaction outputs," in this document, the term
+in the literature, a transaction produces "transaction outputs," in this document, the term
 "payment record" is used instead.  For example, when a transaction is submitted
 successfully, (encrypted) "payment records" are added to the blockchain, and these
 payment records are returned to the appropriate users privately via Fog.

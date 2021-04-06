@@ -138,12 +138,11 @@ def parse_balance_check_output(line):
 
 
 class RemoteWallet:
-    def __init__(self, name, remote_wallet_host_port, keys_dir, ledger_url, view_url, key_num):
+    def __init__(self, name, remote_wallet_host_port, keys_dir, fog_url, key_num):
         self.name = name
         self.remote_wallet_host_port = remote_wallet_host_port
         self.keys_dir = keys_dir
-        self.ledger_url = ledger_url
-        self.view_url = view_url
+        self.fog_url = fog_url
         self.key_num = key_num
         self.client_id = None
 
@@ -156,8 +155,7 @@ class RemoteWallet:
             stub = remote_wallet_pb2_grpc.RemoteWalletApiStub(channel)
             response = self._retrying_grpc_request(stub.FreshBalanceCheck, remote_wallet_pb2.FreshBalanceCheckRequest(
                 root_entropy=bytes(key['root_entropy']),
-                view_server_uri=self.view_url,
-                ledger_server_uri=self.ledger_url,
+                fog_uri=self.fog_url,
             ))
 
         print(f'Key {self.key_num} started: {response}')
@@ -252,11 +250,10 @@ class MultiBalanceChecker:
     # The number of wallets we are playing with at each step.
     NUM_WALLETS = 5
 
-    def __init__(self, remote_wallet_host_port, keys_dir, fog_ledger, fog_view, skip_followup_balance_checks):
+    def __init__(self, remote_wallet_host_port, keys_dir, fog_nginx, skip_followup_balance_checks):
         self.remote_wallet_host_port = remote_wallet_host_port
         self.keys_dir = keys_dir
-        self.fog_ledger = fog_ledger
-        self.fog_view = fog_view
+        self.fog_nginx = fog_nginx
         self.skip_followup_balance_checks = skip_followup_balance_checks
 
         self.steps = []
@@ -327,8 +324,7 @@ class MultiBalanceChecker:
             name = name,
             remote_wallet_host_port = self.remote_wallet_host_port,
             keys_dir = self.keys_dir,
-            ledger_url = f'insecure-fog-ledger://localhost:{self.fog_ledger.client_port}/',
-            view_url = f'insecure-fog-view://localhost:{self.fog_view.client_port}/',
+            fog_url = f'insecure-fog://localhost:{self.fog_nginx.client_port}/',
             key_num = key_num,
         )
 
@@ -373,6 +369,7 @@ class FogConformanceTest:
         # Remote wallet
         self.remote_wallet_host_port = args.remote_wallet
 
+        self.fog_nginx = None
         self.fog_ingest = None
         self.fog_ingest2 = None
         self.fog_view = None
@@ -435,6 +432,15 @@ class FogConformanceTest:
 
         # Start fog services
         print("Starting fog services...")
+        self.fog_nginx = FogNginx(
+            work_dir = self.work_dir,
+            client_port = BASE_NGINX_CLIENT_PORT,
+            view_port = BASE_VIEW_CLIENT_PORT,
+            ledger_port = BASE_LEDGER_CLIENT_PORT,
+            report_port = BASE_REPORT_CLIENT_PORT,
+        )
+        self.fog_nginx.start()
+
         self.fog_ingest = FogIngest(
             name = 'ingest1',
             work_dir = self.work_dir,
@@ -450,6 +456,7 @@ class FogConformanceTest:
 
         self.fog_view = FogView(
             name = 'view1',
+            client_responder_id = f'localhost:{BASE_NGINX_CLIENT_PORT}',
             client_port = BASE_VIEW_CLIENT_PORT,
             admin_port = BASE_VIEW_ADMIN_PORT,
             admin_http_gateway_port = BASE_VIEW_ADMIN_HTTP_GATEWAY_PORT,
@@ -460,6 +467,7 @@ class FogConformanceTest:
         self.fog_ledger = FogLedger(
             name = 'ledger_server1',
             ledger_db_path = ledger2.ledger_db_path,
+            client_responder_id = f'localhost:{BASE_NGINX_CLIENT_PORT}',
             client_port = BASE_LEDGER_CLIENT_PORT,
             admin_port = BASE_LEDGER_ADMIN_PORT,
             admin_http_gateway_port = BASE_LEDGER_ADMIN_HTTP_GATEWAY_PORT,
@@ -507,8 +515,7 @@ class FogConformanceTest:
         self.multi_balance_checker = MultiBalanceChecker(
             self.remote_wallet_host_port,
             self.keys_dir,
-            self.fog_ledger,
-            self.fog_view,
+            self.fog_nginx,
             skip_followup_balance_checks,
         )
 
@@ -937,6 +944,10 @@ class FogConformanceTest:
         if self.fog_ingest2:
             self.fog_ingest2.stop()
 
+        if self.fog_nginx:
+            self.fog_nginx.stop()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Balance check conformance tester')
     parser.add_argument('--skip-build', help='Skip building binaries', action='store_true')
@@ -953,4 +964,7 @@ if __name__ == '__main__':
     os.makedirs(work_dir)
 
     with FogConformanceTest(work_dir, args) as test:
-        test.run(args.skip_followup_balance_checks)
+        try:
+            test.run(args.skip_followup_balance_checks)
+        finally:
+            test.stop()

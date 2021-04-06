@@ -25,7 +25,7 @@ class FogNetwork(Network):
                 f'INGEST_ENCLAVE_PRIVKEY="{enclave_pem}"',
                 f'LEDGER_ENCLAVE_PRIVKEY="{enclave_pem}"',
                 f'VIEW_ENCLAVE_PRIVKEY="{enclave_pem}"',
-                f'cargo build -p fog-ingest-server -p fog-ingest-client -p fog-view-server -p fog-report-server -p fog-ledger-server -p fog-distribution -p fog-test-client -p slam -p fog-ingest-client -p fog-sql-recovery-db -p fog-test-client {CARGO_FLAGS}',
+                f'cargo build -p fog-ingest-server -p fog-ingest-client -p fog-view-server -p fog-report-server -p fog-ledger-server -p fog-distribution -p fog-test-client -p fog-ingest-client -p fog-sql-recovery-db -p fog-test-client {CARGO_FLAGS}',
             ]),
             shell=True,
             check=True,
@@ -58,7 +58,25 @@ class FogNetwork(Network):
         except:
             pass
 
+        # Get chain and key
+        root = subprocess.check_output(f"mobilecoin/{TARGET_DIR}/mc-crypto-x509-test-vectors --type=chain --test-name=ok_rsa_head",
+                                   encoding='utf8', shell=True).strip()
+        chain = subprocess.check_output(f"mobilecoin/{TARGET_DIR}/mc-crypto-x509-test-vectors --type=chain --test-name=ok_rsa_chain_25519_leaf",
+                                   encoding='utf8', shell=True).strip()
+        key = subprocess.check_output(f"mobilecoin/{TARGET_DIR}/mc-crypto-x509-test-vectors --type=key --test-name=ok_rsa_chain_25519_leaf",
+                                 encoding='utf8', shell=True).strip()
+        print(f"chain path = {chain}, key path = {key}")
+
         # Start fog services
+        self.fog_nginx = FogNginx(
+            work_dir = fog_work_dir,
+            client_port = BASE_NGINX_CLIENT_PORT,
+            view_port = BASE_VIEW_CLIENT_PORT,
+            ledger_port = BASE_LEDGER_CLIENT_PORT,
+            report_port = BASE_REPORT_CLIENT_PORT,
+        )
+        self.fog_nginx.start()
+
         self.fog_ingest = FogIngest(
             'ingest1',
             fog_work_dir,
@@ -74,6 +92,7 @@ class FogNetwork(Network):
 
         self.fog_view = FogView(
             'view1',
+            f'localhost:{BASE_NGINX_CLIENT_PORT}',
             BASE_VIEW_CLIENT_PORT,
             BASE_VIEW_ADMIN_PORT,
             BASE_VIEW_ADMIN_HTTP_GATEWAY_PORT,
@@ -87,12 +106,15 @@ class FogNetwork(Network):
             BASE_REPORT_ADMIN_PORT,
             BASE_REPORT_ADMIN_HTTP_GATEWAY_PORT,
             release=True,
+            chain = chain,
+            key = key,
         )
         self.fog_report.start()
 
         self.fog_ledger = FogLedger(
             'ledger1',
             self.nodes[0].ledger_dir,
+            f'localhost:{BASE_NGINX_CLIENT_PORT}',
             BASE_LEDGER_CLIENT_PORT,
             BASE_LEDGER_ADMIN_PORT,
             BASE_LEDGER_ADMIN_HTTP_GATEWAY_PORT,
@@ -102,9 +124,9 @@ class FogNetwork(Network):
         self.fog_ledger.start()
 
         # Tell the ingest server to activate, giving it a little time for RPC to wakeup
-        time.sleep(5 if self.release else 15)
+        time.sleep(15)
         cmd = ' '.join([
-            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'exec {FOG_PROJECT_DIR}/{TARGET_DIR}/fog_ingest_client',
             f'--uri insecure-fog-ingest://localhost:{BASE_INGEST_CLIENT_PORT}',
             f'activate',
         ])

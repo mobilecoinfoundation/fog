@@ -87,10 +87,36 @@ impl RemoteWalletService {
         let consensus_client_uri = ConsensusClientUri::from_str("mc://127.0.0.1")
             .expect("Could not create dummy consensus client uri");
 
+        // Figure out the view/ledger URIs and adapt the scheme to match what the Rust
+        // clients expect.
+        let fog_uri = request.get_fog_uri();
+        let (fog_view_uri, fog_ledger_uri) = if fog_uri.starts_with("fog://") {
+            (
+                fog_uri.replace("fog://", "fog-view://").to_string(),
+                fog_uri.replace("fog://", "fog-ledger://").to_string(),
+            )
+        } else if fog_uri.starts_with("insecure-fog://") {
+            (
+                fog_uri
+                    .replace("insecure-fog://", "insecure-fog-view://")
+                    .to_string(),
+                fog_uri
+                    .replace("insecure-fog://", "insecure-fog-ledger://")
+                    .to_string(),
+            )
+        } else {
+            return Err(rpc_internal_error(
+                "fog_uri",
+                "Unknown fog uri scheme, must be fog:// or insecure-fog://",
+                &self.logger,
+            ));
+        };
+
+        // Create client and perform balance check.
         let mut client = ClientBuilder::new(
             consensus_client_uri,
-            request.get_view_server_uri().to_string(),
-            request.get_ledger_server_uri().to_string(),
+            fog_view_uri,
+            fog_ledger_uri,
             account_key,
             self.logger.clone(),
         )

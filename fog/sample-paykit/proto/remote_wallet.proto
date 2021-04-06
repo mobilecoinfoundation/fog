@@ -35,11 +35,8 @@ message FreshBalanceCheckRequest {
     /// Root entropy for the account the new client will be using.
     bytes root_entropy = 1;
 
-    /// View server URI
-    string view_server_uri = 2;
-
-    /// Ledger server URI
-    string ledger_server_uri = 3;
+    /// FOG URI (should have view and ledger servers accessible).
+    string fog_uri = 2;
 }
 
 message BalanceCheckResponse {

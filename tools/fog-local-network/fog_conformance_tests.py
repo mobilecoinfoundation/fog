@@ -352,6 +352,31 @@ class MultiBalanceChecker:
         prog.assert_balance(acceptable_answers, expected_eventual_block_count)
 
 
+class RustSamplePaykitRemoteWallet:
+    """An object that takes care of starting/stopping the Rust sample paykit remote wallet."""
+    def __init__(self, release):
+        self.release = release
+        self.wallet_process = None
+
+    def start(self):
+        assert self.wallet_process is None
+
+        cmd = ' '.join([
+            f'cd {FOG_PROJECT_DIR} && MC_LOG=info exec {target_dir(self.release)}/sample_paykit_remote_wallet',
+        ])
+
+        print(f'Starting rust sample paykit remote wallet')
+        print(cmd)
+        print()
+
+        self.wallet_process = subprocess.Popen(cmd, shell=True)
+
+    def stop(self):
+        if self.wallet_process:
+            self.wallet_process.terminate()
+            self.wallet_process = None
+
+
 class FogConformanceTest:
     # Build the fog and mobilecoin repos for needed code, in release mode if selected
     def build(args):
@@ -372,6 +397,7 @@ class FogConformanceTest:
         # Remote wallet
         self.remote_wallet_host_port = args.remote_wallet
 
+        self.rust_sample_paykit_remote_wallet = None
         self.fog_nginx = None
         self.fog_ingest = None
         self.fog_ingest2 = None
@@ -397,7 +423,7 @@ class FogConformanceTest:
         return test_ledger
 
     # Create the databases and servers in the workdir and run the actual test
-    def run(self, skip_followup_balance_checks, override_remote_wallet_fog_uri):
+    def run(self, args):
         #######################################################################
         # Set up the fog network
         #######################################################################
@@ -432,6 +458,11 @@ class FogConformanceTest:
         ])
         print(f'Creating postgres database: {cmd}')
         subprocess.check_output(cmd, shell=True)
+
+        # Start the rust remote wallet, unless the user requested not to
+        if not args.skip_rust_sample_paykit_remote_wallet:
+            self.rust_sample_paykit_remote_wallet = RustSamplePaykitRemoteWallet(self.release)
+            self.rust_sample_paykit_remote_wallet.start()
 
         # Start fog services
         print("Starting fog services...")
@@ -519,8 +550,8 @@ class FogConformanceTest:
             self.remote_wallet_host_port,
             self.keys_dir,
             self.fog_nginx,
-            skip_followup_balance_checks,
-            override_remote_wallet_fog_uri,
+            args.skip_followup_balance_checks,
+            args.override_remote_wallet_fog_uri,
         )
 
         # Check all accounts
@@ -951,6 +982,9 @@ class FogConformanceTest:
         if self.fog_nginx:
             self.fog_nginx.stop()
 
+        if self.rust_sample_paykit_remote_wallet:
+            self.rust_sample_paykit_remote_wallet.stop()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Balance check conformance tester')
@@ -959,6 +993,7 @@ if __name__ == '__main__':
     parser.add_argument('--skip-followup-balance-checks', help='Skip followup balance checks', action='store_true')
     parser.add_argument('--remote-wallet', help='The host:port of the remote wallet grpc server', default='127.0.0.1:9090')
     parser.add_argument('--override-remote-wallet-fog-uri', help='Override the default fog URI handed to the remote wallet. This is useful when the remote wallet is running on a different machine and needs to connect to the fog network started by the script')
+    parser.add_argument('--skip-rust-sample-paykit-remote-wallet', help='Do not start the Rust sample paykit remote wallet. Use this option when using a different remote wallet such as one running on a mobile phone emulator', action='store_true')
     args = parser.parse_args()
 
     if not args.skip_build:
@@ -970,6 +1005,6 @@ if __name__ == '__main__':
 
     with FogConformanceTest(work_dir, args) as test:
         try:
-            test.run(args.skip_followup_balance_checks, args.override_remote_wallet_fog_uri)
+            test.run(args)
         finally:
             test.stop()

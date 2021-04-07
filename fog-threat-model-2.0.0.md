@@ -124,11 +124,14 @@ created any particular payment record.
 
 Eve:
 
-* Obeys the SAME set of invariants as described for Oscar, with the following modifications:
+* Eve can see which IP created which payment record. (Oscar only has *some information* about this.)
+  (This is the current threat model for MoblieCoin consensus server.)
+
+* Otherwise, Eve obeys the SAME set of invariants as described for Oscar, with the following modifications:
   * Eve can determine the number of new payment records retrieved during balance checking, but not precisely which payment records belong to the user.
   * Eve can observe the ring elements used to construct a user's outgoing transaction at the time of construction.
 
-(Note: In a future release, we plan to improve the system so that these modifications are not necessary, and this adversary
+(Note: In a future release, we plan to improve the system so that these modifications are not necessary, and Eve
 has no additional information beyond the baseline adversary.)
 
 ### Infrastructure-compromising Adversary (Mallory)
@@ -149,11 +152,11 @@ Mallory cannot:
 * Steal private keys from any of the enclaves.
 * Exercise the fog-ingest, fog-ledger, or fog-view enclaves in any way that reveals additional non-trivial information
   about the amount or recipient of a transaction.
-* Infer *anything* about the sender or recipient of a payment, except when the baseline adversary could.
+* Infer *anything* about the sender or recipient of a payment, that Eve cannot also infer.
 
 Mallory can:
 
-* Do anything Eve could
+* Do anything Eve could.
 * Cause the Fog service to become unavailable.
 * Destroy encrypted payment records in Fog database, making it impossible for a user to successfully perform a balance check via Fog.
 * Create fake encrypted payment records, which are not part of the blockchain, which users will download and treat as real, but which can't be used to make successful transactions.
@@ -181,11 +184,11 @@ Darth cannot:
 
 Darth can:
 
-* Do anything Mallory could
+* Do anything Mallory could.
 * Learn many view-public keys, which appear in the public addresses of Fog users.
 * Learn the recipient of any payment record sent to a Fog user:
   * By attacking fog-ingest enclave in one of several ways, or by attacking fog-view enclave.
-  * Just as the baseline adversary does, they have *some information* about who the sender was.
+  * Darth can learn who the sender of a payment record was, just as Mallory can.
 * Learn how many and in which blocks a Fog user received payments, if they perform full-wallet recovery
   * By attacking fog-view enclave.
 

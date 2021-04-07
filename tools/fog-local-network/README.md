@@ -120,7 +120,6 @@ Usage
 1. Activate the virtualenv: `. ./env/bin/activate`
 1. Install requirements: `pip install --upgrade pip && pip install -r requirements.txt`
 1. Compile the protobuf files into a python module: `./build.sh`
-1. Start the sample paykit remote wallet server: `cargo run --bin sample_paykit_remote_wallet`
 1. Start the fog conformance test script: `./tools/fog_conformance_test.py`
 
 You can build the servers and test in release mode instead:

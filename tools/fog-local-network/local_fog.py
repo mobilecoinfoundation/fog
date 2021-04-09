@@ -157,6 +157,16 @@ class FogIngest:
         result = subprocess.check_output(cmd, shell=True)
         return json.loads(result)
 
+    def get_previous_pubkey_expiry_window(self):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'get-status'
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result).get("previous_pubkey_expiry_window", -1)
+
     def set_peers(self, peers):
         cmd = ' '.join([
             f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
@@ -186,6 +196,16 @@ class FogIngest:
         print(cmd)
         result = subprocess.check_output(cmd, shell=True)
         return json.loads(result).get("last_report_published_block_index", -1)
+
+    def get_next_report_published_block_index(self):
+        cmd = ' '.join([
+            f'exec {FOG_PROJECT_DIR}/{target_dir(self.release)}/fog_ingest_client',
+            f'--uri insecure-fog-ingest://localhost:{self.client_port}',
+            'get-status'
+        ])
+        print(cmd)
+        result = subprocess.check_output(cmd, shell=True)
+        return json.loads(result).get("next_report_published_block_index", -1)
 
 
 class FogView:

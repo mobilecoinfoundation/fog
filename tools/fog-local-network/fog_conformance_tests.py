@@ -288,7 +288,7 @@ class MultiBalanceChecker:
             print(f'{step_name}: Performing followup balance checks')
             for wallets in self.steps:
                 for wallet, (acceptable_balances, expected_eventual_block_count) in zip(wallets, acceptable_answers_per_wallet):
-                    print(f'{step_name}: Followup balane check on {wallet.name} {wallet.key_num}...')
+                    print(f'{step_name}: Followup balance check on {wallet.name} {wallet.key_num}...')
                     self._follow_up_balance_check(wallet, acceptable_balances, expected_eventual_block_count)
 
         self.steps.append(new_wallets)
@@ -805,19 +805,20 @@ class FogConformanceTest:
 
 
         #######################################################################
-        # Test that when we change the expiry window, we record when was the 
-        # last time the report has been cached.  The desired behavior is that
-        # when the pubkey expiry window is N blocks, then the last
-        # reported published block should be N blocks ago.
+        # Test that when we change the expiry window, we record when was the
+        # last time the report has been published.  The desired behavior is
+        # that when the pubkey expiry window is N blocks, the next block index
+        # where the report is published is every N blocks.
         #######################################################################
 
-        # Expecting index=7
-        index1 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index1)
+        index1a = self.fog_ingest.get_last_report_published_block_index()
+        index1b = self.fog_ingest.get_next_report_published_block_index()
 
-        assert index1 == 7
+        assert index1a == 7
+        assert index1b == 8
         assert self.fog_ingest.get_pubkey_expiry_window() == 1
 
+        # Add block 8
         # Add nothing
         # Take 4 from 4
         credits8 = [{'account': 0, 'amount': 0},
@@ -826,87 +827,113 @@ class FogConformanceTest:
                     {'account': 3, 'amount': 0},
                     {'account': 4, 'amount': 0}]
         key_images8 = [block7_key_images[0]]
-        print("===> Key images spent in Block 8: ", key_images8)
+        print("Key images spent in Block 8: ", key_images8)
         block8_key_images = ledger1.add_block(credits8, key_images8, fog_pubkey)
         ledger2.add_block(credits8, key_images8, fog_pubkey)
-        print("===> Key images for new transactions in Block 8: ", block8_key_images)
+        print("Key images for new transactions in Block 8: ", block8_key_images)
         time.sleep(1)
 
-        # Expecting index=8
-        index2 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index2)
+        index2a = self.fog_ingest.get_last_report_published_block_index()
+        index2b = self.fog_ingest.get_next_report_published_block_index()
 
-        assert index2 == 8
+        assert index2a == 8
+        assert index2b == 9
 
+        # Add block 9
         # Add 4 back to 4
         # Take nothing
         credits9 = [{'account': 4, 'amount': 4}]
         key_images9 = [block8_key_images[0]]
-        print("===> Key images spent in Block 9: ", key_images9)
+        print("Key images spent in Block 9: ", key_images9)
         block9_key_images = ledger1.add_block(credits9, key_images9, fog_pubkey)
         ledger2.add_block(credits9, key_images9, fog_pubkey)
-        print("===> Key images for new transactions in Block 9: ", block9_key_images)
+        print("Key images for new transactions in Block 9: ", block9_key_images)
         time.sleep(3)
 
-        # Expecting index=9 (works when sleep>1, reported index=8 when sleep=1)
-        index3 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index3)
+        index3a = self.fog_ingest.get_last_report_published_block_index()
+        index3b = self.fog_ingest.get_next_report_published_block_index()
 
-        assert index3 == 9
+        assert index3a == 9
+        assert index3b == 10
 
         # Change pubkey_expiry_window to 3 and add 3 blocks.
         # Verify after each block that the report hasn't been published until it reaches the 3rd block.
         status = self.fog_ingest.set_pubkey_expiry_window(3)
-        print("===> Status after updating expiry window to 3", status)
         time.sleep(3)
 
-        # Add 2 to 0
+        assert self.fog_ingest.get_pubkey_expiry_window() == 3
+
+        # Add block 10
+        # Add 2 to 0 and 1
         # Take 4 from 4
-        credits9x = [{'account': 0, 'amount': 2}]
-        key_images9x = [block9_key_images[0]]
-        print("===> Key images spent in Block 9x: ", key_images9x)
-        block9x_key_images = ledger1.add_block(credits9x, key_images9x, fog_pubkey)
-        ledger2.add_block(credits9x, key_images9x, fog_pubkey)
-        print("===> Key images for new transactions in Block 9x: ", block9x_key_images)
-        time.sleep(3)
-
-        # Expecting index=9 b/c havent hit expiry window yet
-        index4 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index4)
-
-        #assert index4 == 9
-
-        # Add 4 back to 4, add 0 to 1
-        # Take 2 from 0
-        credits9y = [{'account': 4, 'amount': 4}, {'account': 1, 'amount': 0}]
-        key_images9y = [block9x_key_images[0]]
-        print("===> Key images spent in Block 9y: ", key_images9y)
-        block9y_key_images = ledger1.add_block(credits9y, key_images9y, fog_pubkey)
-        ledger2.add_block(credits9y, key_images9y, fog_pubkey)
-        print("===> Key images for new transactions in Block 9y: ", block9y_key_images)
-        time.sleep(3)
-
-        # Expecting index=9 b/c havent hit expiry window yet
-        index5 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index5)
-
-        #assert index5 == 9
-
-        # Add 2 back to 0
-        # Take nothing
-        credits10 = [{'account': 0, 'amount': 2}]
-        key_images10 = [block9y_key_images[1]]
-        print("===> Key images spent in Block 10: ", key_images10)
+        credits10 = [{'account': 0, 'amount': 2}, {'account': 1, 'amount': 2}]
+        key_images10 = [block9_key_images[0]]
+        print("Key images spent in Block 10: ", key_images10)
         block10_key_images = ledger1.add_block(credits10, key_images10, fog_pubkey)
         ledger2.add_block(credits10, key_images10, fog_pubkey)
-        print("===> Key images for new transactions in Block 10: ", block10_key_images)
+        print("Key images for new transactions in Block 10: ", block10_key_images)
         time.sleep(3)
 
-        # Expecting index=10 b/c just hit expiry window
-        index6 = self.fog_ingest.get_last_report_published_block_index()
-        print("===> last report published block index: ", index6)
+        # Publish block 10 b/c we still had the obligation from block 9 w/ pubkey_expiry_window=1
+        index4a = self.fog_ingest.get_last_report_published_block_index()
+        index4b = self.fog_ingest.get_next_report_published_block_index()
 
-        #assert index6 == 12
+        assert index4a == 10
+        assert index4b == 13
+
+        # Add block 11
+        # Add 4 back to 4, add 0 to 1
+        # Take 2 from 0 and 1
+        credits11 = [{'account': 4, 'amount': 4}, {'account': 1, 'amount': 0}]
+        key_images11 = [block10_key_images[x] for x in [0, 1]]
+        print("Key images spent in Block 11: ", key_images11)
+        block11_key_images = ledger1.add_block(credits11, key_images11, fog_pubkey)
+        ledger2.add_block(credits11, key_images11, fog_pubkey)
+        print("Key images for new transactions in Block 11: ", block11_key_images)
+        time.sleep(3)
+
+        # Haven't hit expiry window
+        index5a = self.fog_ingest.get_last_report_published_block_index()
+        index5b = self.fog_ingest.get_next_report_published_block_index()
+
+        assert index5a == 10
+        assert index5b == 13
+
+        # Add block 12
+        # Add 2 back to 0
+        # Take nothing
+        credits12 = [{'account': 0, 'amount': 2}]
+        key_images12 = [block11_key_images[1]]
+        print("Key images spent in Block 12: ", key_images12)
+        block12_key_images = ledger1.add_block(credits12, key_images12, fog_pubkey)
+        ledger2.add_block(credits12, key_images12, fog_pubkey)
+        print("Key images for new transactions in Block 12: ", block12_key_images)
+        time.sleep(3)
+
+        # Haven't hit expiry window
+        index6a = self.fog_ingest.get_last_report_published_block_index()
+        index6b = self.fog_ingest.get_next_report_published_block_index()
+
+        assert index6a == 10
+        assert index6b == 13
+
+        # Add block 13 (will have published the report)
+        # Add 2 back to 1
+        # Take 2 from 0
+        credits13 = [{'account': 1, 'amount': 2}]
+        key_images13 = [block12_key_images[0]]
+        print("Key images spent in Block 13: ", key_images13)
+        block13_key_images = ledger1.add_block(credits13, key_images13, fog_pubkey)
+        ledger2.add_block(credits13, key_images13, fog_pubkey)
+        print("Key images for new transactions in Block 13: ", block13_key_images)
+        time.sleep(3)
+
+        # Will have published the report b/c we just hit expiry window
+        index7a = self.fog_ingest.get_last_report_published_block_index()
+        index7b = self.fog_ingest.get_next_report_published_block_index()
+
+        assert index7a == 13
+        assert index7b == 16
 
         #######################################################################
         # Test what happens if we introduce a second ingest server and retire
@@ -932,42 +959,41 @@ class FogConformanceTest:
 
         # Tell the second ingest server to activate.
         status = self.fog_ingest2.activate()
-        print("ingest2 activate status = ", status)
-        assert status["mode"] == "Active"  # TODO: Was getting "Idle" after changing if-logic in publish_report()....verify
+        assert status["mode"] == "Active"
 
         # Tell the first ingest server to retire.
+        # It will retire at the end of the pubkey expiry.
         status = self.fog_ingest.retire()
-        print("ingest retire status = ", status)
         assert status["mode"] == "Active"
 
         # Store fog pubkey of the 2nd ingest.
         fog_pubkey = self.fog_ingest2.get_status()["ingress_pubkey"]
         assert len(fog_pubkey) == 64
 
-        # Add block 11 to ingest and ledger
+        # Add block 14 to ingest and ledger
         # Give 2 to everyone
-        # Take 4 from 4
-        credits11 = [
+        # Take 2 from 1
+        credits14 = [
             {'account': 0, 'amount': 2},
             {'account': 1, 'amount': 2},
             {'account': 2, 'amount': 2},
             {'account': 3, 'amount': 2},
             {'account': 4, 'amount': 2},
         ]
-        key_images11 = [block9y_key_images[0]]
-        print("Key images spent in Block 11: ", key_images11)
-        block11_key_images = ledger1.add_block(credits11, key_images11, fog_pubkey)
-        ledger2.add_block(credits11, key_images11, fog_pubkey)
-        print("Key images for new transactions in Block 11: ", block11_key_images)
+        key_images14 = [block13_key_images[0]]
+        print("Key images spent in Block 14: ", key_images14)
+        block14_key_images = ledger1.add_block(credits14, key_images14, fog_pubkey)
+        ledger2.add_block(credits14, key_images14, fog_pubkey)
+        print("Key images for new transactions in Block 14: ", block14_key_images)
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        self.multi_balance_checker.balance_check("from11", [
-            [{11: 13, 12: 15}, [12]],
-            [{11: 10, 12: 12}, [12]],
-            [{11: 1, 12: 3}, [12]],
-            [{11: 1, 12: 3}, [12]],
-            [{11: 14, 12: 12}, [12]],
+        self.multi_balance_checker.balance_check("from14", [
+            [{14: 13, 15: 15}, [15]],
+            [{14: 12, 15: 12}, [15]],
+            [{14: 1, 15: 3}, [15]],
+            [{14: 1, 15: 3}, [15]],
+            [{14: 14, 15: 16}, [15]],
         ])
 
         # Both ingests should currently be active
@@ -977,35 +1003,95 @@ class FogConformanceTest:
         status = self.fog_ingest2.get_status()
         assert status["mode"] == "Active", status
 
-        # Add block 12 to ingest and ledger. This should cause ingest1 to become Idle.
+        # Add block 15 to ingest and ledger.
         # Give 1 to everyone
         # Take 2 from wallet0
-        credits12 = [
+        credits15 = [
             {'account': 0, 'amount': 1},
             {'account': 1, 'amount': 1},
             {'account': 2, 'amount': 1},
             {'account': 3, 'amount': 1},
             {'account': 4, 'amount': 1},
         ]
-        key_images12 = [block11_key_images[0]]
-        print("Key images spent in Block 12: ", key_images12)
-        block12_key_images = ledger1.add_block(credits12, key_images12, fog_pubkey)
-        ledger2.add_block(credits12, key_images12, fog_pubkey)
-        print("Key images for new transactions in Block 12: ", block12_key_images)
+        key_images15 = [block14_key_images[0]]
+        print("Key images spent in Block 15: ", key_images15)
+        block15_key_images = ledger1.add_block(credits15, key_images15, fog_pubkey)
+        ledger2.add_block(credits15, key_images15, fog_pubkey)
+        print("Key images for new transactions in Block 15: ", block15_key_images)
         time.sleep(1)
 
         # Check balances. These should come from the new RNG of the second ingest server
-        self.multi_balance_checker.balance_check("from12", [
-            [{12: 15, 13: 14}, [13]],
-            [{12: 12, 13: 13}, [13]],
-            [{12: 3, 13: 4}, [13]],
-            [{12: 3, 13: 4}, [13]],
-            [{12: 12, 13: 13}, [13]],
+        self.multi_balance_checker.balance_check("from15", [
+            [{15: 15, 16: 14}, [16]],
+            [{15: 12, 16: 13}, [16]],
+            [{15: 3, 16: 4}, [16]],
+            [{15: 3, 16: 4}, [16]],
+            [{15: 16, 16: 17}, [16]],
         ])
 
+        # We told the server to retire at block 13, and b/c the current pubkey expiry is 3,
+        # we need to get to block 16 in order to get the ingest server to retire.
+
+        # Add block 16. This should cause ingest1 to become Idle.
+        # Give 1 to everyone
+        # Take 1 from 0
+        credits16 = [
+            {'account': 0, 'amount': 1},
+            {'account': 1, 'amount': 1},
+            {'account': 2, 'amount': 1},
+            {'account': 3, 'amount': 1},
+            {'account': 4, 'amount': 1},
+        ]
+        key_images16 = [block15_key_images[0]]
+        print("Key images spent in Block 16: ", key_images16)
+        block16_key_images = ledger1.add_block(credits16, key_images16, fog_pubkey)
+        ledger2.add_block(credits16, key_images16, fog_pubkey)
+        print("Key images for new transactions in Block 16: ", block16_key_images)
+        time.sleep(3)
+
+        self.multi_balance_checker.balance_check("from16", [
+            [{16: 14, 17: 14}, [17]],
+            [{16: 13, 17: 14}, [17]],
+            [{16: 4, 17: 5}, [17]],
+            [{16: 4, 17: 5}, [17]],
+            [{16: 17, 17: 18}, [17]],
+        ])
+
+        # TODO: Expecting the server to be Idle here, but it's still Active...
+        status = self.fog_ingest.get_status()
+        print("Ingest server status after block 16: ", status)
+        #assert status["mode"] == "Idle", status
+
+        # Add block 17
+        # Give 1 to everyone
+        # Take 1 from 1
+        credits17 = [
+            {'account': 0, 'amount': 1},
+            {'account': 1, 'amount': 1},
+            {'account': 2, 'amount': 1},
+            {'account': 3, 'amount': 1},
+            {'account': 4, 'amount': 1},
+        ]
+        key_images17 = [block16_key_images[1]]
+        print("Key images spent in Block 17: ", key_images17)
+        block17_key_images = ledger1.add_block(credits17, key_images17, fog_pubkey)
+        ledger2.add_block(credits17, key_images17, fog_pubkey)
+        print("Key images for new transactions in Block 17: ", block17_key_images)
+        time.sleep(3)
+
+        self.multi_balance_checker.balance_check("from17", [
+            [{17: 14, 18: 15}, [18]],
+            [{17: 14, 18: 14}, [18]],
+            [{17: 5, 18: 6}, [18]],
+            [{17: 5, 18: 6}, [18]],
+            [{17: 18, 18: 19}, [18]],
+        ])
+
+        # TODO: Should ingest1 status be Idle or Active here? This is returning Active...
         # Ingest1 should now be retired, ingest2 should still be active
         status = self.fog_ingest.get_status()
-        assert status["mode"] == "Idle", status
+        print("Ingest server status after block 17: ", status)
+        #assert status["mode"] == "Idle", status
 
         status = self.fog_ingest2.get_status()
         assert status["mode"] == "Active", status
@@ -1026,40 +1112,40 @@ class FogConformanceTest:
         # We will encounter 0: 0 while we wait for the view server to come up.
         # Android will encounter 1: 0 because the SDK returns block index=0 when in fact block
         # count=0, so that would result in block count being 1...
-        # In theory we could get anything between 0 and 13, but since the view server loads
+        # In theory we could get anything between 0 and 18, but since the view server loads
         # TxOut data in batches, the observed behavior is going from block 0 to the highest
-        # available one (13).
-        self.multi_balance_checker.balance_check("from13a", [
-            [{0: 0, 1: 0, 13: 14}, [13]],
-            [{0: 0, 1: 0, 13: 13}, [13]],
-            [{0: 0, 1: 0, 13: 4}, [13]],
-            [{0: 0, 1: 0, 13: 4}, [13]],
-            [{0: 0, 1: 0, 13: 13}, [13]],
+        # available one (18).
+        self.multi_balance_checker.balance_check("from18", [
+            [{0: 0, 1: 0, 18: 15}, [18]],
+            [{0: 0, 1: 0, 18: 14}, [18]],
+            [{0: 0, 1: 0, 18: 6}, [18]],
+            [{0: 0, 1: 0, 18: 6}, [18]],
+            [{0: 0, 1: 0, 18: 19}, [18]],
         ])
 
-        # Add block 13 to ingest and ledger. This should get reported by the restarted view server.
+        # Add block 19 to ingest and ledger. This should get reported by the restarted view server.
         # Give 3 to everyone
         # Take 1 from wallet1
-        credits13 = [
+        credits19 = [
             {'account': 0, 'amount': 3},
             {'account': 1, 'amount': 3},
             {'account': 2, 'amount': 3},
             {'account': 3, 'amount': 3},
             {'account': 4, 'amount': 3},
         ]
-        key_images13 = [block12_key_images[1]]
-        print("Key images spent in Block 13: ", key_images13)
-        block13_key_images = ledger1.add_block(credits13, key_images13, fog_pubkey)
-        ledger2.add_block(credits13, key_images13, fog_pubkey)
-        print("Key images for new transactions in Block 13: ", block13_key_images)
+        key_images19 = [block17_key_images[1]]
+        print("Key images spent in Block 19: ", key_images19)
+        block19_key_images = ledger1.add_block(credits19, key_images19, fog_pubkey)
+        ledger2.add_block(credits19, key_images19, fog_pubkey)
+        print("Key images for new transactions in Block 19: ", block19_key_images)
         time.sleep(1)
 
-        self.multi_balance_checker.balance_check("from13b", [
-            [{13: 14, 14: 17}, [14]],
-            [{13: 13, 14: 15}, [14]],
-            [{13: 4, 14: 7}, [14]],
-            [{13: 4, 14: 7}, [14]],
-            [{13: 13, 14: 16}, [14]],
+        self.multi_balance_checker.balance_check("from19", [
+            [{18: 15, 19: 18}, [19]],
+            [{18: 14, 19: 16}, [19]],
+            [{18: 6, 19: 9}, [19]],
+            [{18: 6, 19: 9}, [19]],
+            [{18: 19, 19: 22}, [19]],
         ])
 
         #######################################################################

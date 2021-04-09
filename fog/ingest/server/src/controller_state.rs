@@ -74,7 +74,11 @@ pub struct IngestControllerState {
     /// Logger
     logger: Logger,
     /// The last block index that an ingest report was published for
-    last_report_published_block_index: u64
+    last_report_published_block_index: u64,
+    /// The next block index that an ingest report will be published at
+    next_report_published_block_index: u64,
+    /// The pubkey expiry window of the previous block index
+    previous_pubkey_expiry_window: u64,
 }
 
 impl IngestControllerState {
@@ -88,7 +92,9 @@ impl IngestControllerState {
             ingest_invocation_id: None,
             peers,
             logger,
-            last_report_published_block_index: 0
+            last_report_published_block_index: 0,
+            next_report_published_block_index: 1,
+            previous_pubkey_expiry_window: 0,
         }
     }
 
@@ -190,10 +196,21 @@ impl IngestControllerState {
                 ))
             } else {
                 log::info!(self.logger, "pubkey_expiry_window set to {}", val);
+                self.set_previous_pubkey_expiry_window(self.pubkey_expiry_window);
                 self.pubkey_expiry_window = val;
                 Ok(())
             }
         }
+    }
+
+    /// Get the pubkey expiry window of the previous block index
+    pub fn get_previous_pubkey_expiry_window(&self) -> u64 {
+        self.previous_pubkey_expiry_window
+    }
+
+    /// Set the pubkey expiry window of the previous block index
+    pub fn set_previous_pubkey_expiry_window(&mut self, new_val: u64) {
+        self.previous_pubkey_expiry_window = new_val;
     }
 
     /// Get the ingest_invocation_id
@@ -240,6 +257,10 @@ impl IngestControllerState {
 
         result.last_report_published_block_index = self.last_report_published_block_index;
 
+        result.next_report_published_block_index = self.next_report_published_block_index;
+
+        result.previous_pubkey_expiry_window = self.previous_pubkey_expiry_window;
+
         result.next_block_index = self.next_block_index;
         result.pubkey_expiry_window = self.pubkey_expiry_window;
         if let Some(iid) = self.ingest_invocation_id {
@@ -274,7 +295,7 @@ impl IngestControllerState {
         }
     }
 
-    /// Set the last block index that an ingest report was published for
+    /// Get the last block index that an ingest report was published for
     pub fn get_last_report_published_block_index(&self) -> u64 {
         self.last_report_published_block_index
     }
@@ -282,6 +303,16 @@ impl IngestControllerState {
     /// Set the last block index that an ingest report was published for
     pub fn set_last_report_published_block_index(&mut self, new_val: u64) {
         self.last_report_published_block_index = new_val;
+    }
+
+    /// Get next block index that an ingest report will be published at
+    pub fn get_next_report_published_block_index(&self) -> u64 {
+        self.next_report_published_block_index
+    }
+
+    /// Set next block index that an ingest report will be published at
+    pub fn set_next_report_published_block_index(&mut self, new_val: u64) {
+        self.next_report_published_block_index = new_val;
     }
 }
 

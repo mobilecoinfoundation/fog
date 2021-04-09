@@ -37,6 +37,10 @@ message IngestSummary {
     int64 ingest_invocation_id = 8;
     /// The last block index that an ingest report was published at
     uint64 last_report_published_block_index = 9;
+    /// The next block index that an ingest report will be published at
+    uint64 next_report_published_block_index = 10;
+    /// The pubkey expiry window of the previous block index
+    uint64 previous_pubkey_expiry_window = 11;
 }
 
 /// The schema of the ingest server's state file that it backs up on disk

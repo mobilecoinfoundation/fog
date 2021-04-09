@@ -343,7 +343,11 @@ where
                 log::trace!(self.logger, "publish report");
                 match self.publish_report(&ingress_pubkey, &mut state) {
                     Ok(None) => {
-                        return;
+                        log::info!(
+                            self.logger,
+                            "Didn't publish report on index {}",
+                            block.index
+                        );
                     }
                     Ok(Some(ingress_key_status)) => {
                         // If our key is retired, and the index we want to scan is past expiry,
@@ -696,8 +700,7 @@ where
         // a block unless this key is published before the next block comes.
         match self.publish_report(&our_pubkey, &mut state) {
             Ok(None) => {
-                // TODO: is this ok to return?
-                return Ok(IngestSummary::new());
+                return Ok(self.get_ingest_summary());
             }
             Ok(Some(key_status)) => {
                 // If our key is retired, and the index we want to scan is past expiry, early
@@ -1040,35 +1043,69 @@ where
         ingress_public_key: &CompressedRistrettoPublic,
         state: &mut MutexGuard<IngestControllerState>,
     ) -> Result<Option<IngressPublicKeyStatus>, Error> {
-
         let next_block_index = state.get_next_block_index();
+        let current_pubkey_expiry_window = state.get_pubkey_expiry_window();
+        let current_pubkey_expiry = next_block_index + current_pubkey_expiry_window;
 
-        let last_report_published_block_index = state.get_last_report_published_block_index();
-        let current_pubkey_expiry = last_report_published_block_index + state.get_pubkey_expiry_window();
+        let previous_block_index = next_block_index - 1;
+        let previous_pubkey_expiry_window = state.get_previous_pubkey_expiry_window();
+        let previous_pubkey_expiry = previous_block_index + previous_pubkey_expiry_window;
 
+        let is_active = state.is_active();
+
+        // TODO: Remove this log line on final code push
         log::info!(
             self.logger,
-            "===> next_block_index {} last_report_published_block_index {} current_pubkey_expiry {}",
+            "===> {} (next_block_index {} + pubkey_window {} = current {}) vs. (prev_block_index {} + prev_window {} = previous {}) {} {}",
+            is_active,
             next_block_index,
-            last_report_published_block_index,
-            current_pubkey_expiry
+            current_pubkey_expiry_window,
+            current_pubkey_expiry,
+            previous_block_index,
+            previous_pubkey_expiry_window,
+            previous_pubkey_expiry,
+            state.get_last_report_published_block_index(),
+            state.get_next_report_published_block_index()
         );
 
-        // TODO: Something may be incorrect with this logic...? 
-        // This if-block is always running (ie. a report is never published).
-        // I see this log line starting at the very beginning of running the conformance tests: 
-        //     Block index 1 smaller than the current pubkey expiry 2. Not publishing a report
+        // In order to publish a report, the previous block index's pubkey expiry
+        // must be smaller than the current pubkey expiry.
+        // This if-logic checks for this.
+        // ex.
+        // If block_index=6 with window=100 gives a pubkey_expiry=106
         //
-        if next_block_index < current_pubkey_expiry {
-            // Don't publish report
-            // TODO: Change to debug
-            log::info!(
-                self.logger,
-                "Block index {} smaller than the current pubkey expiry {}. Not publishing a report.",
-                next_block_index,
-                current_pubkey_expiry
-            );
-            return Ok(None);
+        // On the next block index if we reduce the window, so:
+        //    block_index=7 with window=10 gives a pubkey_expiry=17
+        // ...we do not publish, b/c the previous index's pubkey_expiry (106)
+        //    is bigger than the current index's pubkey_expir (17).
+        //
+        // However, if we would have increased the window, so:
+        //    block_index=7 with window=102 gives a pubkey_expiry=109
+        // ...we do publish, b/c the previous index's pubkey_expiry (106)
+        //    is smaller than the current index's pubkey_expiry (109).
+        //
+        // We don't want to publish on every index, only every N indexes,
+        // where N is the size of the window.
+        // ex.
+        // If block_index=1 with window=100, we publish a report on indexes
+        // 101, 201, 301, 401, etc.
+        //
+        // This logic only matters when we are active.
+        // See explanation why at the call to publish_report() in activate().
+        if is_active {
+            if !((previous_pubkey_expiry < current_pubkey_expiry)
+                && (next_block_index >= state.get_last_report_published_block_index())
+                && (next_block_index >= state.get_next_report_published_block_index()))
+            {
+                // Don't publish report
+                // TODO: Change to debug on final code push
+                log::info!(
+                    self.logger,
+                    "Not publishing a report on index {}.",
+                    next_block_index
+                );
+                return Ok(None);
+            }
         }
 
         self.update_enclave_report_cache()?;
@@ -1076,17 +1113,31 @@ where
         let report_data = ReportData {
             ingest_invocation_id: state.get_ingest_invocation_id(),
             report: self.enclave.get_ias_report()?,
-            pubkey_expiry: current_pubkey_expiry + state.get_pubkey_expiry_window() ,
+            pubkey_expiry: current_pubkey_expiry,
         };
         let report_id = self.config.fog_report_id.as_ref();
 
-        let key_status = self.recovery_db.set_report(ingress_public_key, report_id, &report_data);
+        let key_status = self
+            .recovery_db
+            .set_report(ingress_public_key, report_id, &report_data);
 
         match key_status {
             Ok(key_status) => {
+                // TODO: Remove these log lines on final code push
+                log::info!(
+                    self.logger,
+                    "===> (last_report_pub_block_index = {}",
+                    next_block_index
+                );
+                log::info!(
+                    self.logger,
+                    "===> (next_report_pub_block_index = {}",
+                    current_pubkey_expiry
+                );
                 state.set_last_report_published_block_index(next_block_index);
+                state.set_next_report_published_block_index(current_pubkey_expiry);
                 return Ok(Some(key_status));
-            },
+            }
             Err(err) => {
                 log::error!(
                     self.logger,

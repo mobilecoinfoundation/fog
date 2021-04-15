@@ -13,7 +13,7 @@ use mc_common::{
 use mc_ledger_db::LedgerDB;
 use mc_util_grpc::AdminServer;
 use mc_watcher::watcher_db::WatcherDB;
-use std::{env, path::PathBuf, sync::Arc};
+use std::{env, sync::Arc};
 use structopt::StructOpt;
 
 fn main() {
@@ -34,10 +34,9 @@ fn main() {
     );
     let enclave = LedgerSgxEnclave::new(enclave_path, &config.client_responder_id);
 
-    let db =
-        LedgerDB::open(PathBuf::from(config.ledger_db.clone())).expect("Could not read ledger DB");
-    let watcher = WatcherDB::open_ro(PathBuf::from(config.watcher_db.clone()), logger.clone())
-        .expect("Could not open watcher DB");
+    let db = LedgerDB::open(&config.ledger_db).expect("Could not read ledger DB");
+    let watcher =
+        WatcherDB::open_ro(&config.watcher_db, logger.clone()).expect("Could not open watcher DB");
     let ias_client = Client::new(&config.ias_api_key).expect("Could not create IAS client");
     let mut server = LedgerServer::new(
         config.clone(),

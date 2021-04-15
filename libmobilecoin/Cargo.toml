@@ -13,7 +13,7 @@ crate-type = ["lib", "staticlib", "cdylib"]
 aes-gcm = "0.6"
 displaydoc = "0.2"
 libc = "0.2"
-protobuf = "2.12"
+protobuf = "2.22.1"
 rand_core = { version = "0.5", features = ["std"] }
 sha2 = "0.9"
 slip10_ed25519 = "0.1.3"

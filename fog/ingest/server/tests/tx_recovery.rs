@@ -70,8 +70,8 @@ fn test_ingest_polling_integration<A, DB>(
 
     // Set up an empty ledger db.
     let ledger_db_path = TempDir::new("ledger_db").expect("Could not make tempdir for ledger db");
-    LedgerDB::create(ledger_db_path.path().to_path_buf()).unwrap();
-    let mut ledger_db = LedgerDB::open(ledger_db_path.path().to_path_buf()).unwrap();
+    LedgerDB::create(ledger_db_path.path()).unwrap();
+    let mut ledger_db = LedgerDB::open(ledger_db_path.path()).unwrap();
 
     for phase_count in 0..NUM_PHASES {
         {
@@ -84,10 +84,9 @@ fn test_ingest_polling_integration<A, DB>(
 
             // Set up the Watcher DB - create a new watcher DB for each phase
             let db_tmp = TempDir::new("watcher_db").expect("Could not make tempdir for watcher db");
-            WatcherDB::create(db_tmp.path().to_path_buf()).unwrap();
+            WatcherDB::create(db_tmp.path()).unwrap();
             let src_urls = vec![Url::parse("http://www.my_url1.com").unwrap()];
-            let watcher =
-                WatcherDB::open_rw(db_tmp.path().to_path_buf(), &src_urls, logger.clone()).unwrap();
+            let watcher = WatcherDB::open_rw(db_tmp.path(), &src_urls, logger.clone()).unwrap();
 
             // In each phase we tear down ingest
             let igp_uri =

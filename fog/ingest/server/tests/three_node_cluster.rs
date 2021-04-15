@@ -32,7 +32,7 @@ use rand_hc::Hc128Rng;
 use std::{
     collections::BTreeSet,
     convert::TryFrom,
-    path::PathBuf,
+    path::Path,
     str::FromStr,
     time::{Duration, Instant, SystemTime},
 };
@@ -62,8 +62,8 @@ fn make_node(
     idx: u16,
     peer_idxs: impl Iterator<Item = u16>,
     db: SqlRecoveryDb,
-    watcher_path: PathBuf,
-    ledger_db_path: PathBuf,
+    watcher_path: &Path,
+    ledger_db_path: &Path,
     logger: Logger,
 ) -> (IngestServer<AttestClient, SqlRecoveryDb>, TempDir) {
     let logger = logger.new(o!("mc.node_id" => idx.to_string()));
@@ -86,16 +86,16 @@ fn make_node(
         pubkey_expiry_window: 10,
         peer_checkup_period: Some(Duration::from_secs(5)),
         watcher_timeout: Duration::from_secs(5),
-        state_file: Some(StateFile::new(state_file.clone())),
+        state_file: Some(StateFile::new(state_file)),
         enclave_path: get_enclave_path(fog_ingest_enclave::ENCLAVE_FILE),
         omap_capacity: OMAP_CAPACITY,
     };
 
     // Open the Watcher DB
-    let watcher = WatcherDB::open_ro(watcher_path.clone(), logger.clone()).unwrap();
+    let watcher = WatcherDB::open_ro(watcher_path, logger.clone()).unwrap();
 
     // Open the ledger db
-    let ledger_db = LedgerDB::open(ledger_db_path.clone()).unwrap();
+    let ledger_db = LedgerDB::open(ledger_db_path).unwrap();
 
     let ra_client = AttestClient::new("").expect("Could not create IAS client");
     let mut node = IngestServer::new(config, ra_client, db, watcher, ledger_db, logger);
@@ -205,12 +205,12 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
 
     // Set up the Watcher DB - create a new watcher DB for each phase
     let watcher_path = blockchain_path.path().join("watcher");
-    std::fs::create_dir(watcher_path.clone()).expect("couldn't create dir");
-    WatcherDB::create(watcher_path.clone()).unwrap();
+    std::fs::create_dir(&watcher_path).expect("couldn't create dir");
+    WatcherDB::create(&watcher_path).unwrap();
     // Open the watcher db
     let tx_source_url = Url::from_str("https://localhost").unwrap();
     let watcher = mc_watcher::watcher_db::WatcherDB::open_rw(
-        watcher_path.clone(),
+        &watcher_path,
         &[tx_source_url.clone()],
         logger.clone(),
     )
@@ -218,9 +218,9 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
 
     // Set up an empty ledger db.
     let ledger_db_path = blockchain_path.path().join("ledger_db");
-    std::fs::create_dir(ledger_db_path.clone()).expect("couldn't create dir");
-    LedgerDB::create(ledger_db_path.clone()).unwrap();
-    let mut ledger = LedgerDB::open(ledger_db_path.clone()).unwrap();
+    std::fs::create_dir(&ledger_db_path).expect("couldn't create dir");
+    LedgerDB::create(&ledger_db_path).unwrap();
+    let mut ledger = LedgerDB::open(&ledger_db_path).unwrap();
 
     // make origin block before starting any fog servers
     let origin_txo = random_output(&mut rng);
@@ -242,24 +242,24 @@ fn three_node_cluster_activation_retiry(logger: Logger) {
             0,
             peer_indices.iter().cloned(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
         let (node1, _node1dir) = make_node(
             1,
             peer_indices.iter().cloned(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
         let (node2, _node2dir) = make_node(
             2,
             peer_indices.iter().cloned(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
 
@@ -420,12 +420,12 @@ fn three_node_cluster_fencing(logger: Logger) {
 
     // Set up the Watcher DB - create a new watcher DB for each phase
     let watcher_path = blockchain_path.path().join("watcher");
-    std::fs::create_dir(watcher_path.clone()).expect("couldn't create dir");
-    WatcherDB::create(watcher_path.clone()).unwrap();
+    std::fs::create_dir(&watcher_path).expect("couldn't create dir");
+    WatcherDB::create(&watcher_path).unwrap();
     // Open the watcher db
     let tx_source_url = Url::from_str("https://localhost").unwrap();
     let watcher = mc_watcher::watcher_db::WatcherDB::open_rw(
-        watcher_path.clone(),
+        &watcher_path,
         &[tx_source_url.clone()],
         logger.clone(),
     )
@@ -433,9 +433,9 @@ fn three_node_cluster_fencing(logger: Logger) {
 
     // Set up an empty ledger db.
     let ledger_db_path = blockchain_path.path().join("ledger_db");
-    std::fs::create_dir(ledger_db_path.clone()).expect("couldn't create dir");
-    LedgerDB::create(ledger_db_path.clone()).unwrap();
-    let mut ledger = LedgerDB::open(ledger_db_path.clone()).unwrap();
+    std::fs::create_dir(&ledger_db_path).expect("couldn't create dir");
+    LedgerDB::create(&ledger_db_path).unwrap();
+    let mut ledger = LedgerDB::open(&ledger_db_path).unwrap();
 
     // make origin block before
     let origin_txo = random_output(&mut rng);
@@ -456,24 +456,24 @@ fn three_node_cluster_fencing(logger: Logger) {
             7,
             vec![7u16].into_iter(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
         let (mut node8, _node8dir) = make_node(
             8,
             vec![8u16].into_iter(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
         let (mut node9, _node9dir) = make_node(
             9,
             vec![9u16].into_iter(),
             db_test_context.get_db_instance(),
-            watcher_path.clone(),
-            ledger_db_path.clone(),
+            &watcher_path,
+            &ledger_db_path,
             logger.clone(),
         );
 

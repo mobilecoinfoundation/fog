@@ -75,15 +75,14 @@ where
                 // Set up the Watcher DB - create a new watcher DB for each phase
                 let db_tmp =
                     TempDir::new("wallet_db").expect("Could not make tempdir for wallet db");
-                WatcherDB::create(db_tmp.path().to_path_buf()).unwrap();
-                let watcher =
-                    WatcherDB::open_ro(db_tmp.path().to_path_buf(), logger.clone()).unwrap();
+                WatcherDB::create(db_tmp.path()).unwrap();
+                let watcher = WatcherDB::open_ro(db_tmp.path(), logger.clone()).unwrap();
 
                 // Set up an empty ledger db.
                 let ledger_db_path =
                     TempDir::new("ledger_db").expect("Could not make tempdir for ledger db");
-                LedgerDB::create(ledger_db_path.path().to_path_buf()).unwrap();
-                let ledger_db = LedgerDB::open(ledger_db_path.path().to_path_buf()).unwrap();
+                LedgerDB::create(ledger_db_path.path()).unwrap();
+                let ledger_db = LedgerDB::open(ledger_db_path.path()).unwrap();
 
                 let ra_client = A::new("").expect("Could not create IAS client");
                 let mut node = IngestServer::new(
@@ -132,15 +131,14 @@ where
 
                 let db_tmp =
                     TempDir::new("wallet_db").expect("Could not make tempdir for wallet db");
-                WatcherDB::create(db_tmp.path().to_path_buf()).unwrap();
-                let watcher =
-                    WatcherDB::open_ro(db_tmp.path().to_path_buf(), logger.clone()).unwrap();
+                WatcherDB::create(db_tmp.path()).unwrap();
+                let watcher = WatcherDB::open_ro(db_tmp.path(), logger.clone()).unwrap();
 
                 // Set up an empty ledger db.
                 let ledger_db_path =
                     TempDir::new("ledger_db").expect("Could not make tempdir for ledger db");
-                LedgerDB::create(ledger_db_path.path().to_path_buf()).unwrap();
-                let ledger_db = LedgerDB::open(ledger_db_path.path().to_path_buf()).unwrap();
+                LedgerDB::create(ledger_db_path.path()).unwrap();
+                let ledger_db = LedgerDB::open(ledger_db_path.path()).unwrap();
 
                 let ra_client = A::new("").expect("Could not create IAS client");
                 let mut node = IngestServer::new(

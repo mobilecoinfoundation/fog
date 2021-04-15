@@ -29,19 +29,23 @@ use mc_transaction_core::{
 use mc_util_from_random::FromRandom;
 use mc_util_test_helper::{CryptoRng, RngCore, RngType, SeedableRng};
 use mc_watcher::watcher_db::WatcherDB;
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 use tempdir::TempDir;
 use url::Url;
 
 const TEST_URL: &str = "http://www.my_url1.com";
 
-fn setup_watcher_db(logger: Logger) -> (WatcherDB, String) {
+fn setup_watcher_db(logger: Logger) -> (WatcherDB, PathBuf) {
     let url = Url::parse(TEST_URL).unwrap();
 
     let db_tmp = TempDir::new("wallet_db").expect("Could not make tempdir for wallet db");
-    WatcherDB::create(db_tmp.path().to_path_buf()).unwrap();
-    let watcher = WatcherDB::open_rw(db_tmp.path().to_path_buf(), &[url], logger).unwrap();
-    let watcher_dir = db_tmp.path().to_str().unwrap().to_string();
+    WatcherDB::create(db_tmp.path()).unwrap();
+    let watcher = WatcherDB::open_rw(db_tmp.path(), &[url], logger).unwrap();
+    let watcher_dir = db_tmp.path().to_path_buf();
     (watcher, watcher_dir)
 }
 
@@ -65,7 +69,7 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
 
     // Make LedgerDB
     let ledger_dir = TempDir::new("fog-ledger").expect("Could not get test_ledger tempdir");
-    let db_full_path = ledger_dir.path().to_str().unwrap();
+    let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
     let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
@@ -84,7 +88,7 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
         ))
         .unwrap();
         let config = LedgerServerConfig {
-            ledger_db: db_full_path.to_string(),
+            ledger_db: db_full_path.to_path_buf(),
             watcher_db: watcher_dir,
             admin_listen_uri: Default::default(),
             client_listen_uri: client_uri.clone(),
@@ -200,7 +204,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
 
     // Make LedgerDB
     let ledger_dir = TempDir::new("fog-ledger").expect("Could not get test_ledger tempdir");
-    let db_full_path = ledger_dir.path().to_str().unwrap();
+    let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
     // Populate ledger with some data
@@ -237,7 +241,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
         ))
         .unwrap();
         let config = LedgerServerConfig {
-            ledger_db: db_full_path.to_string(),
+            ledger_db: db_full_path.to_path_buf(),
             watcher_db: watcher_dir,
             admin_listen_uri: Default::default(),
             client_listen_uri: client_uri.clone(),
@@ -358,7 +362,7 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
 
     // Make LedgerDB
     let ledger_dir = TempDir::new("fog-ledger").expect("Could not get test_ledger tempdir");
-    let db_full_path = ledger_dir.path().to_str().unwrap();
+    let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
     let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
@@ -393,7 +397,7 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
         ))
         .unwrap();
         let config = LedgerServerConfig {
-            ledger_db: db_full_path.to_string(),
+            ledger_db: db_full_path.to_path_buf(),
             watcher_db: watcher_dir,
             admin_listen_uri: Default::default(),
             client_listen_uri: client_uri.clone(),
@@ -495,7 +499,7 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
 
     // Make LedgerDB
     let ledger_dir = TempDir::new("fog-ledger").expect("Could not get test_ledger tempdir");
-    let db_full_path = ledger_dir.path().to_str().unwrap();
+    let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
     let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
@@ -530,7 +534,7 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
         ))
         .unwrap();
         let config = LedgerServerConfig {
-            ledger_db: db_full_path.to_string(),
+            ledger_db: db_full_path.to_path_buf(),
             watcher_db: watcher_dir,
             admin_listen_uri: Default::default(),
             client_listen_uri: client_uri.clone(),
@@ -609,11 +613,11 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
 // Infra
 // This is like mobilecoind::test_utils::generate_ledger_db, which is
 // unfortunately not pub FIXME MC-1528
-fn generate_ledger_db(path: &str) -> LedgerDB {
+fn generate_ledger_db(path: &Path) -> LedgerDB {
     // DELETE the old database if it already exists.
-    let _ = std::fs::remove_file(format!("{}/data.mdb", path));
-    LedgerDB::create(PathBuf::from(path)).expect("Could not create ledger_db");
-    let db = LedgerDB::open(PathBuf::from(path)).expect("Could not open ledger_db");
+    let _ = std::fs::remove_file(path.join("data.mdb"));
+    LedgerDB::create(path).expect("Could not create ledger_db");
+    let db = LedgerDB::open(path).expect("Could not open ledger_db");
     db
 }
 

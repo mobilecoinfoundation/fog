@@ -68,15 +68,15 @@ fn make_node(
 
     // Set up the Watcher DB - create a new watcher DB for each phase
     let watcher_path = state_tmp.path().join("watcher");
-    std::fs::create_dir(watcher_path.clone()).expect("couldn't create dir");
-    WatcherDB::create(watcher_path.clone()).unwrap();
-    let watcher = WatcherDB::open_ro(watcher_path.clone(), logger.clone()).unwrap();
+    std::fs::create_dir(&watcher_path).expect("couldn't create dir");
+    WatcherDB::create(&watcher_path).unwrap();
+    let watcher = WatcherDB::open_ro(&watcher_path, logger.clone()).unwrap();
 
     // Set up an empty ledger db.
     let ledger_db_path = state_tmp.path().join("ledger_db");
-    std::fs::create_dir(ledger_db_path.clone()).expect("couldn't create dir");
-    LedgerDB::create(ledger_db_path.clone()).unwrap();
-    let ledger_db = LedgerDB::open(ledger_db_path.clone()).unwrap();
+    std::fs::create_dir(&ledger_db_path).expect("couldn't create dir");
+    LedgerDB::create(&ledger_db_path).unwrap();
+    let ledger_db = LedgerDB::open(&ledger_db_path).unwrap();
 
     let ra_client = AttestClient::new("").expect("Could not create IAS client");
     let mut node = IngestServer::new(config, ra_client, db, watcher, ledger_db, logger);

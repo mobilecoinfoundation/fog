@@ -153,13 +153,13 @@ fn load_test(
         // Set up the Watcher DB
         let watcher_db_path =
             TempDir::new("wallet_db").expect("Could not make tempdir for wallet db");
-        WatcherDB::create(watcher_db_path.path().to_path_buf()).unwrap();
+        WatcherDB::create(watcher_db_path.path()).unwrap();
 
         // Set up a fresh ledger db.
         let ledger_db_path =
             TempDir::new("ledger_db").expect("Could not make tempdir for ledger db");
-        LedgerDB::create(ledger_db_path.path().to_path_buf()).unwrap();
-        let mut ledger_db = LedgerDB::open(ledger_db_path.path().to_path_buf()).unwrap();
+        LedgerDB::create(ledger_db_path.path()).unwrap();
+        let mut ledger_db = LedgerDB::open(ledger_db_path.path()).unwrap();
 
         mc_transaction_core_test_utils::initialize_ledger(
             &mut ledger_db,

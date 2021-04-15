@@ -60,6 +60,6 @@ fn main() {
     );
 
     // Initialize the watcher db
-    mc_watcher::watcher_db::create_or_open_rw_watcher_db(config.watcher, &[], logger)
+    mc_watcher::watcher_db::create_or_open_rw_watcher_db(&config.watcher, &[], logger)
         .expect("Could not create watcher_db");
 }

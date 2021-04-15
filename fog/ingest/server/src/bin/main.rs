@@ -51,10 +51,10 @@ fn main() {
     )
     .expect("Failed connecting to database");
 
-    let ledger_db = LedgerDB::open(config.ledger_db.clone()).expect("Could not read ledger DB");
+    let ledger_db = LedgerDB::open(&config.ledger_db).expect("Could not read ledger DB");
 
-    let watcher = WatcherDB::open_ro(config.watcher_db.clone(), logger.clone())
-        .expect("Could not open watcher DB");
+    let watcher =
+        WatcherDB::open_ro(&config.watcher_db, logger.clone()).expect("Could not open watcher DB");
 
     // Start ingest server.
     let server_config = IngestServerConfig {

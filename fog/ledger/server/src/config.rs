@@ -7,7 +7,7 @@ use mc_attest_core::ProviderId;
 use mc_common::ResponderId;
 use mc_util_uri::AdminUri;
 use serde::Serialize;
-use std::{str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 use structopt::StructOpt;
 
 #[derive(Clone, Serialize, StructOpt)]
@@ -17,12 +17,12 @@ pub struct LedgerServerConfig {
     pub client_listen_uri: FogLedgerUri,
 
     /// Path to ledger db (lmdb)
-    #[structopt(long)]
-    pub ledger_db: String,
+    #[structopt(long, parse(from_os_str))]
+    pub ledger_db: PathBuf,
 
     /// Path to watcher db (lmdb) - includes block timestamps
-    #[structopt(long)]
-    pub watcher_db: String,
+    #[structopt(long, parse(from_os_str))]
+    pub watcher_db: PathBuf,
 
     /// Client Responder id.
     ///

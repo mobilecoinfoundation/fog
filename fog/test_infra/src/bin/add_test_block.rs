@@ -109,14 +109,14 @@ fn main() {
     let account_keys: Vec<AccountKey> = root_entropies.iter().map(AccountKey::from).collect();
 
     // Open the ledger db
-    let mut ledger = LedgerDB::open(config.ledger).expect("Could not open ledger db");
+    let mut ledger = LedgerDB::open(&config.ledger).expect("Could not open ledger db");
     let num_blocks = ledger.num_blocks().expect("Could not compute num_blocks");
     assert_ne!(0, num_blocks);
 
     // Open the watcher db
     let tx_source_url = Url::from_str("https://localhost").unwrap();
     let watcher = mc_watcher::watcher_db::WatcherDB::open_rw(
-        config.watcher,
+        &config.watcher,
         &[tx_source_url.clone()],
         logger.clone(),
     )

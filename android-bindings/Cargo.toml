@@ -38,7 +38,7 @@ aes-gcm = { version = "0.6", default-features = false }
 anyhow = "1.0"
 displaydoc = { version = "0.2", default-features = false }
 jni = { version = "0.16.0", default-features = false }
-protobuf = "2.12"
+protobuf = "2.22.1"
 rand = { version = "0.7", default-features = false }
 sha2 = { version = "0.9", default-features = false }
 slip10_ed25519 = "0.1.3"

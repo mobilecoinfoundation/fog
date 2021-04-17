@@ -169,7 +169,7 @@ where
 
     #[inline]
     fn try_from_ffi(src: Option<T>) -> Result<Self, Self::Error> {
-        Ok(src.map(U::try_from_ffi).transpose()?)
+        src.map(U::try_from_ffi).transpose()
     }
 }
 
@@ -181,7 +181,7 @@ where
 
     #[inline]
     fn try_from_ffi(src: FfiOptStr<'a>) -> Result<Self, Self::Error> {
-        Ok(src.as_option().map(U::try_from_ffi).transpose()?)
+        src.as_option().map(U::try_from_ffi).transpose()
     }
 }
 
@@ -193,7 +193,7 @@ where
 
     #[inline]
     fn try_from_ffi(src: FfiOptRefPtr<'a, T>) -> Result<Self, Self::Error> {
-        Ok(src.as_ref().map(U::try_from_ffi).transpose()?)
+        src.as_ref().map(U::try_from_ffi).transpose()
     }
 }
 

@@ -82,8 +82,8 @@ pub enum McError {
     /// Other: {0}
     Other(String),
 
-    /// JNI: {0}
-    JNI(String),
+    /// Jni: {0}
+    Jni(String),
 
     /// Bip39: {0}
     Bip39(Bip39Error),
@@ -208,7 +208,7 @@ impl From<EncodingsError> for McError {
 
 impl From<jni::errors::Error> for McError {
     fn from(src: jni::errors::Error) -> Self {
-        Self::JNI(src.to_string())
+        Self::Jni(src.to_string())
     }
 }
 

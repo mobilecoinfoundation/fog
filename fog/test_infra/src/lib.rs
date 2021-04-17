@@ -104,8 +104,11 @@ pub fn test_block<T: RngCore + CryptoRng, C: FogViewConnection>(
     // does not allow signatures for block 0.
     if block_index > 0 {
         for src_url in watcher.get_config_urls().unwrap().iter() {
-            let mut block = Block::default(); // Dummy block - we don't work with blocks in this test framework
-            block.index = block_index;
+            let block = Block {
+                // Dummy block - we don't work with blocks in this test framework
+                index: block_index,
+                ..Default::default()
+            };
             let mut block_signature =
                 BlockSignature::from_block_and_keypair(&block, &Ed25519Pair::from_random(rng))
                     .expect("Could not create block signature from keypair");

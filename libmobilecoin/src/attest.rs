@@ -470,7 +470,7 @@ impl<'a> TryFromFfi<FfiStr<'a>> for ResponderId {
 
     fn try_from_ffi(src: FfiStr<'a>) -> Result<Self, LibMcError> {
         let str = <&str>::try_from_ffi(src)?;
-        Ok(ResponderId::from_str(str)
-            .map_err(|err| LibMcError::InvalidInput(format!("Invalid responder id: {:?}", err)))?)
+        ResponderId::from_str(str)
+            .map_err(|err| LibMcError::InvalidInput(format!("Invalid responder id: {:?}", err)))
     }
 }

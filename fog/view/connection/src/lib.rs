@@ -52,14 +52,17 @@ impl FogViewConnection for FogViewGrpcClient {
             search_keys.len()
         );
 
-        let mut req: fog_types::view::QueryRequest = Default::default();
-        req.get_txos = search_keys;
+        let req = fog_types::view::QueryRequest {
+            get_txos: search_keys,
+        };
 
-        let mut req_aad: fog_types::view::QueryRequestAAD = Default::default();
-        req_aad.start_from_user_event_id = start_from_user_event_id;
-        req_aad.start_from_block_index = start_from_block_index;
+        let req_aad = fog_types::view::QueryRequestAAD {
+            start_from_user_event_id,
+            start_from_block_index,
+        };
+
         let aad_bytes = mc_util_serial::encode(&req_aad);
 
-        Ok(self.conn.encrypted_enclave_request(&req, &aad_bytes)?)
+        self.conn.encrypted_enclave_request(&req, &aad_bytes)
     }
 }

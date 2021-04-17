@@ -48,14 +48,14 @@ impl EnclaveGrpcChannel for view_grpc::FogViewApiClient {
         msg: &attest::AuthMessage,
         creds: &BasicCredentials,
     ) -> Result<attest::AuthMessage, grpcio::Error> {
-        Ok(<Self>::auth_opt(self, msg, creds.call_option()?)?)
+        <Self>::auth_opt(self, msg, creds.call_option()?)
     }
     fn enclave_request(
         &mut self,
         msg: &attest::Message,
         creds: &BasicCredentials,
     ) -> Result<attest::Message, grpcio::Error> {
-        Ok(<Self>::query_opt(self, msg, creds.call_option()?)?)
+        <Self>::query_opt(self, msg, creds.call_option()?)
     }
 }
 
@@ -65,14 +65,14 @@ impl EnclaveGrpcChannel for ledger_grpc::FogKeyImageApiClient {
         msg: &attest::AuthMessage,
         creds: &BasicCredentials,
     ) -> Result<attest::AuthMessage, grpcio::Error> {
-        Ok(<Self>::auth_opt(self, msg, creds.call_option()?)?)
+        <Self>::auth_opt(self, msg, creds.call_option()?)
     }
     fn enclave_request(
         &mut self,
         msg: &attest::Message,
         creds: &BasicCredentials,
     ) -> Result<attest::Message, grpcio::Error> {
-        Ok(self.check_key_images_opt(msg, creds.call_option()?)?)
+        self.check_key_images_opt(msg, creds.call_option()?)
     }
 }
 
@@ -82,13 +82,13 @@ impl EnclaveGrpcChannel for ledger_grpc::FogMerkleProofApiClient {
         msg: &attest::AuthMessage,
         creds: &BasicCredentials,
     ) -> Result<attest::AuthMessage, grpcio::Error> {
-        Ok(<Self>::auth_opt(self, msg, creds.call_option()?)?)
+        <Self>::auth_opt(self, msg, creds.call_option()?)
     }
     fn enclave_request(
         &mut self,
         msg: &attest::Message,
         creds: &BasicCredentials,
     ) -> Result<attest::Message, grpcio::Error> {
-        Ok(self.get_outputs_opt(msg, creds.call_option()?)?)
+        self.get_outputs_opt(msg, creds.call_option()?)
     }
 }

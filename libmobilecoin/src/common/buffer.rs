@@ -202,8 +202,8 @@ impl<'a> FfiTryFrom<size_t> for ssize_t {
     type Error = LibMcError;
 
     fn ffi_try_from(src: size_t) -> Result<Self, LibMcError> {
-        Ok(ssize_t::try_from(src).map_err(|err| {
+        ssize_t::try_from(src).map_err(|err| {
             LibMcError::InvalidOutput(format!("Overflow converting to ssize_t: {:?}", err))
-        })?)
+        })
     }
 }

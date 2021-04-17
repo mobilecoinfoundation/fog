@@ -28,9 +28,9 @@ impl<'a> FfiTryFrom<u64> for i64 {
     type Error = LibMcError;
 
     fn ffi_try_from(src: u64) -> Result<Self, LibMcError> {
-        Ok(i64::try_from(src).map_err(|err| {
+        i64::try_from(src).map_err(|err| {
             LibMcError::InvalidOutput(format!("Overflow converting to i64: {:?}", err))
-        })?)
+        })
     }
 }
 

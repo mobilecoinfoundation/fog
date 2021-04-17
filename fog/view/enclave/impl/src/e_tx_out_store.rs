@@ -92,19 +92,19 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> ETxOutStore<OSC>
         ciphertext: &[u8],
     ) -> Result<(), AddRecordsError> {
         if search_key.len() != KeySize::USIZE {
-            Err(AddRecordsError::KeyWrongSize)?;
+            return Err(AddRecordsError::KeyWrongSize);
         }
         if ciphertext.len() > ValueSize::USIZE - 1 {
-            Err(AddRecordsError::ValueTooLarge)?;
+            return Err(AddRecordsError::ValueTooLarge);
         }
         if ciphertext.len() < ValueSize::USIZE.saturating_sub(256) {
-            Err(AddRecordsError::ValueWrongSize)?;
+            return Err(AddRecordsError::ValueWrongSize);
         }
 
         let mut key = A8Bytes::<KeySize>::default();
         let mut value = A8Bytes::<ValueSize>::default();
 
-        key.clone_from_slice(&search_key[..]);
+        key.clone_from_slice(search_key);
         value[0] = (ValueSize::USIZE - 1 - ciphertext.len()) as u8;
         let data_end = ValueSize::USIZE - value[0] as usize;
         (&mut value[1..data_end]).clone_from_slice(ciphertext);
@@ -148,7 +148,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> ETxOutStore<OSC>
         }
 
         let mut key = A8Bytes::<KeySize>::default();
-        key.clone_from_slice(&search_key[..]);
+        key.clone_from_slice(search_key);
 
         let mut value = A8Bytes::<ValueSize>::default();
         value[0] = self.last_ciphertext_size_byte;

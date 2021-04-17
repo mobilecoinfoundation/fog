@@ -63,10 +63,10 @@ macro_rules! impl_multiversion_kex_rng_enum {
         }
 
         // Forward to inner
-        impl Into<StoredRng> for $enum_name {
-            fn into(self) -> StoredRng {
-                match self {
-                    $(Self::$rng_name(inner) => inner.into(),)+
+        impl From<$enum_name> for StoredRng {
+            fn from(src: $enum_name) -> StoredRng {
+                match src {
+                    $($enum_name::$rng_name(inner) => inner.into(),)+
                 }
             }
         }

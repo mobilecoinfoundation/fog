@@ -21,6 +21,7 @@ impl SqlRecoveryDbTestContext {
             thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(10)
+                .map(char::from)
                 .collect::<String>()
                 .to_lowercase()
         );

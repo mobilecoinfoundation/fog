@@ -98,7 +98,7 @@ dependencies = [
 
 [[package]]
 name = "aligned-cmov"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aligned-array 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -185,11 +185,11 @@ dependencies = [
 
 [[package]]
 name = "balanced-tree-index"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1131,7 +1131,7 @@ dependencies = [
 name = "fog-ingest-enclave-impl"
 version = "1.0.0"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-ingest-enclave-api 1.0.0",
  "fog-kex-rng 1.0.0",
  "fog-recovery-db-iface 1.0.0",
@@ -1146,9 +1146,9 @@ dependencies = [
  "mc-crypto-box 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-crypto-rand 1.0.1-pre1",
- "mc-oblivious-map 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-ram 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-map 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-ram 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-sgx-compat 1.0.1-pre1",
  "mc-sgx-report-cache-api 1.0.1-pre1",
  "mc-transaction-core 1.0.1-pre1",
@@ -1442,10 +1442,10 @@ dependencies = [
 name = "fog-ocall-oram-storage-testing"
 version = "0.5.0"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-ocall-oram-storage-trusted 0.5.0",
  "fog-ocall-oram-storage-untrusted 0.5.0",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-util-test-helper 1.0.1-pre1",
 ]
 
@@ -1454,14 +1454,14 @@ name = "fog-ocall-oram-storage-trusted"
 version = "0.5.0"
 dependencies = [
  "aes-ctr 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "balanced-tree-index 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "balanced-tree-index 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-sgx-compat 1.0.1-pre1",
- "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "subtle 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1764,7 +1764,7 @@ dependencies = [
 name = "fog-view-enclave-impl"
 version = "1.0.0"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-recovery-db-iface 1.0.0",
  "fog-types 1.0.0",
  "fog-view-enclave-api 1.0.0",
@@ -1774,9 +1774,9 @@ dependencies = [
  "mc-crypto-ake-enclave 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
  "mc-crypto-rand 1.0.1-pre1",
- "mc-oblivious-map 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-ram 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-map 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-ram 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-sgx-compat 1.0.1-pre1",
  "mc-sgx-report-cache-api 1.0.1-pre1",
  "mc-util-serial 1.0.1-pre1",
@@ -3378,36 +3378,36 @@ dependencies = [
 
 [[package]]
 name = "mc-oblivious-map"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aligned-array 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "generic-array 0.14.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "siphasher 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "mc-oblivious-ram"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "balanced-tree-index 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "balanced-tree-index 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "mc-oblivious-traits"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "balanced-tree-index 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "balanced-tree-index 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4498,6 +4498,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "getrandom 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rand_hc"
@@ -5821,7 +5826,7 @@ dependencies = [
 "checksum aesni 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d050d39b0b7688b3a3254394c3e30a9d66c41dcf9b05b0e2dbdc623f6505d264"
 "checksum aho-corasick 0.7.10 (registry+https://github.com/rust-lang/crates.io-index)" = "8716408b8bc624ed7f65d223ddb9ac2d044c0547b6fa4b0d554f3a9540496ada"
 "checksum aligned-array 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e05c92d086290f52938013f6242ac62bf7d401fab8ad36798a609faa65c3fd2c"
-"checksum aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "58430584a6379af5673f32a3d2bb95915d7cdfb33137697c3dc14de2397dbf24"
+"checksum aligned-cmov 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "42131cad0df1f867cc8c693912fe2ba04c67f29be3378c951dac62c80554301f"
 "checksum ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
 "checksum anyhow 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)" = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 "checksum arc-swap 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "dabe5a181f83789739c194cbe5a897dde195078fac08568d09221fd6137a7ba8"
@@ -5833,7 +5838,7 @@ dependencies = [
 "checksum autocfg 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "1d49d90015b3c36167a20fe2810c5cd875ad504b39cff3d4eae7977e6b7c1cb2"
 "checksum autocfg 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 "checksum backtrace 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)" = "ef5140344c85b01f9bbb4d4b7288a8aa4b3287ccef913a14bcc78a1063623598"
-"checksum balanced-tree-index 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a74877859dc08c4589ac95dc2a0182370022452e46940b8a30bfecfe4e2d4233"
+"checksum balanced-tree-index 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d6d6bd47b2008be3e67743e1a6ff23c7c49f7fea5506694915008ad79b9a3f28"
 "checksum base-x 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "a4521f3e3d031370679b3b140beb36dfe4801b09ac77e30c61941f97df3ef28b"
 "checksum base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 "checksum base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
@@ -5994,9 +5999,9 @@ dependencies = [
 "checksum maybe-uninit 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 "checksum mbedtls 0.5.1 (git+https://github.com/mobilecoinofficial/rust-mbedtls.git?tag=mc-0.3)" = "<none>"
 "checksum mbedtls-sys-auto 2.18.1 (git+https://github.com/mobilecoinofficial/rust-mbedtls.git?tag=mc-0.3)" = "<none>"
-"checksum mc-oblivious-map 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "65a0d6d9190a1bbaf7c72030093d33e8c2129fb190cea21b3df4b7649dad6e74"
-"checksum mc-oblivious-ram 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "87a80a981b54728778366179a2e5f10708d8e1efe217a26a0921bb8720c87218"
-"checksum mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "29ae5525b296fee5d2d4c5caca2c6cfa7370d4e9985685d02679b9d7be31c3ed"
+"checksum mc-oblivious-map 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "75ec69b95958d2e9a32a586810490e84e84131576a03089150c866d8f5c5b2db"
+"checksum mc-oblivious-ram 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5315761b84f4d58c26af116531cb6f1d53084f38eeab04f8f3f69e15e532d779"
+"checksum mc-oblivious-traits 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "696594033b1b0d6974460924e74ed2764355055d2287982b8bc07821671f23d0"
 "checksum memchr 2.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3728d817d99e5ac407411fa471ff9800a778d88a24685968b36824eaf4bee400"
 "checksum memoffset 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "b4fc2c02a7e374099d4ee95a193111f72d2110197fe200272371758f6c3643d8"
 "checksum merlin 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c6feca46f4fa3443a01769d768727f10c10a20fdb65e52dc16a81f0c8269bb78"
@@ -6070,6 +6075,7 @@ dependencies = [
 "checksum rand_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6fdeb83b075e8266dcc8762c22776f6877a63111121f5f8c7411e5be7eed4b"
 "checksum rand_core 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9c33a3c44ca05fa6f1807d8e6743f3824e8509beca625669633be0acbdf509dc"
 "checksum rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
+"checksum rand_core 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "34cf66eb183df1c5876e2dcf6b13d57340741e8dc255b48e40a26de954d06ae7"
 "checksum rand_hc 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7b40677c7be09ae76218dc623efbf7b18e34bced3f38883af07bb75630a21bc4"
 "checksum rand_hc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca3129af7b92a17112d59ad498c6f81eaf463253766b90396d39ea7a39d6613c"
 "checksum rand_isaac 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ded997c9d5f13925be2a6fd7e66bf1872597f759fd9dd93513dd7e92e5a5ee08"

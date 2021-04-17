@@ -16,10 +16,10 @@ mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat", default-features =
 mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
 mc-util-serial = { path = "../../../../mobilecoin/util/serial", default-features = false }
 
-aligned-cmov = "1.0"
-mc-oblivious-map = "1.0"
-mc-oblivious-ram = "1.0"
-mc-oblivious-traits = "1.0"
+aligned-cmov = "2.0"
+mc-oblivious-map = "2.0"
+mc-oblivious-ram = "2.0"
+mc-oblivious-traits = "2.0"
 
 fog-recovery-db-iface = { path = "../../../recovery_db_iface" }
 fog-types = { path = "../../../fog_types" }

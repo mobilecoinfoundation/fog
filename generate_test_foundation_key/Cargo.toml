@@ -6,5 +6,5 @@ edition = "2018"
 license = "GPL-3.0"
 
 [dependencies]
-rand = "0.7"
+rand = "0.8"
 mc-account-keys = { path = "../mobilecoin/account-keys" }

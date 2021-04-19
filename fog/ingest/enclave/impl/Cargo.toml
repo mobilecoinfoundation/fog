@@ -20,17 +20,17 @@ mc-transaction-core = { path = "../../../../mobilecoin/transaction/core", defaul
 mc-util-from-random = { path = "../../../../mobilecoin/util/from-random" }
 mc-util-serial = { path = "../../../../mobilecoin/util/serial" }
 
-aligned-cmov = "1.0"
-mc-oblivious-map = "1.0"
-mc-oblivious-ram = "1.0"
-mc-oblivious-traits = "1.0"
+aligned-cmov = "2.0"
+mc-oblivious-map = "2.0"
+mc-oblivious-ram = "2.0"
+mc-oblivious-traits = "2.0"
 
 fog-ingest-enclave-api = { path = "../api", default-features = false }
 fog-kex-rng = { path = "../../../kex_rng" }
 fog-types = { path = "../../../fog_types" }
 fog-recovery-db-iface = { path = "../../../recovery_db_iface", default-features = false }
 
-rand_core = { version = "0.5", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 zeroize = { version = "1.1", default-features = false }
 
 [dev-dependencies]

@@ -51,7 +51,7 @@ futures = "0.3"
 grpcio = "0.6.0"
 link-cplusplus = "1.0" # This is needed to support building on darwin which only has libc++ and not libstdc++
 protobuf = "2.22.1"
-rand = "0.7"
+rand = "0.8"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 structopt = "0.3"
 

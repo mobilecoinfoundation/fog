@@ -1824,28 +1824,3 @@ dependencies = [
  "syn",
  "synstructure",
 ]
-
-[[patch.unused]]
-name = "aligned-cmov"
-version = "2.0.0"
-source = "git+https://github.com/mobilecoinofficial/mc-oblivious.git?rev=9e50f62#9e50f6200b52e3b6d5bfacfd20660330b86e7a6d"
-
-[[patch.unused]]
-name = "balanced-tree-index"
-version = "2.0.0"
-source = "git+https://github.com/mobilecoinofficial/mc-oblivious.git?rev=9e50f62#9e50f6200b52e3b6d5bfacfd20660330b86e7a6d"
-
-[[patch.unused]]
-name = "mc-oblivious-map"
-version = "2.0.0"
-source = "git+https://github.com/mobilecoinofficial/mc-oblivious.git?rev=9e50f62#9e50f6200b52e3b6d5bfacfd20660330b86e7a6d"
-
-[[patch.unused]]
-name = "mc-oblivious-ram"
-version = "2.0.0"
-source = "git+https://github.com/mobilecoinofficial/mc-oblivious.git?rev=9e50f62#9e50f6200b52e3b6d5bfacfd20660330b86e7a6d"
-
-[[patch.unused]]
-name = "mc-oblivious-traits"
-version = "2.0.0"
-source = "git+https://github.com/mobilecoinofficial/mc-oblivious.git?rev=9e50f62#9e50f6200b52e3b6d5bfacfd20660330b86e7a6d"

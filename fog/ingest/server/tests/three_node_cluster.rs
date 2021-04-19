@@ -181,7 +181,7 @@ fn wait_for_sync(ledger: &LedgerDB, recovery_db: &SqlRecoveryDb, logger: &Logger
         if recovery_db_count >= ledger_db_count {
             break;
         }
-        if Instant::now().duration_since(start) > Duration::from_secs(10) {
+        if Instant::now().duration_since(start) > Duration::from_secs(60) {
             panic!("Timed out waiting for active node to process data");
         }
         std::thread::sleep(Duration::from_millis(100));

@@ -36,7 +36,7 @@ mc-common = { path = "../mobilecoin/common", features = ["std"] }
 mc-crypto-box = { path = "../mobilecoin/crypto/box" }
 mc-crypto-keys = { path = "../mobilecoin/crypto/keys" }
 mc-crypto-noise = { path = "../mobilecoin/crypto/noise" }
-mc-crypto-rand = { path = "../mobilecoin/crypto/rand" }
+mc-crypto-rand = { path = "../mobilecoin/crypto/rand", features = ["std"] }
 mc-crypto-sig = { path = "../mobilecoin/crypto/sig" }
 mc-fog-report-validation = { path = "../mobilecoin/fog/report/validation" }
 mc-transaction-core = { path = "../mobilecoin/transaction/core" }

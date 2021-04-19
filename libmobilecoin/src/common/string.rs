@@ -34,9 +34,8 @@ impl<'a> TryFromFfi<FfiStr<'a>> for &'a str {
     type Error = LibMcError;
 
     fn try_from_ffi(src: FfiStr<'a>) -> Result<Self, LibMcError> {
-        Ok(src
-            .as_str()
-            .map_err(|err| LibMcError::InvalidInput(format!("Invalid UTF-8: {:?}", err)))?)
+        src.as_str()
+            .map_err(|err| LibMcError::InvalidInput(format!("Invalid UTF-8: {:?}", err)))
     }
 }
 
@@ -54,7 +53,7 @@ impl<'a> FfiTryFrom<&str> for FfiOwnedStr {
 
     #[inline]
     fn ffi_try_from(src: &str) -> Result<Self, LibMcError> {
-        Ok(FfiOwnedStr::ffi_try_from(src.to_owned())?)
+        FfiOwnedStr::ffi_try_from(src.to_owned())
     }
 }
 
@@ -73,7 +72,7 @@ impl<'a> FfiTryFrom<Option<&str>> for FfiOptOwnedStr {
 
     #[inline]
     fn ffi_try_from(src: Option<&str>) -> Result<Self, LibMcError> {
-        Ok(FfiOptOwnedStr::ffi_try_from(src.map(ToOwned::to_owned))?)
+        FfiOptOwnedStr::ffi_try_from(src.map(ToOwned::to_owned))
     }
 }
 

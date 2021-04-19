@@ -9,8 +9,8 @@ use r2d2::Error as R2d2Error;
 
 #[derive(Display, Debug)]
 pub enum Error {
-    /// ORM: {0}
-    ORM(DieselError),
+    /// Orm: {0}
+    Orm(DieselError),
 
     /// R2d2: {0}
     R2d2(R2d2Error),
@@ -50,7 +50,7 @@ impl Error {
     /// Policy decision, whether the call should be retried.
     pub fn should_retry(&self) -> bool {
         match self {
-            Self::ORM(DieselError::DatabaseError(_, info)) => {
+            Self::Orm(DieselError::DatabaseError(_, info)) => {
                 info.message() == "no connection to the server\n"
                     || info.message() == "terminating connection due to administrator command"
             }
@@ -61,7 +61,7 @@ impl Error {
 
 impl From<DieselError> for Error {
     fn from(src: DieselError) -> Self {
-        Self::ORM(src)
+        Self::Orm(src)
     }
 }
 

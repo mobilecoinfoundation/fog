@@ -134,17 +134,17 @@ where
 }
 
 // To Serialization Form
-impl<Core, KexAlgo> Into<StoredRng> for BufferedKexRng<Core, KexAlgo>
+impl<Core, KexAlgo> From<BufferedKexRng<Core, KexAlgo>> for StoredRng
 where
     Core: KexRngCore<KexAlgo>,
     KexAlgo: Kex,
 {
-    fn into(self) -> StoredRng {
+    fn from(src: BufferedKexRng<Core, KexAlgo>) -> StoredRng {
         StoredRng {
             version: Core::VERSION_ID,
-            secret: self.secret.as_slice().to_vec(),
-            buffer: self.buffer.as_slice().to_vec(),
-            counter: self.counter,
+            secret: src.secret.as_slice().to_vec(),
+            buffer: src.buffer.as_slice().to_vec(),
+            counter: src.counter,
         }
     }
 }

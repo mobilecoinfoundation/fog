@@ -550,11 +550,8 @@ mod helpers {
 
 // This stuff must match edl file
 extern "C" {
-    #[no_mangle]
     fn allocate_oram_storage(count: u64, data_size: u64, meta_size: u64, id: *mut u64);
-    #[no_mangle]
     fn release_oram_storage(id: u64);
-    #[no_mangle]
     fn checkout_oram_storage(
         id: u64,
         idx: *const u64,
@@ -564,8 +561,6 @@ extern "C" {
         metabuf: *mut u64,
         metabuf_size: usize,
     );
-
-    #[no_mangle]
     fn checkin_oram_storage(
         id: u64,
         idx: *const u64,

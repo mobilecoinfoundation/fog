@@ -136,8 +136,7 @@ impl SqlRecoveryDb {
 
         let rows = query.load::<(i64, Option<i64>, Option<i64>)>(conn)?;
 
-        Ok(rows
-            .iter()
+        rows.iter()
             .map(|row| match row {
                 (_, Some(start_index), Some(end_index)) => {
                     Ok(BlockRange::new(*start_index as u64, *end_index as u64))
@@ -147,7 +146,7 @@ impl SqlRecoveryDb {
                     "missing start or end block indices",
                 )),
             })
-            .collect::<Result<Vec<BlockRange>, Error>>()?)
+            .collect::<Result<Vec<BlockRange>, Error>>()
     }
 
     fn get_ingress_key_status_impl(
@@ -464,7 +463,7 @@ impl RecoveryDb for SqlRecoveryDb {
             // of an error This makes it a little easier for the caller to access this
             // information without making custom traits for interrogating generic
             // errors.
-            Err(Self::Error::ORM(diesel::result::Error::DatabaseError(
+            Err(Self::Error::Orm(diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::UniqueViolation,
                 _,
             ))) => Ok(AddBlockDataStatus {
@@ -951,7 +950,7 @@ impl ReportDb for SqlRecoveryDb {
     ) -> Result<IngressPublicKeyStatus, Self::Error> {
         let conn = self.pool.get()?;
 
-        Ok(conn.build_transaction().read_write().run(
+        conn.build_transaction().read_write().run(
             || -> Result<IngressPublicKeyStatus, Self::Error> {
                 // First, try to update the pubkey_expiry value on this ingress key, only
                 // allowing it to increase, and only if it is not retired
@@ -1021,7 +1020,7 @@ impl ReportDb for SqlRecoveryDb {
                     .execute(&conn)?;
                 Ok(result)
             },
-        )?)
+        )
     }
 
     /// Remove report data associated with a given report id.

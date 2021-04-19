@@ -16,8 +16,7 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for RistrettoPublic {
 
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
         let src = <&[u8; 32]>::try_from_ffi(src)?;
-        Ok(RistrettoPublic::try_from(src)
-            .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))?)
+        RistrettoPublic::try_from(src).map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))
     }
 }
 
@@ -26,8 +25,8 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for RistrettoPrivate {
 
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
         let src = <&[u8; 32]>::try_from_ffi(src)?;
-        Ok(RistrettoPrivate::try_from(src)
-            .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))?)
+        RistrettoPrivate::try_from(src)
+            .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))
     }
 }
 
@@ -79,8 +78,7 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for Signature {
 
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
         let src = src.as_slice_of_len(SIGNATURE_LENGTH)?;
-        Ok(Signature::from_bytes(src)
-            .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))?)
+        Signature::from_bytes(src).map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))
     }
 }
 

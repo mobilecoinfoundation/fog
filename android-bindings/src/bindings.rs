@@ -1561,7 +1561,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_ReportResponse_init_1jni(
         let chain = (0..env.get_array_length(chain)?)
             .map(|index| {
                 let obj = env.get_object_array_element(chain, index)?;
-                Ok(env.convert_byte_array(obj.into_inner())?) // FIXME: into_inner() sane here?
+                env.convert_byte_array(obj.into_inner()) // FIXME: into_inner()
+                                                         // sane here?
             })
             .collect::<Result<Vec<Vec<u8>>, jni::errors::Error>>()?;
         let signature = env.convert_byte_array(signature)?;
@@ -1632,7 +1633,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_VerificationReport_init_1jni(
         let chain = (0..env.get_array_length(chain)?)
             .map(|index| {
                 let obj = env.get_object_array_element(chain, index)?;
-                Ok(env.convert_byte_array(obj.into_inner())?)
+                env.convert_byte_array(obj.into_inner())
             })
             .collect::<Result<Vec<Vec<u8>>, jni::errors::Error>>()?;
         let http_body: String = env.get_string(http_body)?.into();

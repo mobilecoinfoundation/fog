@@ -119,18 +119,16 @@ where
 
     /// Logic of proto api
     pub fn retire_impl(&mut self, _: Empty, logger: &Logger) -> Result<IngestSummary, RpcStatus> {
-        Ok(self
-            .controller
+        self.controller
             .retire()
-            .map_err(|err| rpc_database_err(err, logger))?)
+            .map_err(|err| rpc_database_err(err, logger))
     }
 
     /// Logic of proto api
     pub fn unretire_impl(&mut self, _: Empty, logger: &Logger) -> Result<IngestSummary, RpcStatus> {
-        Ok(self
-            .controller
+        self.controller
             .unretire()
-            .map_err(|err| rpc_database_err(err, logger))?)
+            .map_err(|err| rpc_database_err(err, logger))
     }
 
     /// Report a lost ingress key

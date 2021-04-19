@@ -170,7 +170,7 @@ pub unsafe extern "C" fn allocate_oram_storage(
         data_size as usize,
         meta_size as usize,
     ));
-    let id: u64 = core::mem::transmute(Box::into_raw(result));
+    let id = Box::into_raw(result) as u64;
     #[cfg(debug_assertions)]
     debug_checks::add_id(id);
     *id_out = id;

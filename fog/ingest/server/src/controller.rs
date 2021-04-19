@@ -1037,8 +1037,7 @@ where
         };
         let report_id = self.config.fog_report_id.as_ref();
 
-        Ok(self
-            .recovery_db
+        self.recovery_db
             .set_report(ingress_public_key, report_id, &report_data)
             .map_err(|err| {
                 log::error!(
@@ -1050,7 +1049,7 @@ where
                 // ReportDB error to IngestServiceError but the caller won't do
                 // much but log this error eventually so...
                 Error::PublishReport
-            })?)
+            })
     }
 
     // Helper which writes out the state file. This should be done after processing

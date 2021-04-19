@@ -29,7 +29,7 @@ use mc_util_uri::AdminUri;
 use mc_watcher::watcher_db::WatcherDB;
 use retry::{delay, retry, OperationResult};
 use std::{
-    path::PathBuf,
+    path::Path,
     str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
@@ -113,13 +113,11 @@ impl core::fmt::Display for TestResult {
     }
 }
 
-fn load_test(
-    ingest_server_binary: &PathBuf,
-    test_params: TestParams,
-    logger: Logger,
-) -> TestResult {
-    let mut test_results = TestResult::default();
-    test_results.params = test_params.clone();
+fn load_test(ingest_server_binary: &Path, test_params: TestParams, logger: Logger) -> TestResult {
+    let mut test_results = TestResult {
+        params: test_params.clone(),
+        ..Default::default()
+    };
 
     {
         // First make grpcio env

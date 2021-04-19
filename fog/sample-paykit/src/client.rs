@@ -419,7 +419,7 @@ impl Client {
 
         let mut sampled_indices: HashSet<u64> = HashSet::default();
         while sampled_indices.len() < num_requested {
-            let index = rng.gen_range(0, sample_limit);
+            let index = rng.gen_range(0..sample_limit);
             sampled_indices.insert(index as u64);
         }
         let indices: Vec<u64> = sampled_indices.iter().cloned().collect();

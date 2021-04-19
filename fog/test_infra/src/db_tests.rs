@@ -49,13 +49,9 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
         // Test that they have no rng records when the cursor value is up-to-date
         let (user_events, _next_start_from_user_event_id) =
             db.search_user_events(start_from_user_event_id).unwrap();
-        let has_rng_events = user_events.iter().any(|event| {
-            if let FogUserEvent::NewRngRecord(_) = event {
-                true
-            } else {
-                false
-            }
-        });
+        let has_rng_events = user_events
+            .iter()
+            .any(|event| matches!(event, FogUserEvent::NewRngRecord(_)));
         assert!(!has_rng_events);
 
         // Make some test rng record rows by creating new ingest invocations.
@@ -80,13 +76,7 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
                 db.search_user_events(start_from_user_event_id).unwrap();
             let num_rng_events = user_events
                 .iter()
-                .filter(|event| {
-                    if let FogUserEvent::NewRngRecord(_) = event {
-                        true
-                    } else {
-                        false
-                    }
-                })
+                .filter(|event| matches!(event, FogUserEvent::NewRngRecord(_)))
                 .count();
             assert_eq!(
                 num_rng_events, SEEDS_PER_ROUND,
@@ -153,13 +143,7 @@ pub fn recovery_db_smoke_tests_new_apis<DB: RecoveryDb>(
     let (user_events, _next_start_from_user_event_id) = db.search_user_events(0).unwrap();
     let num_rng_events = user_events
         .iter()
-        .filter(|event| {
-            if let FogUserEvent::NewRngRecord(_) = event {
-                true
-            } else {
-                false
-            }
-        })
+        .filter(|event| matches!(event, FogUserEvent::NewRngRecord(_)))
         .count();
 
     assert_eq!(
@@ -255,13 +239,9 @@ pub fn recovery_db_rng_records_decommissioning<DB: RecoveryDb>(
 
     // We start without any rng record events.
     let (user_events, _next_start_from_user_event_id) = db.search_user_events(0).unwrap();
-    let has_rng_events = user_events.iter().any(|event| {
-        if let FogUserEvent::NewRngRecord(_) = event {
-            true
-        } else {
-            false
-        }
-    });
+    let has_rng_events = user_events
+        .iter()
+        .any(|event| matches!(event, FogUserEvent::NewRngRecord(_)));
     assert!(!has_rng_events);
 
     // Add an ingest invocation.

@@ -1315,6 +1315,7 @@ dependencies = [
 name = "fog-ledger-enclave-impl"
 version = "1.0.0"
 dependencies = [
+ "aligned-cmov 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fog-ledger-enclave-api 1.0.0",
  "fog-types 1.0.0",
  "mc-attest-core 1.0.1-pre1",
@@ -1322,6 +1323,10 @@ dependencies = [
  "mc-common 1.0.1-pre1",
  "mc-crypto-ake-enclave 1.0.1-pre1",
  "mc-crypto-keys 1.0.1-pre1",
+ "mc-crypto-rand 1.0.1-pre1",
+ "mc-oblivious-map 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-ram 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mc-oblivious-traits 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mc-sgx-report-cache-api 1.0.1-pre1",
  "mc-util-serial 1.0.1-pre1",
 ]

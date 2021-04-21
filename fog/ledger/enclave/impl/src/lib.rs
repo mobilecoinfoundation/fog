@@ -12,6 +12,8 @@
 
 extern crate alloc;
 
+mod key_image_store;
+
 use alloc::vec::Vec;
 use fog_ledger_enclave_api::{KeyImageContext, LedgerEnclave, OutputContext, Result};
 use fog_types::ledger::{

@@ -1030,6 +1030,7 @@ name = "fog-enclave-connection"
 version = "1.0.0"
 dependencies = [
  "aes-gcm 0.6.0 (git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa)",
+ "cookie 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "displaydoc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.6.0 (git+https://github.com/jcape/grpc-rs?rev=2ad042e9e65ecb664a60e034d0a899a8760d81d3)",
  "mc-attest-ake 1.0.1-pre1",

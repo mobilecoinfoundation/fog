@@ -1,11 +1,13 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 use aes_gcm::Aes256Gcm;
+use cookie::CookieJar;
 use core::{
     cmp::Ordering,
     fmt::{Display, Formatter, Result as FmtResult},
     hash::{Hash, Hasher},
 };
+use grpcio::{CallOption, Metadata, MetadataBuilder};
 use mc_attest_ake::{AuthResponseInput, ClientInitiate, Ready, Start, Transition};
 use mc_attest_api::attest::{AuthMessage, Message};
 use mc_attest_core::{VerificationReport, Verifier};
@@ -16,27 +18,33 @@ use mc_common::{
 use mc_connection::{AttestedConnection, Connection};
 use mc_crypto_keys::X25519;
 use mc_crypto_rand::McRng;
-use mc_util_grpc::BasicCredentials;
+use mc_util_grpc::{BasicCredentials, GrpcCookieStore};
 use mc_util_uri::ConnectionUri;
 use sha2::Sha512;
 
 mod error;
 pub use error::Error;
 
-/// Abstracts the auth and enclave_request aspects of a grpc channel
-/// Note that this need not be a simple grpc channel, it could be a mock,
-/// or it could be something like a bidirectional streaming channel.
+/// Abstracts the auth and enclave_request aspects of a grpc channel used for
+/// attested connections
+///
+/// These calls:
+/// - Take a message type appropriate to the service
+/// - Take a CallOption object containing credentials info and cookies
+/// - Return a message type appropriate to the service, as well as two metadata
+///   objects, the first one containing grpc headers, and second one containing
+///   grpc trailers.
 pub trait EnclaveGrpcChannel: Send + Sync {
     fn auth(
         &mut self,
         msg: &AuthMessage,
-        creds: &BasicCredentials,
-    ) -> Result<AuthMessage, grpcio::Error>;
+        call_option: CallOption,
+    ) -> Result<(Option<Metadata>, AuthMessage, Option<Metadata>), grpcio::Error>;
     fn enclave_request(
         &mut self,
         ciphertext: &Message,
-        creds: &BasicCredentials,
-    ) -> Result<Message, grpcio::Error>;
+        call_option: CallOption,
+    ) -> Result<(Option<Metadata>, Message, Option<Metadata>), grpcio::Error>;
 }
 
 /// A generic object representing an attested connection to a remote enclave
@@ -52,6 +60,9 @@ pub struct EnclaveConnection<U: ConnectionUri, G: EnclaveGrpcChannel> {
     /// Credentials to use for all GRPC calls (this allows authentication
     /// username/password to go through, if provided).
     creds: BasicCredentials,
+    /// A hash map of metadata to set on outbound requests, filled by inbound
+    /// `Set-Cookie` metadata
+    cookies: CookieJar,
     /// Logger
     logger: Logger,
 }
@@ -83,8 +94,24 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> AttestedConnection for EnclaveConn
         let init_input = ClientInitiate::<X25519, Aes256Gcm, Sha512>::default();
         let (initiator, auth_request_output) = initiator.try_next(&mut csprng, init_input)?;
 
-        let auth_response_msg = self.grpc.auth(&auth_request_output.into(), &self.creds)?;
+        // Make the auth request with the server
+        let call_opt = self.call_option();
+        let (header, auth_response_msg, trailer) =
+            self.grpc.auth(&auth_request_output.into(), call_opt)?;
 
+        // Update cookies from server-sent metadata
+        if let Err(e) = self
+            .cookies
+            .update_from_server_metadata(header.as_ref(), trailer.as_ref())
+        {
+            log::warn!(
+                self.logger,
+                "Could not update cookies from gRPC metadata: {}",
+                e
+            )
+        }
+
+        // Process server response, check if key exchange is successful
         let auth_response_event =
             AuthResponseInput::new(auth_response_msg.into(), self.verifier.clone());
         let (initiator, verification_report) =
@@ -97,8 +124,12 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> AttestedConnection for EnclaveConn
 
     fn deattest(&mut self) {
         if self.is_attested() {
-            log::trace!(self.logger, "Tearing down existing attested connection.");
+            log::trace!(
+                self.logger,
+                "Tearing down existing attested connection and clearing cookies."
+            );
             self.attest_cipher = None;
+            self.cookies = CookieJar::default();
         }
     }
 }
@@ -106,6 +137,7 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> AttestedConnection for EnclaveConn
 impl<U: ConnectionUri, G: EnclaveGrpcChannel> EnclaveConnection<U, G> {
     pub fn new(uri: U, grpc: G, verifier: Verifier, logger: Logger) -> Self {
         let creds = BasicCredentials::new(&uri.username(), &uri.password());
+        let cookies = CookieJar::default();
 
         Self {
             uri,
@@ -113,10 +145,33 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> EnclaveConnection<U, G> {
             attest_cipher: None,
             verifier,
             creds,
+            cookies,
             logger,
         }
     }
 
+    /// Produce a "call option" object appropriate for this grpc connection.
+    /// This includes the http headers needed for credentials and cookies.
+    pub fn call_option(&mut self) -> CallOption {
+        let retval = CallOption::default();
+
+        // Create metadata from cookies and credentials
+        let mut metadata_builder = self
+            .cookies
+            .to_client_metadata()
+            .unwrap_or_else(|_| MetadataBuilder::new());
+        if !self.creds.username().is_empty() && !self.creds.password().is_empty() {
+            metadata_builder
+                .add_str("Authorization", &self.creds.authorization_header())
+                .expect("Error setting authorization header");
+        }
+        retval.headers(metadata_builder.build())
+    }
+
+    /// Make an attested request to the enclave, given the plaintext to go to
+    /// enclave, and any aad data, which will be nonmalleable, but visible
+    /// to untrusted. Returns the decrypted and deserialized response
+    /// object.
     pub fn encrypted_enclave_request<
         RequestMessage: mc_util_serial::Message,
         ResponseMessage: mc_util_serial::Message + Default,
@@ -147,7 +202,26 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> EnclaveConnection<U, G> {
             msg
         };
 
-        let resp = self.attested_call(|this| this.grpc.enclave_request(&msg, &this.creds))?;
+        // make an attested call to EnclaveGrpcChannel::enclave_request,
+        // and handle cookies
+        let message = self.attested_call(|this| {
+            let call_opt = this.call_option();
+            let (header, message, trailer) = this.grpc.enclave_request(&msg, call_opt)?;
+
+            // Update cookies from server-sent metadata
+            if let Err(e) = this
+                .cookies
+                .update_from_server_metadata(header.as_ref(), trailer.as_ref())
+            {
+                log::warn!(
+                    this.logger,
+                    "Could not update cookies from gRPC metadata: {}",
+                    e
+                )
+            }
+
+            Ok(message)
+        })?;
 
         // Decrypt request, scope attest_cipher borrow
         {
@@ -156,7 +230,7 @@ impl<U: ConnectionUri, G: EnclaveGrpcChannel> EnclaveConnection<U, G> {
                 .as_mut()
                 .expect("no enclave_connection even though attest succeeded");
 
-            let plaintext_bytes = attest_cipher.decrypt(&resp.get_aad(), resp.get_data())?;
+            let plaintext_bytes = attest_cipher.decrypt(&message.get_aad(), message.get_data())?;
             let plaintext_response: ResponseMessage = mc_util_serial::decode(&plaintext_bytes)?;
             Ok(plaintext_response)
         }

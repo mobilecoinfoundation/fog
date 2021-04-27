@@ -48,6 +48,8 @@ all: setup ios
 .PHONY: setup
 setup:
 	rustup target add $(ARCHS_IOS)
+	rustup component add llvm-tools-preview
+	rustup run --install stable cargo install cargo-binutils
 
 .PHONY: ios
 ios: out/ios/$(IOS_LIB)
@@ -79,7 +81,7 @@ $(ARCHS_IOS):
 
 	@# Create list of libmobilecoin symbols.
 	cd $(CARGO_TARGET_DIR)/$@/$(BUILD_CONFIG_FOLDER) && \
-		nm -jgU extracted/mobilecoin*.mobilecoin.*.o -s __TEXT __text 2>/dev/null \
+		rust-nm -jgU extracted/mobilecoin*.mobilecoin.*.o -s __TEXT __text \
 			| grep '\<_mc_' \
 			> exported-symbols.def
 

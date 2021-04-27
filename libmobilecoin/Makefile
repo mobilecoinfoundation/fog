@@ -79,7 +79,7 @@ $(ARCHS_IOS):
 
 	@# Create list of libmobilecoin symbols.
 	cd $(CARGO_TARGET_DIR)/$@/$(BUILD_CONFIG_FOLDER) && \
-		nm -jgU extracted/mobilecoin*.mobilecoin.*.o -s __TEXT __text 2>/dev/null \
+		nm -jgU extracted/mobilecoin*.mobilecoin.*.o -s __TEXT __text \
 			| grep '\<_mc_' \
 			> exported-symbols.def
 

@@ -228,7 +228,7 @@ impl TxOutRecord {
     pub fn get_fog_tx_out(&self) -> Result<FogTxOut, KeyError> {
         // There are two cases: TxOutRecord with full amount data, and TxOutRecord with
         // only commitment data crc32 and masked value.
-        if self.tx_out_amount_commitment_data.len() == 0 {
+        if self.tx_out_amount_commitment_data.is_empty() {
             return Ok(FogTxOut {
                 target_key: CompressedRistrettoPublic::try_from(&self.tx_out_target_key_data[..])?,
                 public_key: CompressedRistrettoPublic::try_from(&self.tx_out_public_key_data[..])?,

@@ -108,7 +108,7 @@ impl From<&AccountKey> for UserPrivate {
 mod testing {
     use super::*;
     use core::convert::TryFrom;
-    use fog_types::view::FogTxOut;
+    use fog_types::view::{FogTxOut, FogTxOutMetadata};
     use mc_crypto_box::{CryptoBox, VersionedCryptoBox};
     use mc_crypto_keys::CompressedRistrettoPublic;
     use mc_transaction_core::{fog_hint::FogHint, tx::TxOut};
@@ -161,16 +161,12 @@ mod testing {
 
         // Prep for DB record
         let fog_txout = FogTxOut::from(&txo);
-        let commitment_bytes: &[u8; 32] = fog_txout.amount.commitment.as_ref();
-        let txo_record = TxOutRecord {
-            tx_out_amount_commitment_data: commitment_bytes.to_vec(),
-            tx_out_amount_masked_value: fog_txout.amount.masked_value,
-            tx_out_target_key_data: fog_txout.target_key.as_bytes().to_vec(),
-            tx_out_public_key_data: fog_txout.public_key.as_bytes().to_vec(),
-            tx_out_global_index: 1,
+        let meta = FogTxOutMetadata {
+            global_index: 1,
             block_index: 1,
             timestamp: 42,
         };
+        let txo_record = TxOutRecord::new(fog_txout, meta);
 
         let protobuf = mc_util_serial::encode(&txo_record);
 

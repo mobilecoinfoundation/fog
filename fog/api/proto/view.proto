@@ -204,20 +204,6 @@ enum TxOutSearchResultCode {
     RateLimited = 5;
 }
 
-
-/// A Redacted Fog Transaction Output.
-/// This is the same as a normal TxOut, except that the fog hint is removed after processing, to save storage.
-message FogTxOut {
-    /// Amount.
-    external.Amount amount = 1;
-
-    /// Public key.
-    external.CompressedRistretto target_key = 2;
-
-    /// Public key.
-    external.CompressedRistretto public_key = 3;
-}
-
 /// The schema for the decrypted TxOutSearchResult ciphertext
 /// This is the information that the Ingest enclave produces for the user about their TxOut
 ///
@@ -231,6 +217,8 @@ message FogTxOut {
 /// and that's the version of the TxOut that you should use when building a transaction.
 message TxOutRecord {
     /// The (compressed ristretto) bytes of commitment associated to amount field in the TxOut that was recovered
+    ///
+    /// Note: This field is omitted in recent versions, because it can be reconstructed by the recipient instead.
     bytes tx_out_amount_commitment_data = 1;
     /// The masked value associated to amount field in the TxOut that was recovered
     fixed64 tx_out_amount_masked_value = 2;
@@ -267,4 +255,10 @@ message TxOutRecord {
     ///
     /// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
     fixed64 timestamp = 7;
+    /// The crc32 of the commitment data bytes.
+    /// This is a 4-byte IEEE crc32 of the bytes of the tx_out_amount_commitment_data bytes, which is present if
+    /// the full tx_out_amount_commitment_data is omitted.
+    /// The client can recompute the tx_out_amount_commitment from the other data that we include.
+    /// They can confirm correct recomputation by checking this crc value.
+    fixed32 tx_out_amount_commitment_data_crc32 = 8;
 }

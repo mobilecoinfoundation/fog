@@ -26,16 +26,16 @@ fog-ingest-enclave-measurement = { path = "../ingest/enclave/measurement" }
 crossbeam-channel = "0.5"
 grpcio = "0.6.0"
 lazy_static = "1.4"
-rand = "0.7"
+rand = "0.8"
 retry = "1.2"
 structopt = "0.3"
 tempfile = "3.0"
 
 [target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]
-curve25519-dalek = { version = "3.0", default-features = false, features = ["simd_backend", "nightly"] }
+curve25519-dalek = { version = "4.0.0-pre.0", default-features = false, features = ["simd_backend", "nightly"] }
 
 [target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dependencies]
-curve25519-dalek = { version = "3.0", default-features = false, features = ["nightly", "u64_backend"] }
+curve25519-dalek = { version = "4.0.0-pre.0", default-features = false, features = ["nightly", "u64_backend"] }
 
 [dev-dependencies]
 mc-common = { path = "../../mobilecoin/common", features = ["loggers"] }

@@ -216,10 +216,7 @@ impl AttestAke {
     }
 
     pub fn is_attested(&self) -> bool {
-        match self {
-            Self::Attested(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Attested(_))
     }
 
     pub fn take_auth_pending(&mut self) -> Option<AuthPending<X25519, Aes256Gcm, Sha512>> {

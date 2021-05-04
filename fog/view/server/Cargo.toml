@@ -50,8 +50,8 @@ fog-view-enclave-api = { path = "../enclave/api" }
 
 [dev-dependencies]
 pem = "0.8"
-rand = "0.7"
-rand_core = "0.5"
+rand = "0.8"
+rand_core = "0.6"
 tempdir = "0.3"
 
 fog-view-enclave-measurement = { path = "../enclave/measurement" }

@@ -37,8 +37,8 @@ diesel_migrations = { version = "1.4.0", features = ["postgres"] }
 displaydoc = { version = "0.2", default-features = false }
 prost = "0.6.1"
 r2d2 = "0.8.9"
-rand = "0.7"
-rand_core = "0.5"
+rand = "0.8"
+rand_core = "0.6"
 
 # needed for fog-sql-recovery-db-write-bench
 fog-test-infra = { path = "../test_infra" }
@@ -50,7 +50,7 @@ mc-crypto-x509-test-vectors = { path = "../../mobilecoin/crypto/x509/test-vector
 mc-util-test-helper = { path = "../../mobilecoin/util/test-helper" }
 
 pem = "0.8"
-rand = "0.7"
+rand = "0.8"
 # Note: tempdir is deprecated, but tempfile doesn't build because it depends
 # on the wrong version of rand.
 tempdir = "0.3"

@@ -44,15 +44,15 @@ fog-view-protocol = { path = "../view/protocol" }
 # third party
 digest = "0.9"
 hex = "0.4"
-rand_core = "0.5"
-rand_hc = "0.2"
+rand_core = "0.6"
+rand_hc = "0.3"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = "1.0"
 structopt = "0.3"
 url = "2.1"
 
 [target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]
-curve25519-dalek = { version = "3.0", default-features = false, features = ["simd_backend", "nightly"] }
+curve25519-dalek = { version = "4.0.0-pre.0", default-features = false, features = ["simd_backend", "nightly"] }
 
 [target.'cfg(not(any(target_feature = "avx2", target_feature = "avx")))'.dependencies]
-curve25519-dalek = { version = "3.0", default-features = false, features = ["nightly", "u64_backend"] }
+curve25519-dalek = { version = "4.0.0-pre.0", default-features = false, features = ["nightly", "u64_backend"] }

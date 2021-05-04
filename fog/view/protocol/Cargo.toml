@@ -19,7 +19,7 @@ fog-kex-rng = { path = "../../kex_rng" }
 fog-types = { path = "../../fog_types" }
 
 displaydoc = { version = "0.2", default-features = false }
-rand_core = { version = "0.5", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 zeroize = "1.1"
 
@@ -32,4 +32,4 @@ blake2 = { version = "0.9", default-features = false }
 [dev_dependencies]
 mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
 mc-watcher-api = { path = "../../../mobilecoin/watcher/api" }
-rand_hc = "0.2"
+rand_hc = "0.3"

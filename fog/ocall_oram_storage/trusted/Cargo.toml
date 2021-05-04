@@ -8,14 +8,14 @@ license = "GPL-3.0"
 [dependencies]
 mc-sgx-compat = { path = "../../../mobilecoin/sgx/compat" }
 
-aligned-cmov = "1.0"
-balanced-tree-index = "1.0"
-mc-oblivious-traits = "1.0"
+aligned-cmov = "2.0"
+balanced-tree-index = "2.0"
+mc-oblivious-traits = "2.0"
 
 aes-ctr = { version = "0.4", default-features = false }
 displaydoc = { version = "0.2", default-features = false }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
-rand_core = { version = "0.5", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 subtle = { version = "2", default-features = false }
 
 [target.'cfg(any(target_feature = "avx2", target_feature = "avx"))'.dependencies]

@@ -6,8 +6,8 @@ edition = "2018"
 license = "GPL-3.0"
 
 [dependencies]
-aligned-cmov = "1.0"
-mc-oblivious-traits = "1.0"
+aligned-cmov = "2.0"
+mc-oblivious-traits = "2.0"
 
 fog-ocall-oram-storage-trusted = { path = "../trusted" }
 fog-ocall-oram-storage-untrusted = { path = "../untrusted" }

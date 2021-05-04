@@ -67,7 +67,7 @@ mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
 fog-test-infra = { path = "../../test_infra" }
 
 maplit = "1"
-rand_core = "0.5"
-rand_hc = "0.2"
+rand_core = "0.6"
+rand_hc = "0.3"
 tempdir = "0.3"
 url = "2.1"

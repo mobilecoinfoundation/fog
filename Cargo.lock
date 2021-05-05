@@ -1764,6 +1764,7 @@ name = "fog-types"
 version = "1.0.0"
 dependencies = [
  "blake2",
+ "crc",
  "displaydoc",
  "fog-kex-rng",
  "mc-crypto-keys",

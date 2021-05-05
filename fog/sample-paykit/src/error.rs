@@ -5,6 +5,7 @@
 use displaydoc::Display;
 use fog_enclave_connection::Error as EnclaveConnectionError;
 use fog_ledger_connection::{Error as LedgerConnectionError, KeyImageQueryError};
+use fog_types::view::FogTxOutError;
 use fog_view_protocol::TxOutPollingError;
 use mc_connection::Error as ConnectionError;
 use mc_consensus_api::ConversionError;
@@ -28,6 +29,9 @@ pub enum TxOutMatchingError {
 
     /// Error parsing key: {0}
     Key(KeyError),
+
+    /// Error decompressing FogTxOut: {0}
+    FogTxOut(FogTxOutError),
 }
 
 impl From<AmountError> for TxOutMatchingError {
@@ -39,6 +43,12 @@ impl From<AmountError> for TxOutMatchingError {
 impl From<KeyError> for TxOutMatchingError {
     fn from(src: KeyError) -> Self {
         Self::Key(src)
+    }
+}
+
+impl From<FogTxOutError> for TxOutMatchingError {
+    fn from(src: FogTxOutError) -> Self {
+        Self::FogTxOut(src)
     }
 }
 

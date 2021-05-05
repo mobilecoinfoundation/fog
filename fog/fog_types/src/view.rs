@@ -2,13 +2,14 @@
 
 use crate::common::BlockRange;
 use alloc::vec::Vec;
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryFrom;
+use crc::crc32;
 use displaydoc::Display;
-use mc_crypto_keys::{CompressedRistrettoPublic, KeyError};
+use mc_crypto_keys::{CompressedRistrettoPublic, KeyError, RistrettoPrivate, RistrettoPublic};
 use mc_transaction_core::{
     encrypted_fog_hint::{EncryptedFogHint, ENCRYPTED_FOG_HINT_LEN},
     tx::TxOut,
-    Amount, CompressedCommitment,
+    Amount, AmountError,
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -161,8 +162,10 @@ pub struct TxOutSearchResult {
 #[derive(Clone, Eq, Hash, PartialEq, Message)]
 pub struct TxOutRecord {
     /// The (compressed ristretto) bytes of commitment associated to amount
-    /// field in the TxOut that was recovered
-    #[prost(bytes, required, tag = "1")]
+    /// field in the TxOut that was recovered.
+    /// Note: These bytes are omitted in latest versions, and only the IEEE
+    /// crc32 checksum of these bytes is stored.
+    #[prost(bytes, tag = "1")]
     pub tx_out_amount_commitment_data: Vec<u8>,
     /// The masked value associated to amount field in the TxOut that was
     /// recovered
@@ -190,69 +193,178 @@ pub struct TxOutRecord {
     /// epoch 1970-01-01T00:00:00Z.
     #[prost(fixed64, tag = "7")]
     pub timestamp: u64,
+
+    /// The IEEE crc32 bytes of the (omitted) amount commitment data.
+    /// This is here so that the client can check that they derived commitment
+    /// data successfully.
+    #[prost(fixed32, tag = "8")]
+    pub tx_out_amount_commitment_data_crc32: u32,
 }
 
 impl TxOutRecord {
-    /// Helper to extract a FogTxOut object from the (flattened) TxOutRecord
-    /// object
+    /// Construct a TxOutRecord from FogTxOut and metadata, in the new way
+    /// (omitting compressed commitment)
+    ///
+    /// Arguments:
+    /// * FogTxOut: The representation of a TxOut preserved in the TxOutRecord
+    /// * FogTxOutMetadata: The additional data not from the TxOut itself that
+    ///   we preserve in TxOutRecord
+    pub fn new(fog_tx_out: FogTxOut, meta: FogTxOutMetadata) -> Self {
+        Self {
+            tx_out_amount_commitment_data: Default::default(),
+            tx_out_amount_commitment_data_crc32: fog_tx_out.amount_commitment_data_crc32,
+            tx_out_amount_masked_value: fog_tx_out.amount_masked_value,
+            tx_out_target_key_data: fog_tx_out.target_key.as_bytes().to_vec(),
+            tx_out_public_key_data: fog_tx_out.public_key.as_bytes().to_vec(),
+            tx_out_global_index: meta.global_index,
+            block_index: meta.block_index,
+            timestamp: meta.timestamp,
+        }
+    }
+
+    /// Extract a FogTxOut object from the (flattened) TxOutRecord object
+    /// Note that this discards some metadata (timestamp, block_index,
+    /// global_index).
     pub fn get_fog_tx_out(&self) -> Result<FogTxOut, KeyError> {
-        // CompressedCommitment does not implement TryFrom, so we have to do the logic
-        // here
+        // There are two cases: TxOutRecord with full amount data, and TxOutRecord with
+        // only commitment data crc32 and masked value.
+        if self.tx_out_amount_commitment_data.is_empty() {
+            return Ok(FogTxOut {
+                target_key: CompressedRistrettoPublic::try_from(&self.tx_out_target_key_data[..])?,
+                public_key: CompressedRistrettoPublic::try_from(&self.tx_out_public_key_data[..])?,
+                amount_masked_value: self.tx_out_amount_masked_value,
+                amount_commitment_data_crc32: self.tx_out_amount_commitment_data_crc32,
+            });
+        }
+
+        // If we are provided with a commitment, then we should compute crc32 of it and
+        // discard those bytes, in order to unify early to one code path.
         if self.tx_out_amount_commitment_data.len() != 32 {
             return Err(KeyError::LengthMismatch(
                 32,
                 self.tx_out_amount_commitment_data.len(),
             ));
         }
-        let commitment_bytes: &[u8; 32] =
-            &self.tx_out_amount_commitment_data[..].try_into().unwrap();
         Ok(FogTxOut {
-            amount: Amount {
-                commitment: CompressedCommitment::from(commitment_bytes),
-                masked_value: self.tx_out_amount_masked_value,
-            },
             target_key: CompressedRistrettoPublic::try_from(&self.tx_out_target_key_data[..])?,
             public_key: CompressedRistrettoPublic::try_from(&self.tx_out_public_key_data[..])?,
+            amount_masked_value: self.tx_out_amount_masked_value,
+            amount_commitment_data_crc32: crc32::checksum_ieee(&self.tx_out_amount_commitment_data),
         })
     }
 }
 
-// FogTxOut is a redacted version of the TxOut, removing the fog hint.
-// The hint is only used during ingest, so we don't need to persist it.
-#[derive(Clone, Eq, Hash, PartialEq, Message)]
+// FogTxOut is a redacted version of the TxOut, removing the fog hint, and with
+// reduced data about Amount. The hint is only used during ingest, so we don't
+// need to persist it.
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Default)]
 pub struct FogTxOut {
-    /// The amount being sent.
-    #[prost(message, required, tag = "1")]
-    pub amount: Amount,
-
     /// The one-time public address of this output.
-    #[prost(message, required, tag = "2")]
     pub target_key: CompressedRistrettoPublic,
 
     /// The per output tx public key
-    #[prost(message, required, tag = "3")]
     pub public_key: CompressedRistrettoPublic,
+
+    /// The tx out masked amount
+    pub amount_masked_value: u64,
+
+    /// The crc32 of the tx out amount commitment bytes
+    pub amount_commitment_data_crc32: u32,
 }
 
+// Convert a TxOut to a FogTxOut in the efficient way (omitting compressed
+// commitment)
 impl core::convert::From<&TxOut> for FogTxOut {
     #[inline]
     fn from(src: &TxOut) -> Self {
         Self {
-            amount: src.amount.clone(),
             target_key: src.target_key,
             public_key: src.public_key,
+            amount_masked_value: src.amount.masked_value,
+            amount_commitment_data_crc32: crc32::checksum_ieee(
+                src.amount.commitment.point.as_bytes(),
+            ),
         }
     }
 }
 
-impl core::convert::From<&FogTxOut> for TxOut {
-    #[inline]
-    fn from(src: &FogTxOut) -> Self {
-        Self {
-            amount: src.amount.clone(),
-            target_key: src.target_key,
-            public_key: src.public_key,
-            e_fog_hint: EncryptedFogHint::from(&[0u8; ENCRYPTED_FOG_HINT_LEN]),
+impl FogTxOut {
+    /// Try to recover a TxOut from a FogTxOut and the user's private view key.
+    ///
+    /// * The amount commitment data is reconstructed, then we check if the
+    ///   reconstructed data matches the crc32 provided.
+    /// * The encrypted fog hint data is zeroed since it is not reconstructible
+    ///   and isn't needed by the client.
+    ///
+    /// Arguments:
+    /// * view_key: the private view key of the recipient of this TxOut
+    ///
+    /// Returns:
+    /// * TxOut,
+    /// Or
+    /// * An error if recovery failed
+    pub fn try_recover_tx_out(&self, view_key: &RistrettoPrivate) -> Result<TxOut, FogTxOutError> {
+        // Reconstruct compressed commitment based on our view key.
+        // The first step is reconstructing the TxOut shared secret
+        let public_key = RistrettoPublic::try_from(&self.public_key)?;
+        let tx_out_shared_secret =
+            mc_transaction_core::get_tx_out_shared_secret(view_key, &public_key);
+
+        // The next step is unblinding the amount value
+        let value =
+            self.amount_masked_value ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
+
+        // Now we can rebuild the Amount object from the value and shared secret
+        let amount = Amount::new(value, &tx_out_shared_secret)?;
+
+        // Check that the crc32 of amount compressed commitment matches
+        if self.amount_commitment_data_crc32
+            != crc32::checksum_ieee(amount.commitment.point.as_bytes())
+        {
+            return Err(FogTxOutError::ChecksumMismatch);
         }
+
+        Ok(TxOut {
+            amount,
+            target_key: self.target_key,
+            public_key: self.public_key,
+            e_fog_hint: EncryptedFogHint::from(&[0u8; ENCRYPTED_FOG_HINT_LEN]),
+        })
     }
+}
+
+/// An error that occurs when trying to convert a FogTxOut to a TxOut
+#[derive(Display, Debug)]
+pub enum FogTxOutError {
+    /// CompressedCommitment crc32 mismatch
+    ChecksumMismatch,
+    /// An invalid amount: {0}
+    Amount(AmountError),
+    /// An invalid key: {0}
+    Key(KeyError),
+}
+
+impl From<AmountError> for FogTxOutError {
+    fn from(src: AmountError) -> Self {
+        Self::Amount(src)
+    }
+}
+
+impl From<KeyError> for FogTxOutError {
+    fn from(src: KeyError) -> Self {
+        Self::Key(src)
+    }
+}
+
+/// A collection of metadata about a TxOut that fog preserves in the TxOutRecord
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+pub struct FogTxOutMetadata {
+    /// The global index of this TxOut in the set of all TxOut's in the
+    /// blockchain
+    pub global_index: u64,
+    /// The index of the block in which this TxOut appeared
+    pub block_index: u64,
+    /// The timestamp of the block in which this TxOut appeared, in seconds
+    /// since the Unix epoch.
+    pub timestamp: u64,
 }

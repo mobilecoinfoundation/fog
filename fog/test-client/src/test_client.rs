@@ -290,6 +290,7 @@ impl TestClient {
             assert!(src_balance > 0);
             assert!(tgt_balance > 0);
 
+            let fee = source_client.get_fee().unwrap_or(MINIMUM_FEE);
             let transaction = self.transfer(source_client, target_client)?;
 
             // Wait for key images to land in ledger server
@@ -302,7 +303,7 @@ impl TestClient {
             self.ensure_expected_balance_after_block(
                 source_client,
                 transaction_appeared,
-                src_balance - self.transfer_amount - source_client.get_fee().unwrap_or(MINIMUM_FEE),
+                src_balance - self.transfer_amount - fee,
             )?;
             log::info!(self.logger, "Checking balance for target");
             self.ensure_expected_balance_after_block(

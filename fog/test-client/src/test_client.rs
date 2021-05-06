@@ -119,8 +119,16 @@ impl TestClient {
 
         let mut rng = McRng::default();
         assert!(target_address.fog_report_url().is_some());
-        let transaction =
-            source_client.build_transaction(self.transfer_amount, &target_address, &mut rng)?;
+
+        // Get the current fee from consensus
+        let fee = source_client.get_fee().unwrap_or(MINIMUM_FEE);
+
+        let transaction = source_client.build_transaction(
+            self.transfer_amount,
+            &target_address,
+            &mut rng,
+            fee,
+        )?;
         source_client.send_transaction(&transaction)?;
         Ok(transaction)
     }

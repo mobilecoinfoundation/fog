@@ -1121,6 +1121,7 @@ dependencies = [
  "mc-util-keyfile",
  "mc-util-uri",
  "rand 0.8.3",
+ "rayon",
  "retry",
  "structopt",
  "tempfile",
@@ -3540,11 +3541,11 @@ dependencies = [
  "prost",
  "protobuf",
  "rand 0.8.3",
+ "rayon",
  "reqwest",
  "retry",
  "serde_json",
  "structopt",
- "tempdir",
  "tiny-bip39",
 ]
 

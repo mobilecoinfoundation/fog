@@ -10,7 +10,7 @@ use mc_common::{
     HashMap, HashSet,
 };
 use mc_connection::{
-    Error as ConnectionError, HardcodedCredentialsProvider, RetryError, RetryableUserTxConnection,
+    Error as ConnectionError, HardcodedCredentialsProvider, RetryError, RetryableBlockchainConnection, RetryableUserTxConnection,
     SyncConnection, ThickClient,
 };
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
@@ -28,6 +28,7 @@ use mc_transaction_core::{
 use mc_transaction_std::{InputCredentials, TransactionBuilder};
 use mc_util_uri::FogUri;
 use rand::{seq::SliceRandom, thread_rng, Rng};
+use rayon::prelude::*;
 use retry::{delay, retry, OperationResult};
 use std::{
     convert::TryInto,
@@ -69,6 +70,8 @@ fn get_conns(
 
 lazy_static! {
     pub static ref BLOCK_HEIGHT: AtomicU64 = AtomicU64::default();
+
+    pub static ref FEE: AtomicU64 = AtomicU64::default();
 
     // A map of tx pub keys to account index. This is used in conjunction with ledger syncing to
     // identify which new txs belong to which accounts without having to do any slow crypto.
@@ -121,6 +124,17 @@ fn main() {
     let ledger_db = LedgerDB::open(ledger_dir.path()).expect("Could not open ledger_db");
 
     BLOCK_HEIGHT.store(ledger_db.num_blocks().unwrap(), Ordering::SeqCst);
+
+    // Use the maximum fee of all configured consensus nodes
+    FEE.store(
+        get_conns(&config, &logger)
+            .par_iter()
+            .filter_map(|conn| conn.fetch_block_info(empty()).ok())
+            .map(|block_info| block_info.minimum_fee)
+            .max()
+            .unwrap_or(MINIMUM_FEE),
+        Ordering::Release,
+    );
 
     // The number of blocks we've processed so far.
     let mut block_count = 0;
@@ -463,7 +477,7 @@ fn build_tx(
     // Create tx_builder.
     let mut tx_builder = TransactionBuilder::new(fog_resolver);
 
-    tx_builder.set_fee(MINIMUM_FEE);
+    tx_builder.set_fee(FEE.load(Ordering::Acquire));
 
     // Unzip each vec of tuples into a tuple of vecs.
     let mut rings_and_proofs: Vec<(Vec<TxOut>, Vec<TxOutMembershipProof>)> = rings
@@ -545,7 +559,7 @@ fn build_tx(
         let mut amount = utxo.amount;
         // Use the first input to pay for the fee.
         if i == 0 {
-            amount -= MINIMUM_FEE;
+            amount -= FEE.load(Ordering::Acquire);
         }
 
         let target_address = to_account.default_subaddress();

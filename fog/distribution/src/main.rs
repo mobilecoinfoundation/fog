@@ -10,8 +10,8 @@ use mc_common::{
     HashMap, HashSet,
 };
 use mc_connection::{
-    Error as ConnectionError, HardcodedCredentialsProvider, RetryError, RetryableBlockchainConnection, RetryableUserTxConnection,
-    SyncConnection, ThickClient,
+    Error as ConnectionError, HardcodedCredentialsProvider, RetryError,
+    RetryableBlockchainConnection, RetryableUserTxConnection, SyncConnection, ThickClient,
 };
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_fog_report_connection::{Error as ReportConnError, GrpcFogReportConnection};
@@ -133,7 +133,7 @@ fn main() {
             .map(|block_info| block_info.minimum_fee)
             .max()
             .unwrap_or(MINIMUM_FEE),
-        Ordering::Release,
+        Ordering::SeqCst,
     );
 
     // The number of blocks we've processed so far.
@@ -477,7 +477,7 @@ fn build_tx(
     // Create tx_builder.
     let mut tx_builder = TransactionBuilder::new(fog_resolver);
 
-    tx_builder.set_fee(FEE.load(Ordering::Acquire));
+    tx_builder.set_fee(FEE.load(Ordering::SeqCst));
 
     // Unzip each vec of tuples into a tuple of vecs.
     let mut rings_and_proofs: Vec<(Vec<TxOut>, Vec<TxOutMembershipProof>)> = rings
@@ -559,7 +559,7 @@ fn build_tx(
         let mut amount = utxo.amount;
         // Use the first input to pay for the fee.
         if i == 0 {
-            amount -= FEE.load(Ordering::Acquire);
+            amount -= FEE.load(Ordering::SeqCst);
         }
 
         let target_address = to_account.default_subaddress();

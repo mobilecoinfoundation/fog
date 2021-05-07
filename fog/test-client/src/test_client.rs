@@ -119,8 +119,16 @@ impl TestClient {
 
         let mut rng = McRng::default();
         assert!(target_address.fog_report_url().is_some());
-        let transaction =
-            source_client.build_transaction(self.transfer_amount, &target_address, &mut rng)?;
+
+        // Get the current fee from consensus
+        let fee = source_client.get_fee().unwrap_or(MINIMUM_FEE);
+
+        let transaction = source_client.build_transaction(
+            self.transfer_amount,
+            &target_address,
+            &mut rng,
+            fee,
+        )?;
         source_client.send_transaction(&transaction)?;
         Ok(transaction)
     }
@@ -282,6 +290,7 @@ impl TestClient {
             assert!(src_balance > 0);
             assert!(tgt_balance > 0);
 
+            let fee = source_client.get_fee().unwrap_or(MINIMUM_FEE);
             let transaction = self.transfer(source_client, target_client)?;
 
             // Wait for key images to land in ledger server
@@ -289,11 +298,12 @@ impl TestClient {
                 self.ensure_transaction_is_accepted(source_client, &transaction)?;
 
             // Wait for tx to land in fog view server
+            // This test will be as flakey as the accessibility/fees of consensus
             log::info!(self.logger, "Checking balance for source");
             self.ensure_expected_balance_after_block(
                 source_client,
                 transaction_appeared,
-                src_balance - self.transfer_amount - MINIMUM_FEE,
+                src_balance - self.transfer_amount - fee,
             )?;
             log::info!(self.logger, "Checking balance for target");
             self.ensure_expected_balance_after_block(

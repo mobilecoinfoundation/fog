@@ -21,7 +21,9 @@ use mc_common::{
     logger::{log, Logger},
     HashSet,
 };
-use mc_connection::{Connection, HardcodedCredentialsProvider, ThickClient, UserTxConnection};
+use mc_connection::{
+    BlockchainConnection, Connection, HardcodedCredentialsProvider, ThickClient, UserTxConnection,
+};
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_crypto_rand::{CryptoRng, RngCore};
 use mc_fog_report_connection::GrpcFogReportConnection;
@@ -264,11 +266,13 @@ impl Client {
     ///   fee.
     /// * `target_address` - the recipient's address.
     /// * `rng` - Randomness.
+    /// * `fee` - The transaction fee to use
     pub fn build_transaction<T: RngCore + CryptoRng>(
         &mut self,
         amount: u64,
         target_address: &PublicAddress,
         rng: &mut T,
+        fee: u64,
     ) -> Result<Tx> {
         mc_common::trace_time!(self.logger, "MobileCoinClient.build_transaction");
 
@@ -314,6 +318,7 @@ impl Client {
             fog_resolver,
             rng,
             &self.logger,
+            fee,
         )
     }
 
@@ -476,6 +481,11 @@ impl Client {
         );
         Ok(res.num_blocks + self.new_tx_block_attempts as u64)
     }
+
+    /// Retrieve the currently configured minimum fee from the consensus service
+    pub fn get_fee(&mut self) -> Result<u64> {
+        Ok(self.consensus_service_conn.fetch_block_info()?.minimum_fee)
+    }
 }
 
 /// Builds a transaction that spends `inputs`, sends `amount` to the recipient,
@@ -502,6 +512,7 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
     fog_resolver: FPR,
     rng: &mut T,
     logger: &Logger,
+    fee: u64,
 ) -> Result<Tx> {
     if rings.len() != inputs.len() {
         log::error!(
@@ -514,6 +525,7 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
     }
 
     let mut tx_builder = TransactionBuilder::new(fog_resolver);
+    tx_builder.set_fee(fee);
 
     let input_amount = inputs.iter().fold(0, |acc, (txo, _)| acc + txo.value);
     if (amount + tx_builder.fee) > input_amount {
@@ -729,6 +741,7 @@ mod test_build_transaction_helper {
             fake_acct_resolver,
             &mut rng,
             &logger,
+            MINIMUM_FEE,
         )
         .unwrap();
 

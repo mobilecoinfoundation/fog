@@ -198,35 +198,14 @@ fn tx_out_record_round_trip() {
 
     run_with_several_seeds(|mut rng| {
         let fog_txout = fog_types::view::FogTxOut::from(&TxOut::sample(&mut rng));
-
-        let commitment_bytes: &[u8; 32] = fog_txout.amount.commitment.as_ref();
-        let test_val = fog_types::view::TxOutRecord {
-            tx_out_amount_commitment_data: commitment_bytes.to_vec(),
-            tx_out_amount_masked_value: fog_txout.amount.masked_value,
-            tx_out_target_key_data: fog_txout.target_key.as_bytes().to_vec(),
-            tx_out_public_key_data: fog_txout.public_key.as_bytes().to_vec(),
-            tx_out_global_index: rng.next_u64(),
+        let meta = fog_types::view::FogTxOutMetadata {
+            global_index: rng.next_u64(),
             block_index: rng.next_u64(),
-            timestamp: 9,
+            timestamp: rng.next_u64(),
         };
+        let test_val = fog_types::view::TxOutRecord::new(fog_txout, meta);
 
         round_trip_message::<fog_types::view::TxOutRecord, fog_api::view::TxOutRecord>(&test_val);
-    });
-}
-
-/// Test that many random instances of prosty FogTxOut round trip with protobufy
-/// FogTxOut
-#[test]
-fn fog_tx_out_round_trip() {
-    {
-        let test_val: fog_types::view::FogTxOut = Default::default();
-        round_trip_message::<fog_types::view::FogTxOut, fog_api::view::FogTxOut>(&test_val);
-    }
-
-    run_with_several_seeds(|mut rng| {
-        let test_val = fog_types::view::FogTxOut::from(&TxOut::sample(&mut rng));
-
-        round_trip_message::<fog_types::view::FogTxOut, fog_api::view::FogTxOut>(&test_val);
     });
 }
 

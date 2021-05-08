@@ -243,7 +243,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "benchmarks"
-version = "1.0.0"
+version = "1.1.0-pre2"
 dependencies = [
  "criterion",
  "mc-common",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "generate_test_foundation_key"
-version = "1.0.0"
+version = "1.1.0-pre2"
 dependencies = [
  "mc-account-keys",
  "rand 0.8.3",
@@ -2588,7 +2588,7 @@ checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 
 [[package]]
 name = "libmobilecoin"
-version = "1.0.0"
+version = "1.1.0-pre2"
 dependencies = [
  "aes-gcm",
  "cbindgen",
@@ -3853,7 +3853,7 @@ dependencies = [
 
 [[package]]
 name = "mc-util-ffi"
-version = "1.0.0"
+version = "1.1.0-pre2"
 
 [[package]]
 name = "mc-util-from-random"

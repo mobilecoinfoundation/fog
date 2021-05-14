@@ -1418,6 +1418,7 @@ dependencies = [
 name = "fog-ledger-enclave-impl"
 version = "1.0.0"
 dependencies = [
+ "aligned-cmov",
  "fog-ledger-enclave-api",
  "fog-types",
  "mc-attest-core",
@@ -1425,7 +1426,13 @@ dependencies = [
  "mc-common",
  "mc-crypto-ake-enclave",
  "mc-crypto-keys",
+ "mc-crypto-rand",
+ "mc-oblivious-map",
+ "mc-oblivious-ram",
+ "mc-oblivious-traits",
  "mc-sgx-report-cache-api",
+ "mc-transaction-core",
+ "mc-util-grpc",
  "mc-util-serial",
 ]
 

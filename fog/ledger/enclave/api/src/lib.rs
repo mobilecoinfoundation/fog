@@ -9,7 +9,7 @@ extern crate alloc;
 mod error;
 mod messages;
 
-pub use crate::{error::Error, messages::EnclaveCall};
+pub use crate::{error::Error, error::AddRecordsError, messages::EnclaveCall};
 
 use alloc::vec::Vec;
 use core::{hash::Hash, result::Result as StdResult};

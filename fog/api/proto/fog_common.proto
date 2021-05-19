@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 package fog_common;
+option go_package = "mobilecoin/api";
 
 /// Represents a half-open range [start_block, end_block) of blocks
 message BlockRange {

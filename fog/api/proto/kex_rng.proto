@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 package kex_rng;
+option go_package = "mobilecoin/api";
 
 /// The key exchange message associated to creating a kex rng
 message KexRngPubkey {

@@ -7,6 +7,13 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 
+## [1.1.0-pre5 Unreleased]
+
+### Changed
+
+ - Update SGX to 2.13.3.
+ - Use mobilecoin 1.1.0-pre5.
+
 ## [1.1.0-pre1 Unreleased]
 
 ### Added
@@ -25,7 +32,6 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
  - Update `arrayvec` to 0.5.2
  - Update `balanced-tree-index` to 2.0.0
  - Update `merlin` to 3.0.0
- - Update `merlin` to 3.0.0
  - Update `packed_simd` to 0.3.4
  - Update `pv-lite86` to 0.2.10
  - Update `protobuf` to 2.22.1
@@ -40,6 +46,7 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 ### Fixed
 
  - Improve conformance test
+ - Fixed symbol-stripping when compiling libmobilecoin.
 
 ### Security
 

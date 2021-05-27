@@ -243,7 +243,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "benchmarks"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "criterion",
  "mc-common",
@@ -1070,7 +1070,7 @@ checksum = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 
 [[package]]
 name = "fog-api"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "fog-enclave-connection",
@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "fog-distribution"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "crossbeam-channel 0.5.0",
  "curve25519-dalek",
@@ -1129,7 +1129,7 @@ dependencies = [
 
 [[package]]
 name = "fog-enclave-connection"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aes-gcm",
  "cookie",
@@ -1151,7 +1151,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-client"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-api",
@@ -1174,7 +1174,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "criterion",
@@ -1207,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-api"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-kex-rng",
@@ -1224,7 +1224,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-edl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-util-build-script",
@@ -1232,7 +1232,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-impl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aligned-cmov",
  "fog-ingest-enclave-api",
@@ -1265,7 +1265,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-measurement"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-attest-core",
@@ -1277,7 +1277,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-server"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "dirs",
  "displaydoc",
@@ -1331,7 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -1346,7 +1346,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-connection"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-api",
@@ -1366,7 +1366,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "fog-ledger-enclave-api",
@@ -1390,7 +1390,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-api"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-types",
@@ -1408,7 +1408,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-edl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-util-build-script",
@@ -1416,7 +1416,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-impl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "fog-ledger-enclave-api",
  "fog-types",
@@ -1431,7 +1431,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-measurement"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-attest-core",
@@ -1443,7 +1443,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-server"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "curve25519-dalek",
  "displaydoc",
@@ -1490,7 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-test-infra"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "curve25519-dalek",
  "fog-ledger-enclave",
@@ -1505,7 +1505,7 @@ dependencies = [
 
 [[package]]
 name = "fog-load-testing"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "arrayvec",
  "fog-api",
@@ -1536,14 +1536,14 @@ dependencies = [
 
 [[package]]
 name = "fog-ocall-oram-storage-edl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
 ]
 
 [[package]]
 name = "fog-ocall-oram-storage-testing"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aligned-cmov",
  "fog-ocall-oram-storage-trusted",
@@ -1554,7 +1554,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ocall-oram-storage-trusted"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aes-ctr",
  "aligned-cmov",
@@ -1570,7 +1570,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ocall-oram-storage-untrusted"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "lazy_static",
  "mc-common",
@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "fog-recovery-db-iface"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-kex-rng",
@@ -1592,7 +1592,7 @@ dependencies = [
 
 [[package]]
 name = "fog-report-cli"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "binascii",
  "fog-ingest-enclave-measurement",
@@ -1610,7 +1610,7 @@ dependencies = [
 
 [[package]]
 name = "fog-report-server"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-api",
@@ -1644,7 +1644,7 @@ dependencies = [
 
 [[package]]
 name = "fog-sample-paykit"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "displaydoc",
@@ -1687,7 +1687,7 @@ dependencies = [
 
 [[package]]
 name = "fog-sql-recovery-db"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "chrono",
  "diesel",
@@ -1716,7 +1716,7 @@ dependencies = [
 
 [[package]]
 name = "fog-test-client"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "fog-sample-paykit",
  "mc-common",
@@ -1730,7 +1730,7 @@ dependencies = [
 
 [[package]]
 name = "fog-test-infra"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "curve25519-dalek",
  "digest",
@@ -1762,7 +1762,7 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -1777,7 +1777,7 @@ dependencies = [
 
 [[package]]
 name = "fog-uri"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "mc-common",
  "mc-util-uri",
@@ -1785,7 +1785,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-connection"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "fog-api",
  "fog-enclave-connection",
@@ -1802,7 +1802,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "criterion",
@@ -1839,7 +1839,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-api"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-recovery-db-iface",
@@ -1857,7 +1857,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-edl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-util-build-script",
@@ -1865,7 +1865,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-impl"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aligned-cmov",
  "fog-recovery-db-iface",
@@ -1887,7 +1887,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-enclave-measurement"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "cargo-emit",
  "mc-attest-core",
@@ -1899,7 +1899,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-load-test"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "fog-kex-rng",
  "fog-uri",
@@ -1916,7 +1916,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-protocol"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -1939,7 +1939,7 @@ dependencies = [
 
 [[package]]
 name = "fog-view-server"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "displaydoc",
  "fog-api",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "generate_test_foundation_key"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "mc-account-keys",
  "rand 0.8.3",
@@ -2588,7 +2588,7 @@ checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 
 [[package]]
 name = "libmobilecoin"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aes-gcm",
  "cbindgen",
@@ -2767,7 +2767,7 @@ dependencies = [
 
 [[package]]
 name = "mc-android-bindings"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3853,7 +3853,7 @@ dependencies = [
 
 [[package]]
 name = "mc-util-ffi"
-version = "1.1.0-pre4"
+version = "1.1.0-pre5"
 
 [[package]]
 name = "mc-util-from-random"

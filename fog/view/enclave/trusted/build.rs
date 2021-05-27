@@ -1,4 +1,4 @@
-// Copyright (c) 201812020 MobileCoin Inc.
+// Copyright (c) 2018-2020 MobileCoin Inc.
 
 //! Generate the binding code that lives inside the enclave and link it in.
 
@@ -14,7 +14,7 @@ const SGX_SIMULATION_LIBS: &[&str] = &["libsgx_urts_sim", "libsgx_epid_sim"];
 
 // Changing this version is a breaking change, you must update the crate version
 // if you do.
-const SGX_VERSION: &str = "2.9.101.2";
+const SGX_VERSION: &str = "2.13.103.1";
 
 fn main() {
     let env = Environment::default();

@@ -56,6 +56,7 @@ commands:
           name: Version Info
           command: |
             set -x
+            echo $(pwd)
 
             rustup show
             rustc --version
@@ -279,6 +280,7 @@ commands:
       - run:
           name: Update CI dependencies
           command: |
+            echo $(pwd)
             cd ..
             rustup default stable
             command -v cargo-install-update >/dev/null || cargo install cargo-update

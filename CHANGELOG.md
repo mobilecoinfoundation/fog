@@ -7,14 +7,7 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 
-## [1.1.0-pre5 Unreleased]
-
-### Changed
-
- - Update SGX to 2.13.3.
- - Use mobilecoin 1.1.0-pre5.
-
-## [1.1.0-pre1 Unreleased]
+## [1.1.0] - 2021-06-03
 
 ### Added
 
@@ -23,7 +16,7 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ### Changed
 
- - Bump mobilecoin revision to 1.1.0-pre2
+ - Update SGX to 2.13.3.
  - Upgrade Rust to nightly-2021-03-25
 
 #### Rust Dependencies

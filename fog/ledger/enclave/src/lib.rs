@@ -21,6 +21,7 @@ use mc_sgx_types::{
 };
 use mc_sgx_urts::SgxEnclave;
 use std::{path, result::Result as StdResult, sync::Arc};
+use mc_transaction_core::{ring_signature::KeyImage};
 
 /// The default filename of the fog ledger's SGX enclave binary.
 pub const ENCLAVE_FILE: &str = "libledger-enclave.signed.so";
@@ -145,18 +146,25 @@ impl LedgerEnclave for LedgerSgxEnclave {
         mc_util_serial::deserialize(&outbuf[..])?
     }
 
+    fn encrypt_key_images_data(
+        &self,
+        resp: CheckKeyImagesResponse,
+        client: ClientSession,
+    ) -> Result<EnclaveMessage<ClientSession>> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::EncryptKeyImagesData(resp, client))?;
+        let outbuf = self.enclave_call(&inbuf)?;
+        mc_util_serial::deserialize(&outbuf[..])?
+    }
+
     fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext> {
         let inbuf = mc_util_serial::serialize(&EnclaveCall::CheckKeyImages(msg))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }
 
-    fn check_key_images_data(
-        &self,
-        resp: CheckKeyImagesResponse,
-        client: ClientSession,
-    ) -> Result<EnclaveMessage<ClientSession>> {
-        let inbuf = mc_util_serial::serialize(&EnclaveCall::CheckKeyImagesData(resp, client))?;
+    // Add a key image data to the oram sing the key image
+    fn add_key_image_data(&self, key_image: &KeyImage, data:fog_ledger_enclave_api::messages::KeyImageData) -> Result<()> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::AddKeyImageData(*key_image, data))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }

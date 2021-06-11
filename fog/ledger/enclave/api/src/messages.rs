@@ -1,17 +1,24 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 //! The message types used by the ledger_enclave_api.
-
 use fog_types::ledger::{CheckKeyImagesResponse, GetOutputsResponse};
 use mc_attest_core::{Quote, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
 use serde::{Deserialize, Serialize};
+use mc_transaction_core::ring_signature::KeyImage;
+
+// A struct representing the key image store data
+#[derive(Copy, Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd, core::cmp::Eq, core::hash::Hash, Ord)]
+pub struct KeyImageData {
+    pub block_index: u64,
+    pub timestamp: u64,
+}
 
 /// An enumeration of API calls and their arguments for use across serialization
 /// boundaries.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub enum EnclaveCall {
+pub enum EnclaveCall { 
     /// The [LedgerEnclave::enclave_init()] method.
     EnclaveInit(ResponderId),
 
@@ -73,5 +80,10 @@ pub enum EnclaveCall {
     /// The [LedgerEnclave::key_image_checks_for_client()] method.
     ///
     /// Encrypt the key image check results for transmission to a client.
-    CheckKeyImagesData(CheckKeyImagesResponse, ClientSession),
+    EncryptKeyImagesData(CheckKeyImagesResponse, ClientSession),
+
+     /// The [LedgerEnclave::add_key_image_data()] method.
+    ///
+    ///  Add a key image data to the oram sing the key image.
+    AddKeyImageData(KeyImage, KeyImageData),
 }

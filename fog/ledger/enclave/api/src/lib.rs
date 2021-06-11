@@ -3,13 +3,14 @@
 //! APIs for MobileCoin Ledger Service Enclaves
 
 #![no_std]
+#![feature(allocator_api)]
 
 extern crate alloc;
 
 mod error;
-mod messages;
+pub mod messages;
 
-pub use crate::{error::Error, messages::EnclaveCall};
+pub use crate::{error::Error, error::AddRecordsError, messages::EnclaveCall};
 
 use alloc::vec::Vec;
 use core::{hash::Hash, result::Result as StdResult};
@@ -22,6 +23,7 @@ use mc_crypto_keys::X25519Public;
 use mc_sgx_report_cache_api::ReportableEnclave;
 use mc_transaction_core::ring_signature::KeyImage;
 use serde::{Deserialize, Serialize};
+use messages::KeyImageData;
 
 /// A generic result type for enclave calls
 pub type Result<T> = StdResult<T, Error>;
@@ -48,6 +50,7 @@ pub struct OutputContext {
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct KeyImageContext {
     pub key_images: Vec<KeyImage>,
+    pub key_images_data: Vec<KeyImageData>,
 }
 
 /// The API for interacting with a ledger node's enclave.
@@ -84,13 +87,16 @@ pub trait LedgerEnclave: ReportableEnclave {
     /// collect the information required.
     fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext>;
 
-    /// Encrypt key image check results for the given client session, using the
+     /// Encrypt key image check results for the given client session, using the
     /// given authenticated data for the client.
-    fn check_key_images_data(
+    fn encrypt_key_images_data(
         &self,
         response: CheckKeyImagesResponse,
         client: ClientSession,
     ) -> Result<EnclaveMessage<ClientSession>>;
+
+    // Add a key image data to the oram sing the key image
+    fn add_key_image_data(&self, key_image: &KeyImage, data: KeyImageData) -> Result<()>;
 }
 
 /// Helper trait which reduces boiler-plate in untrusted side

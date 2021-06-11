@@ -64,6 +64,7 @@ fog-test-infra = { path = "../../test_infra" }
 fog-ledger-test-infra = { path = "../test_infra" }
 fog-ledger-connection = { path = "../connection" }
 fog-ledger-enclave-measurement = { path = "../enclave/measurement" }
+fog-types = { path = "../../fog_types" }
 
 tempdir = "0.3"
 

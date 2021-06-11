@@ -17,10 +17,11 @@ use mc_util_grpc::{
 use mc_util_metrics::SVC_COUNTERS;
 use mc_watcher::watcher_db::WatcherDB;
 use mc_watcher_api::TimestampResultCode;
-use std::{convert::From, sync::Arc};
+use std::{sync::Arc};
 
 // Maximum number of Key Images that may be checked in a single request.
 pub const MAX_REQUEST_SIZE: usize = 2000;
+
 
 #[derive(Clone)]
 pub struct KeyImageService<L: Ledger + Clone, E: LedgerEnclaveProxy> {
@@ -72,7 +73,7 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
 
         let result = match self
             .enclave
-            .check_key_images_data(response, ClientSession::from(request.channel_id))
+            .encrypt_key_images_data(response, ClientSession::from(request.channel_id))
         {
             Ok(message) => message,
             Err(EnclaveError::Attest(attest_error)) => {

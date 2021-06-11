@@ -18,6 +18,7 @@ mc-sgx-debug-edl = { path = "../../../mobilecoin/sgx/debug-edl" }
 mc-sgx-panic-edl = { path = "../../../mobilecoin/sgx/panic-edl" }
 mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
 mc-sgx-slog-edl = { path = "../../../mobilecoin/sgx/slog-edl" }
+mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
 
 fog-ledger-enclave-api = { path = "./api" }
 fog-ledger-enclave-edl = { path = "./edl" }

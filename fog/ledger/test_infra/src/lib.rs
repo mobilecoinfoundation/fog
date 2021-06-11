@@ -17,6 +17,7 @@ use mc_transaction_core::{
     tx::{TxOut, TxOutMembershipProof},
     Block, BlockContents, BlockData, BlockSignature,
 };
+use fog_ledger_enclave_api::messages::KeyImageData;
 
 #[derive(Default, Clone)]
 pub struct MockEnclave {}
@@ -72,11 +73,19 @@ impl LedgerEnclave for MockEnclave {
     ) -> EnclaveResult<KeyImageContext> {
         unimplemented!()
     }
-    fn check_key_images_data(
+
+    fn encrypt_key_images_data(
         &self,
         _resp: CheckKeyImagesResponse,
         _client: ClientSession,
     ) -> EnclaveResult<EnclaveMessage<ClientSession>> {
+        unimplemented!()
+    }
+
+    fn add_key_image_data(
+        &self,
+        _key_image: &KeyImage, _data: KeyImageData,
+    ) -> Result<(), fog_ledger_enclave::Error> {
         unimplemented!()
     }
 }
@@ -152,6 +161,10 @@ impl Ledger for MockLedger {
     fn check_key_image(&self, _key_image: &KeyImage) -> Result<Option<u64>, Error> {
         unimplemented!()
     }
+    
+//    fn add_key_image_data(&self, _key_image: &KeyImage, _data: KeyImageData) -> Result<Option<u64>, Error> {
+  //      unimplemented!()
+   // }
 
     fn get_key_images_by_block(&self, _block_number: u64) -> Result<Vec<KeyImage>, Error> {
         unimplemented!()

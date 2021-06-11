@@ -69,10 +69,6 @@ pub fn ecall_dispatcher(inbuf: &[u8]) -> Result<Vec<u8>, sgx_status_t> {
         EnclaveCall::CheckKeyImages(msg) => {
             serialize(&ENCLAVE.check_key_images(msg)).or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
         }
-        EnclaveCall::CheckKeyImagesData(resp, client) => {
-            serialize(&ENCLAVE.check_key_images_data(resp, client))
-                .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
-        }
     };
 
     Ok(outdata)

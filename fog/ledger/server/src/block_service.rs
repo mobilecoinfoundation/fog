@@ -2,7 +2,7 @@
 
 use fog_api::{
     external,
-    ledger::{Block, BlockRequest, BlockResponse},
+    ledger::{BlockData, BlockRequest, BlockResponse},
     ledger_grpc::FogBlockApi,
 };
 use grpcio::{RpcContext, RpcStatus, UnarySink};
@@ -66,8 +66,8 @@ impl<L: Ledger + Clone> BlockService<L> {
         Ok(result)
     }
 
-    fn get_block(&mut self, block_index: u64) -> Result<Block, DbError> {
-        let mut result = Block::new();
+    fn get_block(&mut self, block_index: u64) -> Result<BlockData, DbError> {
+        let mut result = BlockData::new();
         let block_contents = self.ledger.get_block_contents(block_index)?;
         let block = self.ledger.get_block(block_index)?;
         for output in block_contents.outputs {

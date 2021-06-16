@@ -3452,7 +3452,7 @@ name = "mc-ledger-db"
 version = "1.1.0"
 dependencies = [
  "curve25519-dalek",
- "failure",
+ "displaydoc",
  "lazy_static",
  "lmdb-rkv",
  "mc-account-keys",
@@ -4023,6 +4023,7 @@ name = "mc-watcher"
 version = "1.1.0"
 dependencies = [
  "displaydoc",
+ "futures",
  "grpcio",
  "hex 0.4.2",
  "lmdb-rkv",

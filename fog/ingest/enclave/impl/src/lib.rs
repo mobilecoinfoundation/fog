@@ -24,7 +24,10 @@ use fog_ingest_enclave_api::{
 };
 use fog_kex_rng::KexRngPubkey;
 use fog_recovery_db_iface::ETxOutRecord;
-use fog_types::{ingest::TxsForIngest, view::TxOutRecord};
+use fog_types::{
+    ingest::TxsForIngest,
+    view::{FogTxOut, FogTxOutMetadata, TxOutRecord},
+};
 use mc_attest_core::{
     IasNonce, IntelSealed, Quote, QuoteNonce, Report, TargetInfo, VerificationReport,
 };
@@ -139,17 +142,15 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> SgxIngestEnclave
                 }
 
                 // Create a TxOutRecord, flattening the Txo data and getting extra data like
-                // global index, block index, timestamp
-                let commitment_bytes: &[u8; 32] = txo.amount.commitment.as_ref();
-                let txo_record = TxOutRecord {
-                    tx_out_amount_commitment_data: commitment_bytes.to_vec(),
-                    tx_out_amount_masked_value: txo.amount.masked_value,
-                    tx_out_target_key_data: txo.target_key.as_bytes().to_vec(),
-                    tx_out_public_key_data: txo.public_key.as_bytes().to_vec(),
-                    tx_out_global_index: chunk.global_txo_index + index as u64,
+                // global index, block index, timestamp.
+                let fog_tx_out = FogTxOut::from(txo);
+                let meta = FogTxOutMetadata {
+                    global_index: chunk.global_txo_index + index as u64,
                     block_index: chunk.block_index,
                     timestamp: chunk.timestamp,
                 };
+                let txo_record = TxOutRecord::new(fog_tx_out, meta);
+
                 // Get the view-kew-encrypted payload for this TX
                 let plaintext = mc_util_serial::encode(&txo_record);
 

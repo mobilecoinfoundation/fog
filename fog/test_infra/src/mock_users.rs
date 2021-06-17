@@ -4,7 +4,10 @@
 //! node, and then exercise the view node to try to find them.
 //! This is basically mocking both the consensus output and the SDK
 
-use fog_types::{view::TxOutRecord, BlockCount};
+use fog_types::{
+    view::{FogTxOut, FogTxOutMetadata, TxOutRecord},
+    BlockCount,
+};
 use fog_view_protocol::{FogViewConnection, UserPrivate, UserRngSet};
 use mc_common::logger::global_log;
 use mc_crypto_keys::RistrettoPublic;
@@ -72,17 +75,15 @@ pub fn test_block_to_inputs_and_expected_outputs(
             .entry(upriv.clone())
             .or_insert_with(HashSet::default);
 
-        let commitment_bytes: &[u8; 32] = txo.amount.commitment.as_ref();
-
-        user_result_set.insert(TxOutRecord {
-            tx_out_amount_commitment_data: commitment_bytes.to_vec(),
-            tx_out_amount_masked_value: txo.amount.masked_value,
-            tx_out_target_key_data: txo.target_key.as_bytes().to_vec(),
-            tx_out_public_key_data: txo.public_key.as_bytes().to_vec(),
-            tx_out_global_index: global_tx_out_index as u64,
+        let fog_tx_out = FogTxOut::from(txo);
+        let meta = FogTxOutMetadata {
+            global_index: global_tx_out_index as u64,
             block_index,
             timestamp,
-        });
+        };
+        let tx_out_record = TxOutRecord::new(fog_tx_out, meta);
+
+        user_result_set.insert(tx_out_record);
         global_tx_out_index += 1;
     }
 

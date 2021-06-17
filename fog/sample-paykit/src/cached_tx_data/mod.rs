@@ -582,7 +582,10 @@ impl OwnedTxOut {
     // so we need to backport that into the rust sample paykit.
     pub fn new(rec: TxOutRecord, account_key: &AccountKey) -> StdResult<Self, TxOutMatchingError> {
         // Reconstitute FogTxOut from the "flattened" data in TxOutRecord
-        let tx_out = rec.get_fog_tx_out()?;
+        let fog_tx_out = rec.get_fog_tx_out()?;
+
+        // Reconstute TxOut from FogTxOut and our view private key
+        let tx_out = fog_tx_out.try_recover_tx_out(&account_key.view_private_key())?;
 
         // This is view key scanning part, getting the value fails if view-key scanning
         // fails
@@ -606,7 +609,7 @@ impl OwnedTxOut {
         Ok(Self {
             global_index: rec.tx_out_global_index,
             block_index: rec.block_index,
-            tx_out: TxOut::from(&tx_out),
+            tx_out,
             key_image,
             value,
             status,

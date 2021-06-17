@@ -635,7 +635,7 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
 mod test_build_transaction_helper {
     use super::*;
     use core::result::Result as StdResult;
-    use fog_types::view::TxOutRecord;
+    use fog_types::view::{FogTxOut, FogTxOutMetadata, TxOutRecord};
     use mc_account_keys::{AccountKey, PublicAddress};
     use mc_common::logger::{test_with_logger, Logger};
     use mc_fog_report_validation::{FogPubkeyError, FullyValidatedFogPubkey};
@@ -683,17 +683,9 @@ mod test_build_transaction_helper {
             let cached_inputs: Vec<(OwnedTxOut, TxOutMembershipProof)> = outputs
                 .into_iter()
                 .map(|tx_out| {
-                    let commitment_bytes: &[u8; 32] = tx_out.amount.commitment.as_ref();
-
-                    let txo_record = TxOutRecord {
-                        tx_out_amount_commitment_data: commitment_bytes.to_vec(),
-                        tx_out_amount_masked_value: tx_out.amount.masked_value,
-                        tx_out_target_key_data: tx_out.target_key.as_bytes().to_vec(),
-                        tx_out_public_key_data: tx_out.public_key.as_bytes().to_vec(),
-                        block_index: 0,
-                        tx_out_global_index: 0,
-                        timestamp: Default::default(),
-                    };
+                    let fog_tx_out = FogTxOut::from(&tx_out);
+                    let meta = FogTxOutMetadata::default();
+                    let txo_record = TxOutRecord::new(fog_tx_out, meta);
 
                     let owned_tx_out = OwnedTxOut::new(txo_record, &sender_account_key).unwrap();
 

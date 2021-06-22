@@ -59,9 +59,9 @@ impl<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> FogViewService<E, DB> {
         // Attempt and deserialize the untrusted portion of this request.
         let query_request_aad: QueryRequestAAD = mc_util_serial::decode(request.get_aad())
             .map_err(|err| {
-                RpcStatus::new(
+                RpcStatus::with_message(
                     RpcStatusCode::INVALID_ARGUMENT,
-                    Some(format!("AAD deserialization error: {}", err)),
+                    format!("AAD deserialization error: {}", err),
                 )
             })?;
 

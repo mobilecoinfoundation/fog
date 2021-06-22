@@ -43,6 +43,9 @@ mc-sgx-types = { path = "../../../../mobilecoin/sgx/types" }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 
+mbedtls = { version = "0.8.1", default-features = false, features = ["no_std_deps", "aesni", "force_aesni_support", "rdrand"] }
+mbedtls-sys-auto = { version = "2.26.1", default-features = false, features = ["custom_threading"] }
+
 [build-dependencies]
 mc-util-build-sgx = { path = "../../../../mobilecoin/util/build/sgx" }
 mc-util-build-script = { path = "../../../../mobilecoin/util/build/script" }
@@ -91,3 +94,7 @@ x25519-dalek = { git = "https://github.com/eranrund/x25519-dalek.git", rev = "57
 
 # Overridden since we need a commit that uprevs a bunch of dependencies.
 schnorrkel = { git = "https://github.com/mobilecoinofficial/schnorrkel", rev = "fa27d0ed32d251a27399a23d3ef69611acb14d56" }
+
+# mbedtls patched to allow certificate verification with a profile
+mbedtls = { git = "https://github.com/mobilecoinofficial/rust-mbedtls.git", rev = "358564b57a2ae51d06419878b0f073a0603028cc" }
+mbedtls-sys-auto = { git = "https://github.com/mobilecoinofficial/rust-mbedtls.git", rev = "358564b57a2ae51d06419878b0f073a0603028cc" }

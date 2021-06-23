@@ -35,6 +35,7 @@ use mc_crypto_rand::McRng;
 use mc_fog_report_validation::{FogReportResponses, FogResolver};
 use mc_fog_types::{Report, ReportResponse};
 use mc_transaction_core::{
+    get_tx_out_shared_secret,
     onetime_keys::{create_shared_secret, recover_onetime_private_key},
     ring_signature::KeyImage,
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
@@ -308,6 +309,39 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
         };
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
     })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
+    env: JNIEnv,
+    obj: JObject,
+    tx_out_shared_secret: jObject,
+    masked_value: jlong,
+) {
+    jni_ffi_call(&env, |env| {
+        let commitment_bytes = env.convert_byte_array(commitment)?;
+        let value =
+            (masked_value as u64) ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
+
+        let amount = Amount::new(value, tx_out_shared_secret)
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
+    })
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_get_1bytes(
+    env: JNIEnv,
+    obj: JObject,
+) -> jbyteArray {
+    jni_ffi_call_or(
+        || Ok(JObject::null().into_inner()),
+        &env,
+        |env| {
+            let amount_key: MutexGuard<Amount> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+            Ok(env.byte_array_from_slice(&amount_key.to_bytes())?)
+        },
+    )
 }
 
 #[no_mangle]
@@ -1303,6 +1337,34 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_bigint2string(
         },
     )
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_get_1shared_1secret(
+    env: JNIEnv,
+    _obj: JObject,
+    view_private_key: JObject,
+    tx_out_public_key: JObject,
+) -> jlong {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let view_private_key: MutexGuard<RistrettoPrivate> =
+                env.get_rust_field(view_private_key, RUST_OBJ_FIELD)?;
+            let tx_out_public_key: MutexGuard<RistrettoPublic> =
+                env.get_rust_field(tx_out_public_key, RUST_OBJ_FIELD)?;
+
+            let key = 
+                get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
+
+            let mbox = Box::new(Mutex::new(key));
+            let ptr: *mut Mutex<RistrettoPrivate> = Box::into_raw(mbox);
+
+            Ok(ptr as jlong)
+        },
+    )
+}
+
 
 /********************************************************************
  * Receipt

@@ -20,10 +20,10 @@ slip10_ed25519 = "0.1.3"
 tiny-bip39 = "0.8"
 zeroize = "1.1"
 
-# Lock cmake-rs verson since only 0.1.43 currently supports ios
+# Lock cmake-rs verson since only >0.1.43 currently supports ios
 # See: https://github.com/alexcrichton/cmake-rs/issues/87
 # Note: This is not used directly by this crate, but rather is a subdependency
-cmake = "= 0.1.43"
+cmake = "= 0.1.45"
 
 # MobileCoin dependencies
 fog-kex-rng = { path = "../fog/kex_rng" }

@@ -312,18 +312,19 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni_1with_1secret(
     env: JNIEnv,
     obj: JObject,
-    tx_out_shared_secret: jObject,
+    tx_out_shared_secret: JObject,
     masked_value: jlong,
 ) {
     jni_ffi_call(&env, |env| {
-        let commitment_bytes = env.convert_byte_array(commitment)?;
+        let tx_out_shared_secret: MutexGuard<RistrettoPublic> =
+            env.get_rust_field(tx_out_shared_secret, RUST_OBJ_FIELD)?;
         let value =
             (masked_value as u64) ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
 
-        let amount = Amount::new(value, tx_out_shared_secret)
+        let amount = Amount::new(value, &tx_out_shared_secret);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
     })
 }
@@ -339,7 +340,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_get_1bytes(
         &env,
         |env| {
             let amount_key: MutexGuard<Amount> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
-            Ok(env.byte_array_from_slice(&amount_key.to_bytes())?)
+            let bytes = mc_util_serial::encode(&*amount_key);
+            Ok(env.byte_array_from_slice(&bytes)?)
         },
     )
 }
@@ -1358,7 +1360,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_get_1shared_1secret(
                 get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
 
             let mbox = Box::new(Mutex::new(key));
-            let ptr: *mut Mutex<RistrettoPrivate> = Box::into_raw(mbox);
+            let ptr: *mut Mutex<RistrettoPublic> = Box::into_raw(mbox);
 
             Ok(ptr as jlong)
         },

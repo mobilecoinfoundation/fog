@@ -106,11 +106,15 @@ impl<E: ViewEnclaveProxy, DB: RecoveryDb + Send + Sync> FogViewService<E, DB> {
 
     // Helper function that is common
     fn enclave_err_to_rpc_status(&self, context: &str, src: ViewEnclaveError) -> RpcStatus {
-        // Treat prost-decode error as an invalid arg, everything else is an internal
-        // error
+        // Treat prost-decode error as an invalid arg,
+        // treat attest error as permission denied,
+        // everything else is an internal error
         match src {
             ViewEnclaveError::ProstDecode => {
                 rpc_invalid_arg_error(context, "Prost decode failed", &self.logger)
+            }
+            ViewEnclaveError::AttestEnclave(err) => {
+                rpc_permissions_error(context, err, &self.logger)
             }
             other => rpc_internal_error(context, format!("{}", &other), &self.logger),
         }

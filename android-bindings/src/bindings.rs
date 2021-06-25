@@ -323,9 +323,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni_1with_1secret(
             env.get_rust_field(tx_out_shared_secret, RUST_OBJ_FIELD)?;
         let value =
             (masked_value as u64) ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
-
         let amount = Amount::new(value, &tx_out_shared_secret);
-        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
+
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount?)?)
     })
 }
 

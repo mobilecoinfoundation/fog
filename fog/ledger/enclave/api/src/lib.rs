@@ -10,7 +10,10 @@ extern crate alloc;
 mod error;
 pub mod messages;
 
-pub use crate::{error::Error, error::AddRecordsError, messages::EnclaveCall};
+pub use crate::{
+    error::{AddRecordsError, Error},
+    messages::EnclaveCall,
+};
 
 use alloc::vec::Vec;
 use core::{hash::Hash, result::Result as StdResult};
@@ -22,8 +25,8 @@ use mc_common::ResponderId;
 use mc_crypto_keys::X25519Public;
 use mc_sgx_report_cache_api::ReportableEnclave;
 use mc_transaction_core::ring_signature::KeyImage;
-use serde::{Deserialize, Serialize};
 use messages::KeyImageData;
+use serde::{Deserialize, Serialize};
 
 /// A generic result type for enclave calls
 pub type Result<T> = StdResult<T, Error>;
@@ -87,7 +90,7 @@ pub trait LedgerEnclave: ReportableEnclave {
     /// collect the information required.
     fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext>;
 
-     /// Encrypt key image check results for the given client session, using the
+    /// Encrypt key image check results for the given client session, using the
     /// given authenticated data for the client.
     fn encrypt_key_images_data(
         &self,

@@ -10,7 +10,7 @@ use aligned_cmov::{
 };
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::convert::TryInto;
-use fog_ledger_enclave_api::{AddRecordsError, Error, Error::AddRecords};
+use fog_ledger_enclave_api::{messages::KeyImageData, AddRecordsError, Error, Error::AddRecords};
 use fog_types::ledger::KeyImageResultCode;
 use mc_common::logger::Logger;
 use mc_crypto_rand::McRng;
@@ -21,10 +21,9 @@ use mc_oblivious_traits::{
     OMAP_NOT_FOUND, OMAP_OVERFLOW,
 };
 use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
-use fog_ledger_enclave_api::messages::KeyImageData;
 
 // internal constants
-// KeySize and ValueSize reflect the needs of key_image_store
+// KeySize and ValueSize reflect the needs of key_image_stores
 // We must choose an oblivious map algorithm that can support that
 type KeySize = U32;
 type ValueSize = U16;
@@ -79,7 +78,11 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     }
 
     // add a key image containing block index and timestamp
-    pub fn add_record(&mut self, key_image: &KeyImage, data: KeyImageData) -> Result<(), AddRecordsError> {
+    pub fn add_record(
+        &mut self,
+        key_image: &KeyImage,
+        data: KeyImageData,
+    ) -> Result<(), AddRecordsError> {
         let mut value = A8Bytes::<ValueSize>::default();
         let mut key = A8Bytes::<KeySize>::default(); // key used to add to the oram for key image
         key.clone_from_slice(&key_image.as_ref());

@@ -14,21 +14,21 @@ extern crate alloc;
 
 mod key_image_store;
 use alloc::vec::Vec;
-use fog_ledger_enclave_api::{Error, KeyImageContext, LedgerEnclave, OutputContext, Result};
+use fog_ledger_enclave_api::{
+    messages::KeyImageData, AddRecordsError, Error, KeyImageContext, LedgerEnclave, OutputContext,
+    Result,
+};
 use fog_types::ledger::{
     CheckKeyImagesRequest, CheckKeyImagesResponse, GetOutputsRequest, GetOutputsResponse,
 };
 use key_image_store::{KeyImageStore, StorageDataSize, StorageMetaSize};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
-use mc_common::ResponderId;
+use mc_common::{logger::create_root_logger, ResponderId};
 use mc_crypto_ake_enclave::{AkeEnclaveState, NullIdentity};
 use mc_crypto_keys::X25519Public;
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
 use mc_transaction_core::ring_signature::KeyImage;
-use fog_ledger_enclave_api::messages::KeyImageData;
-use fog_ledger_enclave_api::AddRecordsError;
-use mc_common::logger::create_root_logger;
 
 /// In-enclave state associated to the ledger enclave
 #[derive(Default)]
@@ -100,8 +100,8 @@ impl LedgerEnclave for SgxLedgerEnclave {
     }
 
     fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext> {
-        let request_bytes = self.ake.client_decrypt(msg)?; 
-        
+        let request_bytes = self.ake.client_decrypt(msg)?;
+
         use mc_common::logger::create_root_logger;
         use mc_transaction_core::ring_signature::KeyImage;
 
@@ -119,20 +119,21 @@ impl LedgerEnclave for SgxLedgerEnclave {
 
         //create temp variables to store KeyImageData which we will use as key to query
         // ledger oram with find_record
-        let mut response: (
-            KeyImageData,
-            fog_types::ledger::KeyImageResultCode,
-        );
-       
+        let mut response: (KeyImageData, fog_types::ledger::KeyImageResultCode);
+
         // query oram using find_record using key_image
         for query in enclave_request.queries {
-            response = key_image_store::KeyImageStore::find_record(&mut keyimagestore, &query.key_image);
+            response =
+                key_image_store::KeyImageStore::find_record(&mut keyimagestore, &query.key_image);
             let (var_keyimagedata, var_keyimageresultcode) = response;
             key_images.push(query.key_image);
             key_images_data.push(var_keyimagedata);
         }
 
-        let context = KeyImageContext { key_images, key_images_data };
+        let context = KeyImageContext {
+            key_images,
+            key_images_data,
+        };
 
         Ok(context)
     }
@@ -149,8 +150,8 @@ impl LedgerEnclave for SgxLedgerEnclave {
         Ok(self.ake.client_encrypt(&client, &[], &response_bytes)?)
     }
 
-      // Add a key image data to the oram sing the key image
-      fn add_key_image_data(&self, key_image: &KeyImage, data: KeyImageData) -> Result<()> {
+    // Add a key image data to the oram sing the key image
+    fn add_key_image_data(&self, key_image: &KeyImage, data: KeyImageData) -> Result<()> {
         let mut desired_capacity: u64 = 1024 * 1024;
         let logger = create_root_logger();
         // create a new keyimagestore
@@ -158,19 +159,20 @@ impl LedgerEnclave for SgxLedgerEnclave {
             mc_oblivious_traits::HeapORAMStorageCreator,
         >::new(desired_capacity, logger);
 
-         // add test KeyImageData record to ledger oram
-         let result = key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image, data);
+        // add test KeyImageData record to ledger oram
+        let result =
+            key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image, data);
 
-         Ok(())
-      }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fog_ledger_enclave_api::messages::KeyImageData;
     use mc_common::logger::create_root_logger;
     use mc_transaction_core::ring_signature::KeyImage;
-    use fog_ledger_enclave_api::messages::KeyImageData;
     // Test that we were able to add key image record to the oram
     #[test]
     fn test_add_record() {
@@ -237,25 +239,13 @@ mod tests {
 
         //create temp variables to store KeyImageData which we will use as key to query
         // ledger oram with find_record
-        let v: (
-            KeyImageData,
-            fog_types::ledger::KeyImageResultCode,
-        );
+        let v: (KeyImageData, fog_types::ledger::KeyImageResultCode);
 
-        let v2: (
-            KeyImageData,
-            fog_types::ledger::KeyImageResultCode,
-        );
+        let v2: (KeyImageData, fog_types::ledger::KeyImageResultCode);
 
-        let v3: (
-            KeyImageData,
-            fog_types::ledger::KeyImageResultCode,
-        );
+        let v3: (KeyImageData, fog_types::ledger::KeyImageResultCode);
 
-        let v4: (
-            KeyImageData,
-            fog_types::ledger::KeyImageResultCode,
-        );
+        let v4: (KeyImageData, fog_types::ledger::KeyImageResultCode);
 
         //query the ledger oram for the record using the key_image
         v = key_image_store::KeyImageStore::find_record(&mut keyimagestore, key_image);
@@ -265,7 +255,10 @@ mod tests {
         // this test should pass since we added this rec into the oram
         assert_eq!(rec.block_index, var_keyimagedata.block_index);
         assert_eq!(rec.timestamp, var_keyimagedata.timestamp);
-        assert_eq!(var_keyimageresultcode,fog_types::ledger::KeyImageResultCode::NotSpent);
+        assert_eq!(
+            var_keyimageresultcode,
+            fog_types::ledger::KeyImageResultCode::NotSpent
+        );
 
         // this test should pass since we did not add this rec into the oram
         assert_ne!(not_found_rec.block_index, var_keyimagedata.block_index);
@@ -273,36 +266,42 @@ mod tests {
 
         let key_image2 = &KeyImage::from(2); // create key image
 
-         // add test KeyImageData record to ledger oram
-         key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image2, rec2);
+        // add test KeyImageData record to ledger oram
+        key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image2, rec2);
 
-         let key_image3 = &KeyImage::from(2); // create key image
-         // add test KeyImageData record to ledger oram
+        let key_image3 = &KeyImage::from(2); // create key image
+                                             // add test KeyImageData record to ledger oram
         key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image3, rec3);
 
-           //query the ledger oram for the record using the key_image
+        //query the ledger oram for the record using the key_image
         v2 = key_image_store::KeyImageStore::find_record(&mut keyimagestore, key_image2);
 
         let (var_keyimagedata2, var_keyimageresultcode2) = v2; // save the result of query into the var_keyimagedata
 
-             //query the ledger oram for the record using the key_image
+        //query the ledger oram for the record using the key_image
         v3 = key_image_store::KeyImageStore::find_record(&mut keyimagestore, key_image3);
 
         let (var_keyimagedata3, var_keyimageresultcode3) = v3; // save the result of query into the var_keyimagedata
 
-           // this test should pass since we added this rec into the oram
+        // this test should pass since we added this rec into the oram
         assert_eq!(rec2.block_index, var_keyimagedata2.block_index);
         assert_eq!(rec2.timestamp, var_keyimagedata2.timestamp);
-        assert_eq!(var_keyimageresultcode2,fog_types::ledger::KeyImageResultCode::NotSpent);
+        assert_eq!(
+            var_keyimageresultcode2,
+            fog_types::ledger::KeyImageResultCode::NotSpent
+        );
 
         // this test should pass since we did not add this rec into the oram
         assert_ne!(not_found_rec.block_index, var_keyimagedata2.block_index);
         assert_ne!(not_found_rec.timestamp, var_keyimagedata2.timestamp);
 
-           // this test should pass since we added this rec into the oram
+        // this test should pass since we added this rec into the oram
         assert_eq!(rec3.block_index, var_keyimagedata3.block_index);
         assert_eq!(rec3.timestamp, var_keyimagedata3.timestamp);
-        assert_eq!(var_keyimageresultcode3,fog_types::ledger::KeyImageResultCode::NotSpent);
+        assert_eq!(
+            var_keyimageresultcode3,
+            fog_types::ledger::KeyImageResultCode::NotSpent
+        );
 
         // this test should pass since we did not add this rec into the oram
         assert_ne!(not_found_rec.block_index, var_keyimagedata3.block_index);
@@ -310,11 +309,14 @@ mod tests {
 
         let key_image4 = &KeyImage::from(2); // create key image that is not added to oram
 
-            //query the ledger oram for the record using the key_image not added to oram
+        //query the ledger oram for the record using the key_image not added to oram
         v4 = key_image_store::KeyImageStore::find_record(&mut keyimagestore, key_image4);
 
         let (var_keyimagedata4, var_keyimageresultcode4) = v4; // save the result of query into the var_keyimagedata
 
-        assert_eq!(var_keyimageresultcode4,fog_types::ledger::KeyImageResultCode::KeyImageError);
+        assert_eq!(
+            var_keyimageresultcode4,
+            fog_types::ledger::KeyImageResultCode::KeyImageError
+        );
     }
 }

@@ -1,8 +1,8 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 mod block_service;
-mod config;
 mod block_tracker;
+mod config;
 mod counters;
 mod db_fetcher;
 mod key_image_service;

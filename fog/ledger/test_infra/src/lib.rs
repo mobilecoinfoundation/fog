@@ -6,6 +6,7 @@ use fog_ledger_enclave::{
     CheckKeyImagesResponse, GetOutputsResponse, KeyImageContext, LedgerEnclave, OutputContext,
     Result as EnclaveResult,
 };
+use fog_ledger_enclave_api::messages::KeyImageData;
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::{HashMap, ResponderId};
@@ -17,7 +18,6 @@ use mc_transaction_core::{
     tx::{TxOut, TxOutMembershipProof},
     Block, BlockContents, BlockData, BlockSignature,
 };
-use fog_ledger_enclave_api::messages::KeyImageData;
 
 #[derive(Default, Clone)]
 pub struct MockEnclave {}
@@ -84,7 +84,8 @@ impl LedgerEnclave for MockEnclave {
 
     fn add_key_image_data(
         &self,
-        _key_image: &KeyImage, _data: KeyImageData,
+        _key_image: &KeyImage,
+        _data: KeyImageData,
     ) -> Result<(), fog_ledger_enclave::Error> {
         unimplemented!()
     }
@@ -161,10 +162,10 @@ impl Ledger for MockLedger {
     fn check_key_image(&self, _key_image: &KeyImage) -> Result<Option<u64>, Error> {
         unimplemented!()
     }
-    
-//    fn add_key_image_data(&self, _key_image: &KeyImage, _data: KeyImageData) -> Result<Option<u64>, Error> {
-  //      unimplemented!()
-   // }
+
+    //    fn add_key_image_data(&self, _key_image: &KeyImage, _data: KeyImageData)
+    // -> Result<Option<u64>, Error> {      unimplemented!()
+    // }
 
     fn get_key_images_by_block(&self, _block_number: u64) -> Result<Vec<KeyImage>, Error> {
         unimplemented!()

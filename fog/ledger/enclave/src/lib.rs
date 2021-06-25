@@ -20,8 +20,8 @@ use mc_sgx_types::{
     sgx_attributes_t, sgx_enclave_id_t, sgx_launch_token_t, sgx_misc_attribute_t, sgx_status_t,
 };
 use mc_sgx_urts::SgxEnclave;
+use mc_transaction_core::ring_signature::KeyImage;
 use std::{path, result::Result as StdResult, sync::Arc};
-use mc_transaction_core::{ring_signature::KeyImage};
 
 /// The default filename of the fog ledger's SGX enclave binary.
 pub const ENCLAVE_FILE: &str = "libledger-enclave.signed.so";
@@ -163,7 +163,11 @@ impl LedgerEnclave for LedgerSgxEnclave {
     }
 
     // Add a key image data to the oram sing the key image
-    fn add_key_image_data(&self, key_image: &KeyImage, data:fog_ledger_enclave_api::messages::KeyImageData) -> Result<()> {
+    fn add_key_image_data(
+        &self,
+        key_image: &KeyImage,
+        data: fog_ledger_enclave_api::messages::KeyImageData,
+    ) -> Result<()> {
         let inbuf = mc_util_serial::serialize(&EnclaveCall::AddKeyImageData(*key_image, data))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?

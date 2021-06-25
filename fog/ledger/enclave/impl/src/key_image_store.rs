@@ -11,7 +11,7 @@ use aligned_cmov::{
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::convert::TryInto;
 use fog_ledger_enclave_api::{messages::KeyImageData, AddRecordsError, Error, Error::AddRecords};
-use fog_types::ledger::KeyImageResultCode;
+use fog_types::ledger::{KeyImageResult, KeyImageResultCode};
 use mc_common::logger::Logger;
 use mc_crypto_rand::McRng;
 use mc_oblivious_map::CuckooHashTableCreator;
@@ -23,7 +23,7 @@ use mc_oblivious_traits::{
 use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
 
 // internal constants
-// KeySize and ValueSize reflect the needs of key_image_stores
+// KeySize and ValueSize reflect the needs of key_image_store
 // We must choose an oblivious map algorithm that can support that
 type KeySize = U32;
 type ValueSize = U16;
@@ -80,18 +80,18 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     // add a key image containing block index and timestamp
     pub fn add_record(
         &mut self,
-        key_image: &KeyImage,
-        data: KeyImageData,
+        key_image: &[u8],
+        datablockindex: &[u8], datatimestamp: &[u8],
     ) -> Result<(), AddRecordsError> {
         let mut value = A8Bytes::<ValueSize>::default();
         let mut key = A8Bytes::<KeySize>::default(); // key used to add to the oram for key image
-        key.clone_from_slice(&key_image.as_ref());
+        key.clone_from_slice(key_image);
         // write block index data to  value[0..8] write the time stamp data to
         // value[8..16]
-        value[0..8].clone_from_slice(&data.block_index.to_le_bytes());
-        value[8..16].clone_from_slice(&data.timestamp.to_le_bytes());
+        value[0..8].clone_from_slice(datablockindex);
+        value[8..16].clone_from_slice(datatimestamp);
         // Note: Passing true means we allow overwrite, which seems fine since
-        // the value is not changing
+        // the vasearch_key: &[u8]lue is not changing
         let omap_result_code = self.omap.vartime_write(&key, &value, Choice::from(1));
         if omap_result_code == OMAP_INVALID_KEY {
             return Err(AddRecordsError::KeyWrongSize);
@@ -114,16 +114,18 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     // return new struct KeyImageData which contains block index and timestamp of
     // key image key image as ref to convert key image to 32 bits,
     // call the oram to query to to key image data
-    pub fn find_record(&mut self, key_image: &KeyImage) -> (KeyImageData, KeyImageResultCode) {
-        // find_record is reusing KeyImageResultCode
-        let mut result = KeyImageData {
-            block_index: 0u64,
+    pub fn find_record(&mut self, key_image: &[u8]) -> KeyImageResult{
+
+        let mut result = KeyImageResult {
+            key_image: KeyImage::from(2),
+            spent_at: 0u64,
+            key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: 0u64,
+            timestamp_result_code: 0u32,
         };
 
-        let mut result_code = KeyImageResultCode::KeyImageError as u32;
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
-        key.clone_from_slice(&key_image.as_ref());
+        key.clone_from_slice(key_image);
 
         let mut value = A8Bytes::<ValueSize>::default(); // value used to save the reuslt of querying
                                                          //the oram for key image value using key
@@ -135,15 +137,15 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         // Other -> KeyImageResultCode::KeyImageError debug_assert!(false)
         {
             let oram_result_code = self.omap.read(&key, &mut value);
-            result_code.cmov(
+            result.key_image_result_code.cmov(
                 oram_result_code.ct_eq(&OMAP_FOUND),
                 &(KeyImageResultCode::NotSpent as u32),
             );
-            result_code.cmov(
+            result.key_image_result_code.cmov(
                 oram_result_code.ct_eq(&OMAP_NOT_FOUND),
                 &(KeyImageResultCode::KeyImageError as u32),
             );
-            result_code.cmov(
+            result.key_image_result_code.cmov(
                 oram_result_code.ct_eq(&OMAP_INVALID_KEY),
                 &(KeyImageResultCode::KeyImageError as u32),
             );
@@ -157,17 +159,11 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
             );
         }
 
-        // Copy the data in value[0..8] to result.block_index
+        // Copy the data in value[0..8] to result.spent_at which represents the block_index
         // Copy the data in value[8..16] to result.timestamp
-        result.block_index = u64::from_le_bytes(value[0..8].try_into().unwrap());
+        result.spent_at = u64::from_le_bytes(value[0..8].try_into().unwrap());
         result.timestamp = u64::from_le_bytes(value[8..16].try_into().unwrap());
 
-        if (result_code == OMAP_FOUND) {
-            (result, KeyImageResultCode::NotSpent)
-        } else if (result_code == OMAP_NOT_FOUND) {
-            (result, KeyImageResultCode::KeyImageError)
-        } else {
-            (result, KeyImageResultCode::KeyImageError)
-        }
+        result
     }
 }

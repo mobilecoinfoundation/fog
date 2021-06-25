@@ -17,11 +17,34 @@ use mc_util_grpc::{
 use mc_util_metrics::SVC_COUNTERS;
 use mc_watcher::watcher_db::WatcherDB;
 use mc_watcher_api::TimestampResultCode;
-use std::{sync::Arc};
+use std::sync::Arc;
 
-// Maximum number of Key Images that may be checked in a single request.
+// Maximum number of Key Image that may be checked in a single request.
 pub const MAX_REQUEST_SIZE: usize = 2000;
 
+/// UntrustedKeyImageQueryResponse object that contains any data that is needed that isn't in the ORAM. This might be like "num_blocks"
+#[derive(Serialize, Deserialize)]
+pub struct UntrustedKeyImageQueryResponse {
+     /// User events.
+     pub user_events: Vec<FogUserEvent>,
+
+     /// The next value the user should use for start_from_user_event_id.
+     pub next_start_from_user_event_id: i64,
+    /// The number of blocks at the time that the request was evaluated.
+    pub highest_processed_block_count: u64,
+
+    /// The timestamp of the highest processed block at the time that the
+    /// request was evaluated.
+    pub highest_processed_block_signature_timestamp: u64,
+
+    /// The index of the last known block, which can be obtained by calculating
+    /// last_known_block_count - 1. We don't store the index but instead store a
+    /// count so that we have a way of representing no known block (0).
+    pub last_known_block_count: u64,
+
+    /// The cumulative count of the last known block.
+    pub last_known_block_cumulative_count: u64,
+}
 
 #[derive(Clone)]
 pub struct KeyImageService<L: Ledger + Clone, E: LedgerEnclaveProxy> {
@@ -49,121 +72,13 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
         }
     }
 
-    fn check_key_images_auth(&mut self, request: Message) -> Result<Message, RpcStatus> {
-        let key_image_context = match self.enclave.check_key_images(request.clone().into()) {
-            Ok(context) => context,
-            Err(EnclaveError::Attest(attest_error)) => {
-                return Err(rpc_permissions_error(
-                    "check_key_images",
-                    EnclaveError::Attest(attest_error),
-                    &self.logger,
-                ))
-            }
-            Err(EnclaveError::Serialization) => {
-                return Err(rpc_invalid_arg_error(
-                    "check_key_images",
-                    EnclaveError::Serialization,
-                    &self.logger,
-                ))
-            }
-            Err(e) => return Err(rpc_internal_error("check_key_images", e, &self.logger)),
-        };
-
-        let response = self.check_key_images_impl(key_image_context)?;
-
-        let result = match self
-            .enclave
-            .encrypt_key_images_data(response, ClientSession::from(request.channel_id))
-        {
-            Ok(message) => message,
-            Err(EnclaveError::Attest(attest_error)) => {
-                return Err(rpc_permissions_error(
-                    "check_key_images_data",
-                    EnclaveError::Attest(attest_error),
-                    &self.logger,
-                ))
-            }
-            Err(EnclaveError::Serialization) => {
-                return Err(rpc_invalid_arg_error(
-                    "check_key_images_data",
-                    EnclaveError::Serialization,
-                    &self.logger,
-                ))
-            }
-            Err(e) => return Err(rpc_internal_error("check_key_images_data", e, &self.logger)),
-        };
-
-        Ok(result.into())
-    }
-
-    fn check_key_images_impl(
-        &mut self,
-        key_image_context: KeyImageContext,
-    ) -> Result<CheckKeyImagesResponse, RpcStatus> {
-        if key_image_context.key_images.len() > MAX_REQUEST_SIZE {
-            return Err(rpc_invalid_arg_error(
-                "check_key_images",
-                "Request size exceeds limit",
-                &self.logger,
-            ));
+    fn check_key_images_auth(&mut self, request: Message,  untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse) -> Result<Message, RpcStatus> {
+       // self.enclave.check_key_images should take both an AttestMessage and an Untruste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dKeyImageQueryResponse object that contains any data that is
+       //needed that isn't in the ORAM. This might be like "num_blocks" and similar stuff.
+       //self.enclave.check_key_images should return an AttestMessage that we send back to the user.
+        let mut resp = self.enclave.check_key_images(request.clone().into(), untrusted_keyimagequery_response);
+            Ok(resp)
         }
-
-        Ok(CheckKeyImagesResponse {
-            num_blocks: self
-                .ledger
-                .num_blocks()
-                .map_err(|err| rpc_database_err(err, &self.logger))?,
-            global_txo_count: self
-                .ledger
-                .num_txos()
-                .map_err(|err| rpc_database_err(err, &self.logger))?,
-            results: key_image_context
-                .key_images
-                .iter()
-                .map(|key_image| {
-                    // Get the block where this KeyImage landed
-                    let (spent_at, ki_result) = match self.ledger.check_key_image(&key_image) {
-                        Ok(maybe_index) => match maybe_index {
-                            Some(spent_at) => (spent_at, KeyImageResultCode::Spent),
-                            None => (u64::MAX, KeyImageResultCode::NotSpent),
-                        },
-                        Err(err) => {
-                            log::error!(
-                                self.logger,
-                                "Database error for key image {:?}: {}",
-                                key_image,
-                                err
-                            );
-                            (u64::MAX, KeyImageResultCode::KeyImageError)
-                        }
-                    };
-                    // Get the timestamp of the spent_at block
-                    let (timestamp, ts_result): (u64, TimestampResultCode) =
-                        match self.watcher.get_block_timestamp(spent_at) {
-                            Ok((ts, res)) => (ts, res),
-                            Err(err) => {
-                                log::error!(
-                                    self.logger,
-                                    "Could not obtain timestamp for block {} due to error {:?}",
-                                    spent_at,
-                                    err
-                                );
-                                (u64::MAX, TimestampResultCode::WatcherDatabaseError)
-                            }
-                        };
-
-                    KeyImageResult {
-                        key_image: *key_image,
-                        spent_at,
-                        timestamp,
-                        timestamp_result_code: ts_result as u32,
-                        key_image_result_code: ki_result as u32,
-                    }
-                })
-                .collect(),
-        })
-    }
-}
 
 impl<L: Ledger + Clone, E: LedgerEnclaveProxy> FogKeyImageApi for KeyImageService<L, E> {
     fn check_key_images(&mut self, ctx: RpcContext, request: Message, sink: UnarySink<Message>) {

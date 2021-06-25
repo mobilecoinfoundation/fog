@@ -18,7 +18,7 @@ pub mod view;
 /// protobuf.
 ///
 /// Note: This is a database and enclave interface type, and is not sent to the
-/// user. TxOutSearchResult is the corresponding user-facing object
+/// user. TxOutSearchResult is the corresponding user-facing objects
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Message)]
 pub struct ETxOutRecord {
     /// The query the user sends to the View Enclave (an RNG output)
@@ -27,6 +27,25 @@ pub struct ETxOutRecord {
     /// The TxOutRecord body, encrypted using user's view key
     #[prost(bytes, required, tag = "2")]
     pub payload: Vec<u8>,
+}
+
+/// An Encrypted Key Image Out Record, consisting of a fog key image
+/// and an mc-crypto-box encrypted payload, containing the FogKeyImageecord
+/// protobuf.
+///
+/// Note: This is a database and enclave interface type, and is not sent to the
+/// user. KeyImageSearchResult is the corresponding user-facing object
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Message)]
+pub struct KeyImageOutRecord {
+    /// The query the user sends to the Ledger Enclave
+    #[prost(bytes, required, tag = "1")]
+    pub key_image: Vec<u8>,
+    /// The KeyImageOutRecord body, encrypted using user's ledger key
+    #[prost(bytes, required, tag = "2")]
+    pub datablockindex: Vec<u8>,
+     /// The KeyImageOutRecord body, encrypted using user's ledger key
+     #[prost(bytes, required, tag = "3")]
+     pub datatimestamp: Vec<u8>,
 }
 
 /// A newtype for numbers representing a BlockCount

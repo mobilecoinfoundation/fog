@@ -1,12 +1,13 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-//! A background thread, in the server side, that continuously checks the LedgerDB for new blocks, then gets all the key images associated to those blocks and adds them to the enclave.
+//! A background thread, in the server side, that continuously checks the
+//! LedgerDB for new blocks, then gets all the key images associated to those
+//! blocks and adds them to the enclave.
 #![allow(unused)]
 use crate::{block_tracker::BlockTracker, counters};
-use mc_ledger_db::{self, Error as DbError, Ledger};
-use fog_api::fog_common::BlockRange;
-use fog_api::ledger::KeyImageQuery;
+use fog_api::{fog_common::BlockRange, ledger::KeyImageQuery};
 use mc_common::logger::{log, Logger};
+use mc_ledger_db::{self, Error as DbError, Ledger};
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -86,7 +87,7 @@ impl DbFetcher {
         let thread_num_queued_records_limiter = num_queued_records_limiter.clone();
         let join_handle = Some(
             ThreadBuilder::new()
-                .name("ViewDbFetcher".to_owned())
+                .name("LedgerDbFetcher".to_owned())
                 .spawn(move || {
                     DbFetcherThread::start(
                         db,
@@ -117,12 +118,11 @@ impl DbFetcher {
         Ok(())
     }
 
-   
-   /// Get a copy of the currently known missing block ranges.
-   /// This updates over time by the background worker thread.
-   pub fn known_missing_block_ranges(&self) -> Vec<BlockRange> {
-            self.shared_state().missing_block_ranges.clone()
-      }
+    /// Get a copy of the currently known missing block ranges.
+    /// This updates over time by the background worker thread.
+    pub fn known_missing_block_ranges(&self) -> Vec<BlockRange> {
+        self.shared_state().missing_block_ranges.clone()
+    }
 
     /// Get the list of FetchedRecords that were obtained by the worker thread.
     /// This also clears the queue so that more records could be fetched by
@@ -167,7 +167,7 @@ struct DbFetcherThread<DB: Ledger + Clone + Send + Sync + 'static> {
 }
 
 /// Background worker thread implementation that takes care of periodically
-/// polling data out of the database.
+/// polling data out of the database. Add join handle
 impl<DB: Ledger + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
     pub fn start(
         db: DB,
@@ -205,114 +205,81 @@ impl<DB: Ledger + Clone + Send + Sync + 'static> DbFetcherThread<DB> {
         }
     }
 
-    /// Attempt to load the next block for each of the ledger db invocations we are
-    /// aware of and tracking.
+    /// Attempt to load the next block for each of the ledger db invocations we
+    /// are aware of and tracking.
     /// Returns true if we might have more block data to load.
     fn load_block_data(&mut self) -> bool {
         let mut has_more_work = false;
 
-        // See whats the next block number we need to load for each invocation we are aware of.
-        let missing_block_ranges = {
-              let shared_state = self.shared_state();
-               (
-                  shared_state.missing_block_ranges.clone(),
-              )
-          };
+          // Grab whatever fetched records have shown up since the last time we ran.
+          let fetched_records_list = self.db_fetcher.get_pending_fetched_records();
+          for fetched_records in fetched_records_list.into_iter() {
+              // Early exit if stop as requested.
+              if self.stop_requested.load(Ordering::SeqCst) {
+                  mut has_more_work = true;
+                  break;
+              }
 
-          let next_block_index_per_invocation_id = self.block_tracker.next_blocks(&missing_block_ranges);
-          
-                log::trace!(
+              // Insert the records into the enclave.
+              self.add_records_to_enclave(
+                  fetched_records.block_index,
+                  fetched_records.records,
+              );
+          }
+
+        has_more_work
+    }
+
+    fn add_records_to_enclave(
+        &mut self,
+        block_index: u64,
+        records: Vec<KeyImageOutRecord>,
+    ) {
+        let num_records = records.len();
+
+        let add_records_result = {
+            trace_time!(
+                self.logger,
+                "Added {} records into the enclave",
+                num_records
+            );
+            let _metrics_timer = counters::ENCLAVE_ADD_RECORDS_TIME.start_timer();
+            self.enclave.add_key_image_data(records)
+        };
+
+        match add_records_result {
+            Err(err) => {
+                // Failing to add records to the enclave is unrecoverable,
+                // When we encounter this failure mode we will begin logging a high-priority log
+                // message every ten minutes indefinitely.
+                loop {
+                    log::crit!(
+                        self.logger,
+                        "Failed adding {} keyimage_outs for {} into enclave: {}",
+                        num_records,
+                        block_index,
+                        err
+                    );
+                    sleep(Duration::from_secs(600));
+                }
+            }
+
+            Ok(_) => {
+                log::info!(
                     self.logger,
-                      "load_block_data next_blocks: {:?}",
-                      next_block_index_per_invocation_id
-                  );
+                    "Added {} keyimage outs for {} into the enclave",
+                    num_records,
+                    block_index
+                );
 
-                  for (ingest_invocation_id, block_index) in next_block_index_per_invocation_id.into_iter() {
-                             
-                                // This ensures we do not have holes in the blocks processed by the enclave thread.
-                                self.shared_state().fetched_records.push(FetchedRecords {
-                                    block_index,
-                                    records: vec![],
-                                });
-                                  
-                                // Attempt to load data for the next block.
-                                let get_key_images_by_block_result = {
-                                    let _metrics_timer = counters::GET_KEY_IMAGES_BY_BLOCK_TIME.start_timer();
-                                    self.db
-                                        .get_key_images_by_block(block_index)
-                                };
-                    
-                                match get_key_images_by_block_result {
-                                    Ok(keyimage_outs) => {
-                                        let num_keyimage_outs = keyimage_outs.len();
-                    
-                                        // NOTE: This makes a very nuanced and important assumption, which is that
-                                        // always produces data KeyImage Records for each block it has processed,
-                                        // EVEN if it actually found NO matches.
-                                        // Based on that assumption, keyimage_outs will be empty only when it has not yet
-                                        // createdd the block (and wrote the results into the database).
-                                        if !keyimage_outs.is_empty() {
-                                            // Log
-                                            log::info!(
-                                                self.logger,
-                                                "invocation id {} fetched {} keyimage outs for block {}",
-                                                ingest_invocation_id,
-                                                num_keyimage_outs,
-                                                block_index,
-                                            );
-                    
-                                            // Ingest has produced data for this block, we'd like to keep trying the
-                                            // next block on the next loop iteration.
-                                            has_more_work = true;
-                                   
-                                            // Store the fetched records so that they could be consumed by the enclave
-                                            // when its ready.
-                                            self.shared_state().fetched_records.push(FetchedRecords {
-                                                block_index,
-                                                records: keyimage_outs,
-                                            });
-                    
-                                            // Update metrics.
-                                            counters::BLOCKS_FETCHED_COUNT.inc();
-                                            counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_keyimage_outs as i64);
-                    
-                                            // Block if we have queued up enough records for now.
-                                            // (Until the enclave thread drains the queue).
-                                            let (lock, condvar) = &*self.num_queued_records_limiter;
-                                            let mut num_queued_records = condvar
-                                                .wait_while(lock.lock().unwrap(), |num_queued_records| {
-                                                    *num_queued_records > MAX_QUEUED_RECORDS
-                                                })
-                                                .expect("condvar wait failed");
-                                            *num_queued_records += num_keyimage_outs;
-                    
-                                            counters::DB_FETCHER_NUM_QUEUED_RECORDS.set(*num_queued_records as i64);
-                                        } else {
-                                            log::trace!(
-                                                self.logger,
-                                                "invocation id {} fetched {} tx outs for block {}",
-                                                ingest_invocation_id,
-                                                num_keyimage_outs,
-                                                block_index,
-                                            );
-                                        }
-                                    }
-                                    Err(err) => {
-                                        log::warn!(
-                                            self.logger,
-                                            "Failed querying keyimage outs for {}/{}: {}",
-                                            ingest_invocation_id,
-                                            block_index,
-                                            err
-                                        );
-                                    }
-                                }
-                            }
-                    
-                            has_more_work
-                        }
-                    
-                        fn shared_state(&self) -> MutexGuard<DbFetcherSharedState> {
-                            self.shared_state.lock().expect("mutex poisoned")
-                        }
+                // Update metrics
+                counters::BLOCKS_ADDED_COUNT.inc();
+                counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_records as i64);
+            }
+        }
+    }
+
+    fn shared_state(&self) -> MutexGuard<DbFetcherSharedState> {
+        self.shared_state.lock().expect("mutex poisoned")
+    }
 }

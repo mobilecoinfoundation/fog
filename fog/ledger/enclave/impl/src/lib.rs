@@ -15,7 +15,7 @@ extern crate alloc;
 mod key_image_store;
 use alloc::vec::Vec;
 use fog_ledger_enclave_api::{
-    messages::KeyImageData, AddRecordsError, Error, KeyImageContext, LedgerEnclave, OutputContext,
+    messages::KeyImageData, UntrustedKeyImageQueryResponse, AddRecordsError, Error, LedgerEnclave, OutputContext,
     Result,
 };
 use fog_types::ledger::{
@@ -25,18 +25,33 @@ use key_image_store::{KeyImageStore, StorageDataSize, StorageMetaSize};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::{logger::create_root_logger, ResponderId};
+use mc_common::logger::{log, Logger};
 use mc_crypto_ake_enclave::{AkeEnclaveState, NullIdentity};
 use mc_crypto_keys::X25519Public;
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
 use mc_transaction_core::ring_signature::KeyImage;
+use mc_sgx_compat::sync::Mutex;
+use mc_oblivious_traits::ORAMStorageCreator;
+use fog_types::KeyImageOutRecord;
 
-/// In-enclave state associated to the ledger enclave
-#[derive(Default)]
-pub struct SgxLedgerEnclave {
+/// In-enclave state associated to the ledger enclaves
+pub struct SgxLedgerEnclave<OSC>
+where
+    OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
+{
+      /// The encrypted storage
+    keyimagestore: Mutex<Option<KeyImageStore<OSC>>>,
+
     ake: AkeEnclaveState<NullIdentity>,
+
+    /// Logger object
+    logger: Logger,
 }
 
-impl ReportableEnclave for SgxLedgerEnclave {
+impl<OSC> ReportableEnclave for SgxLedgerEnclave<OSC>
+where
+    OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
+{
     fn new_ereport(&self, qe_info: TargetInfo) -> ReportableEnclaveResult<(Report, QuoteNonce)> {
         Ok(self.ake.new_ereport(qe_info)?)
     }
@@ -55,7 +70,18 @@ impl ReportableEnclave for SgxLedgerEnclave {
     }
 }
 
-impl LedgerEnclave for SgxLedgerEnclave {
+impl<OSC> LedgerEnclave for SgxLedgerEnclave<OSC>
+where
+    OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
+{
+    fn new(logger: Logger) -> Self {
+        Self {
+            keyimagestore: Mutex::new(None),
+            ake: Default::default(),
+            logger,
+        }
+    }
+
     fn enclave_init(&self, self_id: &ResponderId) -> Result<()> {
         self.ake.init(Default::default(), self_id.clone())?;
         Ok(())
@@ -99,73 +125,63 @@ impl LedgerEnclave for SgxLedgerEnclave {
         Ok(self.ake.client_encrypt(&client, &[], &response_bytes)?)
     }
 
-    fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext> {
-        let request_bytes = self.ake.client_decrypt(msg)?;
+    fn check_key_images(&self, msg: EnclaveMessage<ClientSession>, untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
+    ) -> Result<Vec<u8>> {
 
-        use mc_common::logger::create_root_logger;
-        use mc_transaction_core::ring_signature::KeyImage;
+        let channel_id = msg.channel_id.clone();
+        let user_plaintext = self.ake.client_decrypt(msg)?;
 
-        let mut desired_capacity: u64 = 1024 * 1024;
-        let logger = create_root_logger();
-        // create a new keyimagestore
-        let mut keyimagestore = key_image_store::KeyImageStore::<
-            mc_oblivious_traits::HeapORAMStorageCreator,
-        >::new(desired_capacity, logger);
+        let req: fog_types::ledger::QueryRequest =
+            mc_util_serial::decode(&user_plaintext).map_err(|e| {
+                log::error!(self.logger, "Could not decode user request: {}", e);
+                Error::ProstDecode
+            })?;
 
-        // Try and deserialize.
-        let enclave_request: CheckKeyImagesRequest = mc_util_serial::decode(&request_bytes)?;
-        let mut key_images = Vec::new();
-        let mut key_images_data = Vec::new();
-
-        //create temp variables to store KeyImageData which we will use as key to query
-        // ledger oram with find_record
-        let mut response: (KeyImageData, fog_types::ledger::KeyImageResultCode);
-
-        // query oram using find_record using key_image
-        for query in enclave_request.queries {
-            response =
-                key_image_store::KeyImageStore::find_record(&mut keyimagestore, &query.key_image);
-            let (var_keyimagedata, var_keyimageresultcode) = response;
-            key_images.push(query.key_image);
-            key_images_data.push(var_keyimagedata);
-        }
-
-        let context = KeyImageContext {
-            key_images,
-            key_images_data,
+        let mut resp = fog_types::ledger::QueryResponse   {
+            highest_processed_block_count: untrusted_keyimagequery_response.highest_processed_block_count,
+            highest_processed_block_signature_timestamp: untrusted_keyimagequery_response
+                .highest_processed_block_signature_timestamp,
+            next_start_from_user_event_id: untrusted_keyimagequery_response.next_start_from_user_event_id,
+            keyimage_search_results: Default::default(),
+            last_known_block_count: untrusted_keyimagequery_response.last_known_block_count,
+            last_known_block_cumulative_count: untrusted_keyimagequery_response
+                .last_known_block_cumulative_count,
         };
 
-        Ok(context)
-    }
+       // Do the scope lock of keyimagetore
+       {
+        let mut lk = self.keyimagestore.lock()?;
+        let store = lk.as_mut().ok_or(Error::EnclaveNotInitialized)?;
 
-    fn encrypt_key_images_data(
-        &self,
-        response: CheckKeyImagesResponse,
-        client: ClientSession,
-    ) -> Result<EnclaveMessage<ClientSession>> {
-        // Serialize this for the client.
-        let response_bytes = mc_util_serial::encode(&response);
+        resp.keyimage_search_results = req
+            .get_keyimages
+            .iter() // Attempt and deserialize the untrusted portion of this request.
+            .map(|key| store.find_record(&key[..]))
+            .collect();
+        }
 
-        // Encrypt for the client.
-        Ok(self.ake.client_encrypt(&client, &[], &response_bytes)?)
+    let response_plaintext_bytes = mc_util_serial::encode(&resp);
+
+    let response = self
+        .ake
+        .client_encrypt(&channel_id, &[], &response_plaintext_bytes)?;
+
+    Ok(response.data)
     }
 
     // Add a key image data to the oram sing the key image
-    fn add_key_image_data(&self, key_image: &KeyImage, data: KeyImageData) -> Result<()> {
-        let mut desired_capacity: u64 = 1024 * 1024;
-        let logger = create_root_logger();
-        // create a new keyimagestore
-        let mut keyimagestore = key_image_store::KeyImageStore::<
-            mc_oblivious_traits::HeapORAMStorageCreator,
-        >::new(desired_capacity, logger);
-
-        // add test KeyImageData record to ledger oram
-        let result =
-            key_image_store::KeyImageStore::add_record(&mut keyimagestore, key_image, data);
+    fn add_key_image_data(&self, records: Vec<KeyImageOutRecord>) -> Result<()> {
+        let mut lk = self.keyimagestore.lock()?;
+        let store = lk.as_mut().ok_or(Error::EnclaveNotInitialized)?;
+           // add test KeyImageData record to ledger oram
+        for rec in records {
+            store.add_record(&rec.key_image, &rec.datablockindex, &rec.datatimestamp)?;
+        }
 
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {

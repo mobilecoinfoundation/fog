@@ -323,12 +323,11 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni_1with_1secret(
             env.get_rust_field(tx_out_shared_secret, RUST_OBJ_FIELD)?;
         let value =
             (masked_value as u64) ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
-        let amount : Amount = Amount::new(value, &tx_out_shared_secret)?;
+        let amount: Amount = Amount::new(value, &tx_out_shared_secret)?;
 
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
     })
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_get_1bytes(
@@ -1356,8 +1355,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_get_1shared_1secret(
             let tx_out_public_key: MutexGuard<RistrettoPublic> =
                 env.get_rust_field(tx_out_public_key, RUST_OBJ_FIELD)?;
 
-            let key = 
-                get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
+            let key = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
 
             let mbox = Box::new(Mutex::new(key));
             let ptr: *mut Mutex<RistrettoPublic> = Box::into_raw(mbox);
@@ -1366,7 +1364,6 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_get_1shared_1secret(
         },
     )
 }
-
 
 /********************************************************************
  * Receipt

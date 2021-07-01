@@ -3,12 +3,12 @@
 //! Functionality for mocking and testing components in the ledger server
 
 use fog_ledger_enclave::{
-    CheckKeyImagesResponse, GetOutputsResponse, KeyImageContext, LedgerEnclave, OutputContext,
-    Result as EnclaveResult,
+    GetOutputsResponse, LedgerEnclave, OutputContext, Result as EnclaveResult,
 };
+use fog_ledger_enclave_api::{messages::KeyImageData, UntrustedKeyImageQueryResponse};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
-use mc_common::{HashMap, ResponderId};
+use mc_common::{logger::Logger, HashMap, ResponderId};
 use mc_crypto_keys::{CompressedRistrettoPublic, X25519Public};
 use mc_ledger_db::{Error, Ledger};
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
@@ -40,6 +40,10 @@ impl ReportableEnclave for MockEnclave {
 }
 
 impl LedgerEnclave for MockEnclave {
+    fn new(&self, _: Logger) -> Self {
+        unimplemented!()
+    }
+
     fn enclave_init(&self, _self_id: &ResponderId) -> EnclaveResult<()> {
         unimplemented!()
     }
@@ -69,14 +73,15 @@ impl LedgerEnclave for MockEnclave {
     fn check_key_images(
         &self,
         _msg: EnclaveMessage<ClientSession>,
-    ) -> EnclaveResult<KeyImageContext> {
+        _untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
+    ) -> Result<Vec<u8>, fog_ledger_enclave::Error> {
         unimplemented!()
     }
-    fn check_key_images_data(
+
+    fn add_key_image_data(
         &self,
-        _resp: CheckKeyImagesResponse,
-        _client: ClientSession,
-    ) -> EnclaveResult<EnclaveMessage<ClientSession>> {
+        _records: Vec<KeyImageData>,
+    ) -> Result<(), fog_ledger_enclave::Error> {
         unimplemented!()
     }
 }
@@ -152,6 +157,10 @@ impl Ledger for MockLedger {
     fn check_key_image(&self, _key_image: &KeyImage) -> Result<Option<u64>, Error> {
         unimplemented!()
     }
+
+    //    fn add_key_image_data(&self, _key_image: &KeyImage, _data: KeyImageData)
+    // -> Result<Option<u64>, Error> {      unimplemented!()
+    // }
 
     fn get_key_images_by_block(&self, _block_number: u64) -> Result<Vec<KeyImage>, Error> {
         unimplemented!()

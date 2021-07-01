@@ -1366,22 +1366,29 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave"
-version = "1.1.0"
+version = "1.0.0"
 dependencies = [
+ "aligned-cmov",
  "cargo-emit",
  "fog-ledger-enclave-api",
  "fog-ledger-enclave-edl",
+ "fog-types",
  "mc-attest-core",
  "mc-attest-enclave-api",
  "mc-common",
  "mc-crypto-keys",
  "mc-enclave-boundary",
+ "mc-oblivious-map",
+ "mc-oblivious-ram",
+ "mc-oblivious-traits",
+ "mc-sgx-compat",
  "mc-sgx-debug-edl",
  "mc-sgx-panic-edl",
  "mc-sgx-report-cache-api",
  "mc-sgx-slog-edl",
  "mc-sgx-types",
  "mc-sgx-urts",
+ "mc-transaction-core",
  "mc-util-build-script",
  "mc-util-build-sgx",
  "mc-util-serial",
@@ -1416,8 +1423,10 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-impl"
-version = "1.1.0"
+version = "1.0.0"
 dependencies = [
+ "aligned-cmov",
+ "byteorder",
  "fog-ledger-enclave-api",
  "fog-types",
  "mc-attest-core",
@@ -1425,7 +1434,14 @@ dependencies = [
  "mc-common",
  "mc-crypto-ake-enclave",
  "mc-crypto-keys",
+ "mc-crypto-rand",
+ "mc-oblivious-map",
+ "mc-oblivious-ram",
+ "mc-oblivious-traits",
+ "mc-sgx-compat",
  "mc-sgx-report-cache-api",
+ "mc-transaction-core",
+ "mc-util-grpc",
  "mc-util-serial",
 ]
 
@@ -1454,6 +1470,7 @@ dependencies = [
  "fog-ledger-enclave-measurement",
  "fog-ledger-test-infra",
  "fog-test-infra",
+ "fog-types",
  "fog-uri",
  "futures",
  "grpcio",
@@ -1476,6 +1493,7 @@ dependencies = [
  "mc-util-from-random",
  "mc-util-grpc",
  "mc-util-metrics",
+ "mc-util-serial",
  "mc-util-test-helper",
  "mc-util-uri",
  "mc-watcher",
@@ -1494,6 +1512,8 @@ version = "1.1.0"
 dependencies = [
  "curve25519-dalek",
  "fog-ledger-enclave",
+ "fog-ledger-enclave-api",
+ "fog-types",
  "mc-attest-core",
  "mc-attest-enclave-api",
  "mc-common",

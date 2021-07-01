@@ -1,6 +1,6 @@
 [package]
 name = "fog-ledger-enclave"
-version = "1.1.0"
+version = "1.0.0"
 authors = ["MobileCoin"]
 edition = "2018"
 license = "GPL-3.0"
@@ -18,9 +18,19 @@ mc-sgx-debug-edl = { path = "../../../mobilecoin/sgx/debug-edl" }
 mc-sgx-panic-edl = { path = "../../../mobilecoin/sgx/panic-edl" }
 mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
 mc-sgx-slog-edl = { path = "../../../mobilecoin/sgx/slog-edl" }
+mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
+mc-sgx-compat = { path = "../../../mobilecoin/sgx/compat", default-features = false }
+
+aligned-cmov = "2.0"
+mc-oblivious-map = "2.0"
+mc-oblivious-ram = "2.0"
+mc-oblivious-traits = "2.0"
 
 fog-ledger-enclave-api = { path = "./api" }
 fog-ledger-enclave-edl = { path = "./edl" }
+
+# fog
+fog-types = { path = "../../fog_types" }
 
 [build-dependencies]
 mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }

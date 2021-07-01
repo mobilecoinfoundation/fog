@@ -32,7 +32,7 @@ fn main() {
         enclave_path.to_str().expect("Could not get enclave path"),
         &config.client_responder_id
     );
-    let enclave = LedgerSgxEnclave::new(enclave_path, &config.client_responder_id);
+    let enclave = LedgerSgxEnclave::new(enclave_path, &config.client_responder_id, logger.clone());
 
     let db = LedgerDB::open(&config.ledger_db).expect("Could not read ledger DB");
     let watcher =

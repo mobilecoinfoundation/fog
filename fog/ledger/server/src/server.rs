@@ -22,7 +22,7 @@ use mc_util_grpc::{
 };
 use mc_util_uri::ConnectionUri;
 use mc_watcher::watcher_db::WatcherDB;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Display)]
 pub enum LedgerServerError {
@@ -98,10 +98,13 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
                 Arc::new(AnonymousAuthenticator::default())
             };
 
+        let shared_state = Arc::new(Mutex::new(DbPollSharedState::default()));
+
         let key_image_service = KeyImageService::new(
             ledger.clone(),
             watcher.clone(),
             enclave.clone(),
+            shared_state.clone(),
             client_authenticator.clone(),
             logger.clone(),
         );
@@ -212,4 +215,21 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> Drop for Ledger
     fn drop(&mut self) {
         self.stop();
     }
+}
+
+/// State that we want to expose from the db poll thread
+#[derive(Debug, Default)]
+pub struct DbPollSharedState {
+    /// The highest block count for which we can guarantee we have loaded all
+    /// available data.
+    pub highest_processed_block_count: u64,
+
+    /// A block signature timestamp for the highest processed block
+    pub highest_processed_block_signature_timestamp: u64,
+
+    /// The last block count for which we were able to load data.
+    pub last_known_block_count: u64,
+
+    /// The cumulative txo count of the last known block.
+    pub last_known_block_cumulative_txo_count: u64,
 }

@@ -10,6 +10,45 @@ use mc_transaction_core::{
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
+// User <-> enclave proto schema types
+// These are synced with types in fog_api view.proto, and tests enforce that
+// they round trip These are NOT expected to be synced with Db schema types
+
+#[derive(Clone, Eq, PartialEq, Message)]
+pub struct QueryRequestAAD {
+    #[prost(int64, tag = "1")]
+    pub start_from_user_event_id: i64,
+
+    /// The first block index to search keyimages in.
+    // TODO this is currently unused
+    #[prost(uint64, tag = "2")]
+    pub start_from_block_index: u64,
+}
+
+#[derive(Clone, Eq, PartialEq, Message)]
+pub struct QueryRequest {
+    #[prost(bytes, repeated, tag = "1")]
+    pub get_keyimages: Vec<Vec<u8>>,
+}
+
+#[derive(Clone, Eq, PartialEq, Message)]
+pub struct QueryResponse {
+    #[prost(uint64, tag = "1")]
+    pub highest_processed_block_count: u64,
+
+    #[prost(uint64, tag = "2")]
+    pub highest_processed_block_signature_timestamp: u64,
+
+    #[prost(message, repeated, tag = "7")]
+    pub keyimage_search_results: Vec<KeyImageResult>,
+
+    #[prost(uint64, tag = "8")]
+    pub last_known_block_count: u64,
+
+    #[prost(uint64, tag = "9")]
+    pub last_known_block_cumulative_count: u64,
+}
+
 /// Parameters for a output request. This is the contents of the encrypted
 /// payload sent by the client. We need to define this since the client will use
 /// the external type to send this.  Eventually we want to use prost to generate

@@ -3,62 +3,28 @@
 //! A background thread, in the server side, that continuously checks the
 //! LedgerDB for new blocks, then gets all the key images associated to those
 //! blocks and adds them to the enclave.
-#![allow(unused)]
-use crate::{block_tracker::BlockTracker, counters};
-use fog_api::{fog_common::BlockRange, ledger::KeyImageQuery};
+use crate::counters;
 use fog_ledger_enclave::LedgerEnclaveProxy;
 use fog_ledger_enclave_api::messages::KeyImageData;
 use mc_common::{
     logger::{log, Logger},
     trace_time,
 };
-use mc_ledger_db::{self, Error as DbError, Ledger};
+use mc_ledger_db::{self, Error as LedgerError, Ledger};
+use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
+use mc_watcher::watcher_db::WatcherDB;
+use mc_watcher_api::TimestampResultCode;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Condvar, Mutex, MutexGuard,
+        Arc,
     },
     thread::{sleep, Builder as ThreadBuilder, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 /// Time to wait between database fetch attempts.
 pub const DB_POLL_INTERNAL: Duration = Duration::from_millis(100);
-
-/// Approximate maximum number of KeyImages we will collect inside
-/// fetched_records before blocking and waiting for the enclave thread to pick
-/// them up. Since DB fetching is significantlly faster than enclave insertion
-/// we need a mechanism that prevents fetched_records from growing indefinitely.
-/// This essentially caps the memory usage of the fetched_records array.
-/// Assuming each KeyImage is <256 bytes, this gives a worst case scenario
-/// of 128MB.
-pub const MAX_QUEUED_RECORDS: usize = (128 * 1024 * 1024) / 256; // may not need queued record
-
-/// A single block of fetched KeyImages, together with information
-/// identifying where it came from.
-pub struct FetchedRecords {
-    /// The block index the KeyImages belong to.
-    pub block_index: u64,
-
-    /// The records got from the ledger db.
-    pub records: Vec<KeyImageData>,
-}
-
-/// Container for data that is shared between the worker thread and the holder
-/// of the DbFetcher object.
-#[derive(Default)]
-struct DbFetcherSharedState {
-    /// Missing block ranges we are aware of.
-    missing_block_ranges: Vec<BlockRange>,
-
-    /// A queue of KeyImages we have fetched from the database.
-    /// This is periodically polled by an external thread which grabs this data
-    /// and feeds it into the enclave.
-    /// The queue is limited to approximately MAX_QUEUED_RECORDS KeyImages
-    /// total.
-    fetched_records: Vec<FetchedRecords>,
-}
-
 /// An object for managing background data fetches from the ledger database.
 pub struct DbFetcher {
     /// Join handle used to wait for the thread to terminate.
@@ -66,14 +32,6 @@ pub struct DbFetcher {
 
     /// Stop request trigger, used to signal the thread to stop.
     stop_requested: Arc<AtomicBool>,
-
-    /// State shared with the worker thread.
-    shared_state: Arc<Mutex<DbFetcherSharedState>>,
-
-    /// A tuple containing a mutex that holds the number of KeyImages we
-    /// have queued inside fetched_records so far, and a condition variable
-    /// to signal when the count resets to zero.
-    num_queued_records_limiter: Arc<(Mutex<usize>, Condvar)>,
 }
 
 impl DbFetcher {
@@ -81,31 +39,15 @@ impl DbFetcher {
         db: DB,
         logger: Logger,
         enclave: E,
+        watcher: WatcherDB,
     ) -> Self {
         let stop_requested = Arc::new(AtomicBool::new(false));
-
-        let shared_state = Arc::new(Mutex::new(DbFetcherSharedState::default()));
-
-        // Clippy suggests to use AtomicUSize but we need a mutex for the conditional
-        // variable.
-        #[allow(clippy::mutex_atomic)]
-        let num_queued_records_limiter = Arc::new((Mutex::new(0), Condvar::new()));
-
         let thread_stop_requested = stop_requested.clone();
-        let thread_shared_state = shared_state.clone();
-        let thread_num_queued_records_limiter = num_queued_records_limiter.clone();
         let join_handle = Some(
             ThreadBuilder::new()
                 .name("LedgerDbFetcher".to_owned())
                 .spawn(move || {
-                    DbFetcherThread::start(
-                        db,
-                        thread_stop_requested,
-                        thread_shared_state,
-                        thread_num_queued_records_limiter,
-                        logger,
-                        enclave,
-                    )
+                    DbFetcherThread::start(db, thread_stop_requested, 0, logger, enclave, watcher)
                 })
                 .expect("Could not spawn thread"),
         );
@@ -113,8 +55,6 @@ impl DbFetcher {
         Self {
             join_handle,
             stop_requested,
-            shared_state,
-            num_queued_records_limiter,
         }
     }
 
@@ -127,38 +67,6 @@ impl DbFetcher {
 
         Ok(())
     }
-
-    /// Get a copy of the currently known missing block ranges.
-    /// This updates over time by the background worker thread.
-    pub fn known_missing_block_ranges(&self) -> Vec<BlockRange> {
-        self.shared_state().missing_block_ranges.clone()
-    }
-
-    /// Get the list of FetchedRecords that were obtained by the worker thread.
-    /// This also clears the queue so that more records could be fetched by
-    /// the worker thread. This updates over time by the background worker
-    /// thread.
-    pub fn get_pending_fetched_records(&self) -> Vec<FetchedRecords> {
-        // First grab all the records queued so far.
-        let records = self.shared_state().fetched_records.split_off(0);
-
-        // Now, signal the condition variable that the queue has been drained.
-        let (lock, condvar) = &*self.num_queued_records_limiter;
-        let mut num_queued_records = lock.lock().expect("mutex poisoned");
-        *num_queued_records = 0;
-
-        counters::DB_FETCHER_NUM_QUEUED_RECORDS.set(0);
-
-        condvar.notify_one();
-
-        // Return the records
-        records
-    }
-
-    /// Get a locked reference to the shared state.
-    fn shared_state(&self) -> MutexGuard<DbFetcherSharedState> {
-        self.shared_state.lock().expect("mutex poisoned")
-    }
 }
 
 impl Drop for DbFetcher {
@@ -170,32 +78,33 @@ impl Drop for DbFetcher {
 struct DbFetcherThread<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> {
     db: DB,
     stop_requested: Arc<AtomicBool>,
-    shared_state: Arc<Mutex<DbFetcherSharedState>>,
-    block_tracker: BlockTracker,
-    num_queued_records_limiter: Arc<(Mutex<usize>, Condvar)>,
+    next_block_index: u64,
     logger: Logger,
     enclave: E,
+    watcher: WatcherDB,
 }
 
 /// Background worker thread implementation that takes care of periodically
 /// polling data out of the database. Add join handle
 impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetcherThread<DB, E> {
+    const POLLING_FREQUENCY: Duration = Duration::from_millis(10);
+    const ERROR_RETRY_FREQUENCY: Duration = Duration::from_millis(1000);
+
     pub fn start(
         db: DB,
         stop_requested: Arc<AtomicBool>,
-        shared_state: Arc<Mutex<DbFetcherSharedState>>,
-        num_queued_records_limiter: Arc<(Mutex<usize>, Condvar)>,
+        next_block_index: u64,
         logger: Logger,
         enclave: E,
+        watcher: WatcherDB,
     ) {
         let thread = Self {
             db,
             stop_requested,
-            shared_state,
-            block_tracker: BlockTracker::new(logger.clone()),
-            num_queued_records_limiter,
+            next_block_index,
             logger,
             enclave,
+            watcher,
         };
         thread.run();
     }
@@ -207,7 +116,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 log::info!(self.logger, "Db fetcher thread stop requested.");
                 break;
             }
-
+            self.next_block_index = 0;
             // Each call to load_block_data attempts to load one block for each known
             // invocation. We want to keep loading blocks as long as we have data to load,
             // but that could take some time which is why the loop is also gated
@@ -223,42 +132,103 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
     /// Returns true if we might have more block data to load.
     fn load_block_data(&mut self) -> bool {
         let mut has_more_work = false;
+        let mut records: Vec<KeyImageData> = Vec::new();
+        let watcher_timeout: Duration = Duration::from_millis(5000);
 
-        // Grab whatever fetched records have shown up since the last time we ran.
-        let fetched_records_list = self.get_pending_fetched_records();
-        for fetched_records in fetched_records_list.into_iter() {
-            // Early exit if stop as requested.
-            if self.stop_requested.load(Ordering::SeqCst) {
-                has_more_work = true;
-                break;
+        match self.db.get_block_contents(self.next_block_index) {
+            Err(LedgerError::NotFound) => std::thread::sleep(Self::POLLING_FREQUENCY),
+            Err(e) => {
+                log::error!(
+                    self.logger,
+                    "Unexpected error when checking for block data {}: {:?}",
+                    self.next_block_index,
+                    e
+                );
+                std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
             }
+            Ok(block_contents) => {
+                // Get the timestamp for the block.
+                let timestamp = Self::get_watcher_timestamp(
+                    self.next_block_index,
+                    &self.watcher,
+                    watcher_timeout,
+                    &self.logger,
+                );
 
-            // Insert the records into the enclave.
-            self.add_records_to_enclave(fetched_records.block_index, fetched_records.records);
+                for key_image in block_contents.key_images {
+                    let mut rec = KeyImageData {
+                        key_image: KeyImage::from(2),
+                        block_index: 0u64,
+                        timestamp: 0u64,
+                    };
+
+                    rec.key_image = key_image;
+                    rec.block_index = self.next_block_index;
+                    rec.timestamp = timestamp;
+
+                    records.push(rec);
+
+                    if self.stop_requested.load(Ordering::SeqCst) {
+                        has_more_work = true;
+                        break;
+                    }
+                }
+                self.add_records_to_enclave(self.next_block_index, records);
+                self.next_block_index = self.next_block_index + 1;
+                // Early exit if stop as requested.
+            }
         }
-
         has_more_work
     }
 
-    /// Get the list of FetchedRecords that were obtained by the worker thread.
-    /// This also clears the queue so that more records could be fetched by
-    /// the worker thread. This updates over time by the background worker
-    /// thread.
-    fn get_pending_fetched_records(&self) -> Vec<FetchedRecords> {
-        // First grab all the records queued so far.
-        let records = self.shared_state().fetched_records.split_off(0);
-
-        // Now, signal the condition variable that the queue has been drained.
-        let (lock, condvar) = &*self.num_queued_records_limiter;
-        let mut num_queued_records = lock.lock().expect("mutex poisoned");
-        *num_queued_records = 0;
-
-        counters::DB_FETCHER_NUM_QUEUED_RECORDS.set(0);
-
-        condvar.notify_one();
-
-        // Return the records
-        records
+    // Get the timestamp from the watcher, or an error code,
+    // using retries if the watcher fell behind
+    fn get_watcher_timestamp(
+        block_index: BlockIndex,
+        watcher: &WatcherDB,
+        watcher_timeout: Duration,
+        logger: &Logger,
+    ) -> u64 {
+        // Timer that tracks how long we have had WatcherBehind error for,
+        // if this exceeds watcher_timeout, we log a warning.
+        let mut watcher_behind_timer = Instant::now();
+        loop {
+            match watcher.get_block_timestamp(block_index) {
+                Ok((ts, res)) => match res {
+                    TimestampResultCode::WatcherBehind => {
+                        if watcher_behind_timer.elapsed() > watcher_timeout {
+                            log::warn!(logger, "watcher is still behind on block index = {} after waiting {} seconds, ingest will be blocked", block_index, watcher_timeout.as_secs());
+                            watcher_behind_timer = Instant::now();
+                        }
+                        std::thread::sleep(Self::POLLING_FREQUENCY);
+                    }
+                    TimestampResultCode::BlockIndexOutOfBounds => {
+                        log::warn!(logger, "block index {} was out of bounds, we should not be scanning it, we will have junk timestamps for it", block_index);
+                        return u64::MAX;
+                    }
+                    TimestampResultCode::Unavailable => {
+                        log::crit!(logger, "watcher configuration is wrong and timestamps will not be available with this configuration. Ingest is blocked at block index {}", block_index);
+                        std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
+                    }
+                    TimestampResultCode::WatcherDatabaseError => {
+                        log::crit!(logger, "The watcher database has an error which prevents us from getting timestamps. Ingest is blocked at block index {}", block_index);
+                        std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
+                    }
+                    TimestampResultCode::TimestampFound => {
+                        return ts;
+                    }
+                },
+                Err(err) => {
+                    log::error!(
+                        logger,
+                        "Could not obtain timestamp for block {} due to error {}, this may mean the watcher is not correctly configured. will retry",
+                        block_index,
+                        err
+                    );
+                    std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
+                }
+            };
+        }
     }
 
     fn add_records_to_enclave(&mut self, block_index: u64, records: Vec<KeyImageData>) {
@@ -304,9 +274,5 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_records as i64);
             }
         }
-    }
-
-    fn shared_state(&self) -> MutexGuard<DbFetcherSharedState> {
-        self.shared_state.lock().expect("mutex poisoned")
     }
 }

@@ -44,6 +44,7 @@ fn main() {
         "SGX_DEBUG_EDL_SEARCH_PATH",
         "SGX_PANIC_EDL_SEARCH_PATH",
         "SGX_SLOG_EDL_SEARCH_PATH",
+        "FOG_OCALL_ORAM_STORAGE_EDL_SEARCH_PATH",
     ]
     .iter()
     {

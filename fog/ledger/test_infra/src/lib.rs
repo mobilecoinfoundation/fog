@@ -8,7 +8,7 @@ use fog_ledger_enclave::{
 use fog_ledger_enclave_api::{messages::KeyImageData, UntrustedKeyImageQueryResponse};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
-use mc_common::{logger::Logger, HashMap, ResponderId};
+use mc_common::{HashMap, ResponderId};
 use mc_crypto_keys::{CompressedRistrettoPublic, X25519Public};
 use mc_ledger_db::{Error, Ledger};
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
@@ -40,10 +40,6 @@ impl ReportableEnclave for MockEnclave {
 }
 
 impl LedgerEnclave for MockEnclave {
-    fn new(&self, _: Logger) -> Self {
-        unimplemented!()
-    }
-
     fn enclave_init(&self, _self_id: &ResponderId) -> EnclaveResult<()> {
         unimplemented!()
     }
@@ -157,10 +153,6 @@ impl Ledger for MockLedger {
     fn check_key_image(&self, _key_image: &KeyImage) -> Result<Option<u64>, Error> {
         unimplemented!()
     }
-
-    //    fn add_key_image_data(&self, _key_image: &KeyImage, _data: KeyImageData)
-    // -> Result<Option<u64>, Error> {      unimplemented!()
-    // }
 
     fn get_key_images_by_block(&self, _block_number: u64) -> Result<Vec<KeyImage>, Error> {
         unimplemented!()

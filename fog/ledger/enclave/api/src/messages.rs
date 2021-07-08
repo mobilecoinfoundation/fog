@@ -7,6 +7,7 @@ use fog_types::ledger::GetOutputsResponse;
 use mc_attest_core::{Quote, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
+use mc_transaction_core::ring_signature::KeyImage;
 use serde::{Deserialize, Serialize};
 
 // A struct representing the key image stores data
@@ -21,12 +22,10 @@ use serde::{Deserialize, Serialize};
     core::hash::Hash,
     Ord,
 )]
-
-/// struct used when adding key image data using oram
 pub struct KeyImageData {
-    pub key_image: Vec<u8>,
-    pub block_index: Vec<u8>,
-    pub timestamp: Vec<u8>,
+    pub key_image: KeyImage,
+    pub block_index: u64,
+    pub timestamp: u64,
 }
 
 /// An enumeration of API calls and their arguments for use across serialization

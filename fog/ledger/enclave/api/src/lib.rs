@@ -3,7 +3,6 @@
 //! APIs for MobileCoin Ledger Service Enclave
 
 #![no_std]
-#![feature(allocator_api)]
 
 extern crate alloc;
 
@@ -22,7 +21,7 @@ pub use fog_types::ledger::{
     CheckKeyImagesResponse, GetOutputsResponse, KeyImageResult, KeyImageResultCode, OutputResult,
 };
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
-use mc_common::{logger::Logger, ResponderId};
+use mc_common::ResponderId;
 use mc_crypto_keys::X25519Public;
 use mc_sgx_report_cache_api::ReportableEnclave;
 use serde::{Deserialize, Serialize};
@@ -64,9 +63,6 @@ pub struct UntrustedKeyImageQueryResponse {
 /// The API for interacting with a ledger node's enclave.
 pub trait LedgerEnclave: ReportableEnclave {
     // UTILITY METHODS
-
-    fn new(&self, logger: Logger) -> Self;
-
     /// Perform one-time initialization upon enclave startup.
     fn enclave_init(&self, self_id: &ResponderId) -> Result<()>;
 

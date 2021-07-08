@@ -20,8 +20,8 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct KeyImageService<L: Ledger + Clone, E: LedgerEnclaveProxy> {
-    ledger: L,
-    watcher: WatcherDB,
+    pub ledger: L,
+    pub watcher: WatcherDB,
     enclave: E,
     authenticator: Arc<dyn Authenticator + Send + Sync>,
     logger: Logger,

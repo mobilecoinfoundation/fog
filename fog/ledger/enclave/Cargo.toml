@@ -28,6 +28,8 @@ mc-oblivious-traits = "2.0"
 
 fog-ledger-enclave-api = { path = "./api" }
 fog-ledger-enclave-edl = { path = "./edl" }
+fog-ocall-oram-storage-edl = { path = "../../ocall_oram_storage/edl" }
+fog-ocall-oram-storage-untrusted = { path = "../../ocall_oram_storage/untrusted" }
 
 # fog
 fog-types = { path = "../../fog_types" }

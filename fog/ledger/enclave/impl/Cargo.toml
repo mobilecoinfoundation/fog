@@ -1,6 +1,6 @@
 [package]
 name = "fog-ledger-enclave-impl"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["MobileCoin"]
 edition = "2018"
 description = '''
@@ -18,10 +18,8 @@ mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features
 mc-util-serial = { path = "../../../../mobilecoin/util/serial" }
 mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
 mc-crypto-rand = { path = "../../../../mobilecoin/crypto/rand" }
-mc-util-grpc = { path = "../../../../mobilecoin/util/grpc" }
 mc-transaction-core = { path = "../../../../mobilecoin/transaction/core" }
 mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat", default-features = false }
-byteorder = "1"
 
 aligned-cmov = "2.0"
 mc-oblivious-map = "2.0"

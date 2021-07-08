@@ -2,17 +2,16 @@
 //! Object representing trusted storage for key image records.
 //! Mediates between the bytes used in ORAM and the protobuf format,
 //! the various ORAM vs. fog api error codes, etc.
-#![allow(unused)]
 use aligned_cmov::{
     subtle::{Choice, ConstantTimeEq},
-    typenum::{Unsigned, U1024, U16, U32, U4096, U64},
+    typenum::{U1024, U16, U32, U4096, U64},
     A8Bytes, CMov,
 };
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::boxed::Box;
 use core::convert::TryInto;
-use fog_ledger_enclave_api::{messages::KeyImageData, AddRecordsError, Error, Error::AddRecords};
+use fog_ledger_enclave_api::AddRecordsError;
 use fog_types::ledger::{KeyImageResult, KeyImageResultCode};
-use mc_common::logger::Logger;
+use mc_common::logger::{log, Logger};
 use mc_crypto_rand::McRng;
 use mc_oblivious_map::CuckooHashTableCreator;
 use mc_oblivious_ram::PathORAM4096Z4Creator;
@@ -20,7 +19,7 @@ use mc_oblivious_traits::{
     OMapCreator, ORAMStorageCreator, ObliviousHashMap, OMAP_FOUND, OMAP_INVALID_KEY,
     OMAP_NOT_FOUND, OMAP_OVERFLOW,
 };
-use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
+use mc_transaction_core::ring_signature::KeyImage;
 
 // internal constants
 // KeySize and ValueSize reflect the needs of key_image_store
@@ -40,6 +39,7 @@ pub type StorageMetaSize = U64;
 
 // This selects the stash size we will construct the oram with
 const STASH_SIZE: usize = 32;
+
 // This selects the oblivious map algorithm
 type ObliviousMapCreator<OSC> = CuckooHashTableCreator<BlockSize, McRng, ObliviousRAMAlgo<OSC>>;
 
@@ -80,17 +80,17 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     // add a key image containing block index and timestamp
     pub fn add_record(
         &mut self,
-        key_image: &[u8],
-        block_index: &[u8],
-        timestamp: &[u8],
+        key_image: &KeyImage,
+        block_index: u64,
+        timestamp: u64,
     ) -> Result<(), AddRecordsError> {
         let mut value = A8Bytes::<ValueSize>::default();
         let mut key = A8Bytes::<KeySize>::default(); // key used to add to the oram for key image
-        key.clone_from_slice(key_image);
+        key.clone_from_slice(&key_image.as_ref());
         // write block index data to  value[0..8] write the time stamp data to
         // value[8..16]
-        value[0..8].clone_from_slice(block_index);
-        value[8..16].clone_from_slice(timestamp);
+        value[0..8].clone_from_slice(&block_index.to_le_bytes());
+        value[8..16].clone_from_slice(&timestamp.to_le_bytes());
         // Note: Passing true means we allow overwrite, which seems fine since
         // the vasearch_key: &[u8]lue is not changing
         let omap_result_code = self.omap.vartime_write(&key, &value, Choice::from(1));
@@ -99,10 +99,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         } else if omap_result_code == OMAP_OVERFLOW {
             return Err(AddRecordsError::KeyWrongSize);
         } else if omap_result_code == OMAP_FOUND {
-            // log::debug!(
-            //    self.logger,
-            //    "An omap key was added twice, overwriting previous value"
-            // );
+            log::debug!(self.logger, "An omap key was found");
         } else if omap_result_code != OMAP_NOT_FOUND {
             panic!(
                 "omap_result_code had an unexpected value: {}",
@@ -115,7 +112,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     // return new struct KeyImageResult which contains block index and timestamp of
     // key image key image as ref to convert key image to 32 bits,
     // call the oram to query to to key image data
-    pub fn find_record(&mut self, key_image: &[u8]) -> KeyImageResult {
+    pub fn find_record(&mut self, key_image: &KeyImage) -> KeyImageResult {
         let mut result = KeyImageResult {
             key_image: KeyImage::from(2),
             spent_at: 0u64,
@@ -125,7 +122,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         };
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
-        key.clone_from_slice(key_image);
+        key.clone_from_slice(&key_image.as_ref());
 
         let mut value = A8Bytes::<ValueSize>::default(); // value used to save the reuslt of querying
                                                          //the oram for key image value using key

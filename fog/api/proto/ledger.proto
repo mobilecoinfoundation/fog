@@ -22,49 +22,6 @@ service FogMerkleProofAPI {
     rpc GetOutputs (attest.Message) returns (attest.Message) {}
 }
 
-message QueryRequestAAD {
-    /// The first block index to search TXOs in.
-    uint64 start_from_block_index = 2;
-}
-
-message QueryRequest {
-    /// KexRng output bytes, "search keys", to request TxOutSearchResult's for
-    repeated bytes get_keyimages = 1;
-}
-
-/// When the result comes back, after decryption, the attest.Message plaintext
-/// follows this schema
-message QueryResponse {
-    /// The number of blocks processed at the time that the request was evaluated.
-    ///
-    /// The semantics of the result as a whole are, we guarantee to get you all
-    /// relevant event data from start_from_user_event_id to next_start_from_user_event_id
-    /// and all TxOutSearchResults from start_from_block_index to highest_processed_block_count.
-    ///
-    /// The highest_processed_block_count value you had last time should generally be the start_from_block_index
-    /// value next time, but there are caveats.
-    ///
-    /// If you have no data, start_from_block_index should be 0. Then you get your rng records,
-    /// and start_from_block_index can be the minimum start block of any of your rng records.
-    uint64 highest_processed_block_count = 1;
-
-    /// The timestamp of the block corresponding to highest_processed_block_count
-    uint64 highest_processed_block_signature_timestamp = 2;
-
-    /// Any KeyImageResults from the get_keyimages in the request.
-    repeated KeyImageResult keyimage_results = 7;
-
-    /// Extra data: The index of the last known block.
-    /// This might be larger than highest_processed_block_count.
-    /// This field doesn't have the same "cursor" semantics as the other fields.
-    uint64 last_known_block_count = 8;
-
-    /// Extra data: The cumulative txo count of the last known block.
-    /// This can be used by the client as a hint when choosing cryptonote mixin indices.
-    /// This field doesn't have the same "cursor" semantics as the other fields.
-    uint64 last_known_block_cumulative_count = 9;
-}
-
 message GetOutputsRequest {
     /// The global txout indices being requested
     repeated fixed64 indices = 1;

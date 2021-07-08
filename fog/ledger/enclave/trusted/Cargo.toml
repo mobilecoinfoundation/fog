@@ -36,6 +36,9 @@ fog-ledger-enclave-api = { path = "../api", default-features = false }
 fog-ledger-enclave-edl = { path = "../edl" }
 fog-ledger-enclave-impl = { path = "../impl", default-features = false }
 
+fog-ocall-oram-storage-edl = { path = "../../../ocall_oram_storage/edl" }
+fog-ocall-oram-storage-trusted = { path = "../../../ocall_oram_storage/trusted" }
+
 lazy_static = "1.4"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 

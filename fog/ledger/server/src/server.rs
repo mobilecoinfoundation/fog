@@ -1,8 +1,8 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 use crate::{
-    config::LedgerServerConfig, counters, BlockService, KeyImageService, MerkleProofService,
-    UntrustedTxOutService,
+    config::LedgerServerConfig, counters, db_fetcher::DbFetcher, BlockService, KeyImageService,
+    MerkleProofService, UntrustedTxOutService,
 };
 use displaydoc::Display;
 use fog_api::ledger_grpc;
@@ -75,6 +75,7 @@ pub struct LedgerServer<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'stat
     ra_client: R,
     report_cache_thread: Option<ReportCacheThread>,
     logger: Logger,
+    db_fetcher: Option<DbFetcher>,
 }
 
 impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E, R> {
@@ -138,6 +139,7 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
             ra_client,
             report_cache_thread: None,
             logger,
+            db_fetcher: None,
         }
     }
 
@@ -150,6 +152,13 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
                 &counters::ENCLAVE_REPORT_TIMESTAMP,
                 self.logger.clone(),
             )?);
+
+            self.db_fetcher = Some(DbFetcher::new(
+                self.key_image_service.ledger.clone(),
+                self.logger.clone(),
+                self.enclave.clone(),
+                self.key_image_service.watcher.clone(),
+            ));
 
             let env = Arc::new(
                 grpcio::EnvBuilder::new()
@@ -207,6 +216,10 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
             report_cache_thread
                 .stop()
                 .expect("Could not stop report cache thread");
+        }
+
+        if let Some(ref mut db_fetcher) = self.db_fetcher.take() {
+            db_fetcher.stop().expect("Could not stop db fetcher");
         }
     }
 }

@@ -20,6 +20,12 @@ slip10_ed25519 = "0.1.3"
 tiny-bip39 = "0.8"
 zeroize = "1.1"
 
+# Lock a specific cmake version that plays nicely with iOS. Note that 0.1.45 does not actually do that,
+# but there is an override to a specific commit of a currently-unreleased version in the root Cargo.toml.
+# Once that version is released (presumably as 0.1.46) that override will no longer be necessary.
+# Note: This is not used directly by this crate, but rather is a subdependency
+cmake = "= 0.1.45"
+
 # MobileCoin dependencies
 fog-kex-rng = { path = "../fog/kex_rng" }
 mc-account-keys = { path = "../mobilecoin/account-keys" }

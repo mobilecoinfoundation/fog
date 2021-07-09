@@ -106,3 +106,6 @@ x25519-dalek = { git = "https://github.com/eranrund/x25519-dalek.git", rev = "57
 
 # Overridden since we need a commit that uprevs a bunch of dependencies.
 schnorrkel = { git = "https://github.com/mobilecoinofficial/schnorrkel", rev = "fa27d0ed32d251a27399a23d3ef69611acb14d56" }
+
+# This version contains iOS build fixes
+cmake = { git = "https://github.com/alexcrichton/cmake-rs", rev = "5f89f90ee5d7789832963bffdb2dcb5939e6199c" }

@@ -68,12 +68,13 @@ fn get_test_environment(
             admin_listen_uri: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: view_omap_capacity,
         };
 
         let enclave = SgxViewEnclave::new(
             get_enclave_path(fog_view_enclave::ENCLAVE_FILE),
             config.client_responder_id.clone(),
-            view_omap_capacity,
+            config.omap_capacity,
             logger.clone(),
         );
 

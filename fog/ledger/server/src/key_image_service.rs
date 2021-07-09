@@ -42,9 +42,9 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
             ledger,
             watcher,
             enclave,
-            db_poll_shared_state,
             authenticator,
             logger,
+            db_poll_shared_state,
         }
     }
 

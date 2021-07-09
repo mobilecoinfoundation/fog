@@ -174,7 +174,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                     }
                 }
                 self.add_records_to_enclave(self.next_block_index, records);
-                self.next_block_index = self.next_block_index + 1;
+                self.next_block_index += 1;
                 // Early exit if stop as requested.
             }
         }

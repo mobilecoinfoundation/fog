@@ -24,7 +24,7 @@ mc-util-uri = { path = "../../mobilecoin/util/uri" }
 fog-ingest-enclave-measurement = { path = "../ingest/enclave/measurement" }
 
 crossbeam-channel = "0.5"
-grpcio = "0.6.0"
+grpcio = "0.9.0"
 lazy_static = "1.4"
 rand = "0.8"
 rayon = "1.3"

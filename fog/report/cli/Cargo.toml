@@ -18,5 +18,5 @@ mc-util-keyfile = { path = "../../../mobilecoin/util/keyfile" }
 mc-util-uri = { path = "../../../mobilecoin/util/uri" }
 
 binascii = "0.1.4"
-grpcio = "0.6"
+grpcio = "0.9.0"
 structopt = "0.3"

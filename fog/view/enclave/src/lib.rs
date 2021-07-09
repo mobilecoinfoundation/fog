@@ -50,7 +50,7 @@ impl SgxViewEnclave {
     ///   oblivious map. Must be a power of two. Actual capacity will be ~70% of
     ///   this. Memory utilization will be about 256 bytes * this + some
     ///   overhead
-    /// * logger: Logger to use when servicing db access from OCALLs
+    /// * logger: Logger to use
     pub fn new(
         enclave_path: path::PathBuf,
         client_responder_id: ResponderId,

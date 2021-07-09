@@ -2,6 +2,10 @@
 
 //! MobileCoin Fog Ledger SGX Enclave Untrusted Proxy
 
+#![deny(missing_docs)]
+
+extern crate fog_ocall_oram_storage_untrusted;
+
 pub use fog_ledger_enclave_api::{
     messages::KeyImageData, CheckKeyImagesResponse, EnclaveCall, Error, GetOutputsResponse,
     KeyImageResult, KeyImageResultCode, LedgerEnclave, LedgerEnclaveProxy, OutputContext,
@@ -26,6 +30,7 @@ use std::{path, result::Result as StdResult, sync::Arc};
 /// The default filename of the fog ledger's SGX enclave binary.
 pub const ENCLAVE_FILE: &str = "libledger-enclave.signed.so";
 
+/// A clone-able handle to the enclave suitable for use in servers
 #[derive(Clone)]
 pub struct LedgerSgxEnclave {
     eid: sgx_enclave_id_t,
@@ -61,6 +66,19 @@ impl ReportableEnclave for LedgerSgxEnclave {
 }
 
 impl LedgerSgxEnclave {
+    /// Create a new sgx ledger enclave
+    ///
+    /// Arguments:
+    /// * enclave_path: The path to the signed enclave .so file
+    /// * client_responder_id: The responder_id to be used when connecting to
+    ///   clients
+    /// * db: The recovery db to read data from. This is used when servicing
+    ///   seeds requests
+    /// * desired_capacity: The desired capacity for ETxOutRecords in the
+    ///   oblivious map. Must be a power of two. Actual capacity will be ~70% of
+    ///   this. Memory utilization will be about 256 bytes * this + some
+    ///   overhead
+    /// * logger: Logger to use
     pub fn new(
         enclave_path: path::PathBuf,
         self_id: &ResponderId,

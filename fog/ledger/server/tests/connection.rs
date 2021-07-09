@@ -39,6 +39,8 @@ use url::Url;
 
 const TEST_URL: &str = "http://www.my_url1.com";
 
+const OMAP_CAPACITY: u64 = 1024 * 1024;
+
 fn setup_watcher_db(logger: Logger) -> (WatcherDB, PathBuf) {
     let url = Url::parse(TEST_URL).unwrap();
 
@@ -97,11 +99,14 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -185,7 +190,7 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -250,11 +255,14 @@ fn fog_ledger_key_images_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -343,7 +351,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -406,11 +414,14 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -480,7 +491,7 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -543,11 +554,14 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -607,7 +621,7 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
 }
 
 // Infra

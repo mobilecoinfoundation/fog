@@ -8,13 +8,11 @@ extern crate alloc;
 
 mod error;
 pub mod messages;
-
+use crate::messages::KeyImageData;
 pub use crate::{
     error::{AddRecordsError, Error},
     messages::EnclaveCall,
 };
-
-use crate::messages::KeyImageData;
 use alloc::vec::Vec;
 use core::result::Result as StdResult;
 pub use fog_types::ledger::{
@@ -64,7 +62,7 @@ pub struct UntrustedKeyImageQueryResponse {
 pub trait LedgerEnclave: ReportableEnclave {
     // UTILITY METHODS
     /// Perform one-time initialization upon enclave startup.
-    fn enclave_init(&self, self_id: &ResponderId) -> Result<()>;
+    fn enclave_init(&self, self_id: &ResponderId, desired_capacity: u64) -> Result<()>;
 
     /// Retrieve the public identity of the enclave.
     fn get_identity(&self) -> Result<X25519Public>;

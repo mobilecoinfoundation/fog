@@ -64,6 +64,7 @@ impl LedgerSgxEnclave {
     pub fn new(
         enclave_path: path::PathBuf,
         self_id: &ResponderId,
+        desired_capacity: u64,
         logger: Logger,
     ) -> LedgerSgxEnclave {
         let mut launch_token: sgx_launch_token_t = [0; 1024];
@@ -93,7 +94,7 @@ impl LedgerSgxEnclave {
         };
 
         sgx_enclave
-            .enclave_init(self_id)
+            .enclave_init(self_id, desired_capacity)
             .unwrap_or_else(|e| panic!("enclave_init({}) failed: {:?}", self_id, e));
 
         sgx_enclave
@@ -112,8 +113,11 @@ impl LedgerSgxEnclave {
 /// Proxy API for talking to the corresponding implementation inside the
 /// enclave.
 impl LedgerEnclave for LedgerSgxEnclave {
-    fn enclave_init(&self, self_id: &ResponderId) -> Result<()> {
-        let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(self_id.clone()))?;
+    fn enclave_init(&self, self_id: &ResponderId, desired_capacity: u64) -> Result<()> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(
+            self_id.clone(),
+            desired_capacity,
+        ))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }

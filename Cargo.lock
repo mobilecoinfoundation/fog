@@ -1366,7 +1366,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "aligned-cmov",
  "cargo-emit",

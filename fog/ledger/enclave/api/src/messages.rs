@@ -33,7 +33,7 @@ pub struct KeyImageData {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum EnclaveCall {
     /// The [LedgerEnclave::enclave_init()] method.
-    EnclaveInit(ResponderId),
+    EnclaveInit(ResponderId, u64),
 
     /// The [LedgerEnclave::client_accept()] method.
     ///

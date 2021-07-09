@@ -36,8 +36,10 @@ pub fn ecall_dispatcher(inbuf: &[u8]) -> Result<Vec<u8>, sgx_status_t> {
     // And actually do it
     let outdata = match call_details {
         // Utility methods
-        EnclaveCall::EnclaveInit(self_id) => serialize(&ENCLAVE.enclave_init(&self_id))
-            .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?,
+        EnclaveCall::EnclaveInit(self_id, desired_capacity) => {
+            serialize(&ENCLAVE.enclave_init(&self_id, desired_capacity))
+                .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
+        }
         // Node-to-Client Attestation
         EnclaveCall::ClientAccept(auth_msg) => serialize(&ENCLAVE.client_accept(auth_msg))
             .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?,

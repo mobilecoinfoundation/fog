@@ -83,11 +83,10 @@ impl<OSC> LedgerEnclave for SgxLedgerEnclave<OSC>
 where
     OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
 {
-    fn enclave_init(&self, self_id: &ResponderId) -> Result<()> {
+    fn enclave_init(&self, self_id: &ResponderId, desired_capacity: u64) -> Result<()> {
         self.ake.init(Default::default(), self_id.clone())?;
         let mut lk = self.keyimagestore.lock()?;
-        let desired_capacity: u64;
-        desired_capacity = 1024 * 1024; // process num of users samples just like the enclave view
+
         SgxLedgerEnclave::<HeapORAMStorageCreator>::new(self.logger.clone());
         *lk = Some(KeyImageStore::new(desired_capacity, self.logger.clone()));
         Ok(())

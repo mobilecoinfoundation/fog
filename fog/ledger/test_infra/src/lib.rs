@@ -40,7 +40,7 @@ impl ReportableEnclave for MockEnclave {
 }
 
 impl LedgerEnclave for MockEnclave {
-    fn enclave_init(&self, _self_id: &ResponderId) -> EnclaveResult<()> {
+    fn enclave_init(&self, _self_id: &ResponderId, _desired_capacity: u64) -> EnclaveResult<()> {
         unimplemented!()
     }
 

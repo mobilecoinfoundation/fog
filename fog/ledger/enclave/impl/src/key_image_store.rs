@@ -97,7 +97,10 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         if omap_result_code == OMAP_INVALID_KEY {
             return Err(AddRecordsError::KeyWrongSize);
         } else if omap_result_code == OMAP_OVERFLOW {
-            return Err(AddRecordsError::KeyWrongSize);
+            return Err(AddRecordsError::MapOverflow(
+                self.omap.len(),
+                self.omap.capacity(),
+            ));
         } else if omap_result_code == OMAP_FOUND {
             log::debug!(self.logger, "An omap key was found");
         } else if omap_result_code != OMAP_NOT_FOUND {

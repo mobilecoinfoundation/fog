@@ -161,6 +161,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
 
         // Copy the data in value[0..8] to result.spent_at which represents the
         // block_index Copy the data in value[8..16] to result.timestamp
+        result.key_image = *key_image;
         result.spent_at = u64::from_le_bytes(value[0..8].try_into().unwrap());
         result.timestamp = u64::from_le_bytes(value[8..16].try_into().unwrap());
 

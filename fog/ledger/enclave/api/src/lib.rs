@@ -3,6 +3,7 @@
 //! APIs for MobileCoin Ledger Service Enclave
 
 #![no_std]
+#![deny(missing_docs)]
 
 extern crate alloc;
 
@@ -35,7 +36,9 @@ pub type Result<T> = StdResult<T, Error>;
 /// will do the check directly.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct OutputContext {
+    /// A vector for output context
     pub indexes: Vec<u64>,
+    /// A merkle root block for output context
     pub merkle_root_block: u64,
 }
 
@@ -95,7 +98,7 @@ pub trait LedgerEnclave: ReportableEnclave {
         untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
     ) -> Result<Vec<u8>>;
 
-    // Add a key image data to the oram Using thrm -rf targete key image
+    /// Add a key image data to the oram Using thrm -rf targete key image
     fn add_key_image_data(&self, records: Vec<KeyImageData>) -> Result<()>;
 }
 

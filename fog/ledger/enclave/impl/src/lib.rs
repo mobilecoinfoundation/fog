@@ -8,6 +8,7 @@
 //! with all the unit testing they would ever need. Fate, it seems, has a sense
 //! of irony...
 #![no_std]
+#![deny(missing_docs)]
 extern crate alloc;
 
 mod key_image_store;
@@ -38,16 +39,19 @@ where
     /// The encrypted storage
     keyimagestore: Mutex<Option<KeyImageStore<OSC>>>,
 
+    /// The enclave state
     ake: AkeEnclaveState<NullIdentity>,
 
     /// Logger object
     logger: Logger,
 }
 
+/// Implementation of the sgx ledger enclave
 impl<OSC> SgxLedgerEnclave<OSC>
 where
     OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
 {
+    /// Constructor function for the ledger enclave
     pub fn new(logger: Logger) -> Self {
         Self {
             keyimagestore: Mutex::new(None),
@@ -57,6 +61,7 @@ where
     }
 }
 
+/// Implementation of the reportable enclave for sgxledger enclave
 impl<OSC> ReportableEnclave for SgxLedgerEnclave<OSC>
 where
     OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
@@ -79,6 +84,7 @@ where
     }
 }
 
+/// Implemenation for ledger encave for sgx ledger enclave
 impl<OSC> LedgerEnclave for SgxLedgerEnclave<OSC>
 where
     OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,

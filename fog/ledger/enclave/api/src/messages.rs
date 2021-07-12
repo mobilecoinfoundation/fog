@@ -10,7 +10,7 @@ use mc_common::ResponderId;
 use mc_transaction_core::ring_signature::KeyImage;
 use serde::{Deserialize, Serialize};
 
-// A struct representing the key image stores data
+/// A struct representing the key image stores data
 #[derive(
     Serialize,
     Deserialize,
@@ -23,8 +23,11 @@ use serde::{Deserialize, Serialize};
     Ord,
 )]
 pub struct KeyImageData {
+    /// A key image for key image data
     pub key_image: KeyImage,
+    /// A block index for key image data
     pub block_index: u64,
+    /// A timestamp for key image data
     pub timestamp: u64,
 }
 

@@ -190,7 +190,7 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(10000));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -351,7 +351,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(10000));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -491,7 +491,7 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(10000));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 }
 
 // Test that a fog ledger connection is able to check key images by hitting
@@ -621,7 +621,7 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
     // in the meantime we can just sleep after grpcio env and all related
     // objects have been destroyed, and hope that those 6 threads see the
     // shutdown requests within 1 second.
-    std::thread::sleep(std::time::Duration::from_millis(10000));
+    std::thread::sleep(std::time::Duration::from_millis(1000));
 }
 
 // Infra

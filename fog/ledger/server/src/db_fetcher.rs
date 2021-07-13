@@ -167,15 +167,12 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                     rec.timestamp = timestamp;
 
                     records.push(rec);
-
-                    if self.stop_requested.load(Ordering::SeqCst) {
-                        has_more_work = true;
-                        break;
                     }
-                }
+
                 self.add_records_to_enclave(self.next_block_index, records);
                 self.next_block_index += 1;
-                // Early exit if stop as requested.
+                has_more_work = true;
+              }
             }
         }
         has_more_work

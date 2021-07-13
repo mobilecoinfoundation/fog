@@ -116,7 +116,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 log::info!(self.logger, "Db fetcher thread stop requested.");
                 break;
             }
-            self.next_block_index = 1;
+            self.next_block_index = 0;
             // Each call to load_block_data attempts to load one block for each known
             // invocation. We want to keep loading blocks as long as we have data to load,
             // but that could take some time which is why the loop is also gated

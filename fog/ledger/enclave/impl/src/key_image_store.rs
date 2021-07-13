@@ -117,7 +117,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     // call the oram to query to to key image data
     pub fn find_record(&mut self, key_image: &KeyImage) -> KeyImageResult {
         let mut result = KeyImageResult {
-            key_image: key_image.clone(),
+            key_image: *key_image,
             spent_at: u64::MAX,
             key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: u64::MAX,

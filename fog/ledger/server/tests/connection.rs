@@ -33,6 +33,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
+    thread, time,
 };
 use tempdir::TempDir;
 use url::Url;
@@ -295,9 +296,18 @@ fn fog_ledger_key_images_test(logger: Logger) {
         let mut client = FogKeyImageGrpcClient::new(client_uri, verifier, grpc_env, logger);
 
         // Check on key images
-        let response = client
+        let mut response = client
             .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
             .expect("check_key_images failed");
+
+        // adding a delay to give fog ledger time to fully initialize
+        while (response.num_blocks != num_blocks) {
+            response = client
+                .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
+                .expect("check_key_images failed");
+
+            thread::sleep(time::Duration::from_secs(10));
+        }
 
         assert_eq!(response.num_blocks, num_blocks, "Maybe try adding a delay? Or an API to tell when fog ledger is fully initialized and has processed the database");
         // FIXME assert_eq!(response.num_txos, ...);

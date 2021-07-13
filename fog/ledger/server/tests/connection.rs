@@ -301,7 +301,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
             .expect("check_key_images failed");
 
         // adding a delay to give fog ledger time to fully initialize
-        while (response.num_blocks != num_blocks) {
+        while response.num_blocks != num_blocks {
             response = client
                 .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
                 .expect("check_key_images failed");

@@ -167,12 +167,11 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                     rec.timestamp = timestamp;
 
                     records.push(rec);
-                    }
+                }
 
                 self.add_records_to_enclave(self.next_block_index, records);
                 self.next_block_index += 1;
                 has_more_work = true;
-              }
             }
         }
         has_more_work

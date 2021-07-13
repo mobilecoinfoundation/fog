@@ -190,7 +190,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
         logger: &Logger,
     ) -> u64 {
         // special case the origin block has a timestamp of u64::MAX
-        if block_index = 0 {
+        if block_index == 0 {
             return u64::MAX;
         }
 

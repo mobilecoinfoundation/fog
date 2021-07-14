@@ -87,8 +87,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         let mut value = A8Bytes::<ValueSize>::default();
         let mut key = A8Bytes::<KeySize>::default(); // key used to add to the oram for key image
         key.clone_from_slice(&key_image.as_ref());
-        // Flip the first byte of shared secret, when used as a key in the oblivious
-        // map. This is because we will use shared_secret as a key in the map,
+        // Flip the first byte of key image, when used as a key in the oblivious
+        // map. This is because we will use key image as a key in the map,
         // but the map does not support all zeroes as a key. All zeroes is a
         // valid curve point. But if we flip the first byte, it turns out that
         // isn't a valid curve point, in the Ristretto group.
@@ -133,8 +133,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
         key.clone_from_slice(&key_image.as_ref());
-        // Flip the first byte of shared secret, when used as a key in the oblivious
-        // map. This is because we will use shared_secret as a key in the map,
+        // Flip the first byte of key image, when used as a key in the oblivious
+        // map. This is because we will use key image as a key in the map,
         // but the map does not support all zeroes as a key. All zeroes is a
         // valid curve point. But if we flip the first byte, it turns out that
         // isn't a valid curve point, in the Ristretto group.
@@ -144,10 +144,13 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         let mut value = A8Bytes::<ValueSize>::default(); // value used to save the reuslt of querying
                                                          //the oram for key image value using key
                                                          // we want for the spent time stamp to have u64 max if it is not found
-        let mut n = 0;
-        while n < 16 {
-            value[n] = 1;
-            n += 1;
+
+        // set the bytes to all ones so  binary corresponds to u64::MAX because we want
+        // value to be the same size irrespective if it is found or not
+        // we want to return the same size back to the user so that no one can guess
+        // based on the size what value is returned back to user
+        for byte in value.iter_mut() {
+            *byte = u8::MAX;
         }
 
         // Do ORAM read operation and branchlessly handle the result code

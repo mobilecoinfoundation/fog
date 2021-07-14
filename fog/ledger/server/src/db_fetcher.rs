@@ -111,12 +111,12 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
 
     fn run(mut self) {
         log::info!(self.logger, "Db fetcher thread started.");
+        self.next_block_index = 0;
         loop {
             if self.stop_requested.load(Ordering::SeqCst) {
                 log::info!(self.logger, "Db fetcher thread stop requested.");
                 break;
             }
-            self.next_block_index = 0;
             // Each call to load_block_data attempts to load one block for each known
             // invocation. We want to keep loading blocks as long as we have data to load,
             // but that could take some time which is why the loop is also gated

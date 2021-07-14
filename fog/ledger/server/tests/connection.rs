@@ -306,7 +306,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
                 .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
                 .expect("check_key_images failed");
 
-            thread::sleep(time::Duration::from_secs(10));
+            thread::sleep(time::Duration::from_secs(30));
         }
 
         assert_eq!(response.num_blocks, num_blocks, "Maybe try adding a delay? Or an API to tell when fog ledger is fully initialized and has processed the database");

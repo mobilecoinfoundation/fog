@@ -87,6 +87,13 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         let mut value = A8Bytes::<ValueSize>::default();
         let mut key = A8Bytes::<KeySize>::default(); // key used to add to the oram for key image
         key.clone_from_slice(&key_image.as_ref());
+        // Flip the first byte of shared secret, when used as a key in the oblivious
+        // map. This is because we will use shared_secret as a key in the map,
+        // but the map does not support all zeroes as a key. All zeroes is a
+        // valid curve point. But if we flip the first byte, it turns out that
+        // isn't a valid curve point, in the Ristretto group.
+        // So this prevents the OMAP_INVALID_KEY error path.
+        key[0] = !key[0];
         // write block index data to  value[0..8] write the time stamp data to
         // value[8..16]
         value[0..8].clone_from_slice(&block_index.to_le_bytes());
@@ -126,6 +133,13 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
         key.clone_from_slice(&key_image.as_ref());
+        // Flip the first byte of shared secret, when used as a key in the oblivious
+        // map. This is because we will use shared_secret as a key in the map,
+        // but the map does not support all zeroes as a key. All zeroes is a
+        // valid curve point. But if we flip the first byte, it turns out that
+        // isn't a valid curve point, in the Ristretto group.
+        // So this prevents the OMAP_INVALID_KEY error path.
+        key[0] = !key[0];
 
         let mut value = A8Bytes::<ValueSize>::default(); // value used to save the reuslt of querying
                                                          //the oram for key image value using key

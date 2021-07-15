@@ -252,7 +252,12 @@ fn main() {
             &logger,
         );
 
-        get_unvalidated_pubkey(responses, fog_uri, "".to_string(), &logger)
+        get_unvalidated_pubkey(
+            responses,
+            fog_uri,
+            config.fog_report_id.unwrap_or_default(),
+            &logger,
+        )
     };
 
     let mut hex_buf = [0u8; 64];

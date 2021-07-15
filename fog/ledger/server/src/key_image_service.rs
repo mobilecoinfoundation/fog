@@ -76,8 +76,9 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
         };
 
         let untrusted_query_response = UntrustedKeyImageQueryResponse {
-            highest_processed_block_count,
-            highest_processed_block_signature_timestamp,
+            highest_processed_block_count, // should go up after same as next block index
+            highest_processed_block_signature_timestamp, /* time stamp goes with the next block
+                                            * index */
             last_known_block_count,
             last_known_block_cumulative_count,
         };

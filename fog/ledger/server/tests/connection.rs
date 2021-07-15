@@ -75,13 +75,24 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
-    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(1)], &mut rng);
-    let num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(2)], &mut rng);
+    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng, &mut watcher);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(1)],
+        &mut rng,
+        &mut watcher,
+    );
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(2)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -213,15 +224,33 @@ fn fog_ledger_key_images_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
+    // Make WatcherDB
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
+
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &keys[0..2], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &keys[3..6], &mut rng);
-    let num_blocks = add_block_to_ledger_db(&mut ledger, &recipients, &keys[6..9], &mut rng);
-
-    // Make WatcherDB
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng, &mut watcher);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[0..2],
+        &mut rng,
+        &mut watcher,
+    );
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[3..6],
+        &mut rng,
+        &mut watcher,
+    );
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[6..9],
+        &mut rng,
+        &mut watcher,
+    );
 
     // Populate watcher with Signature and Timestamp for block 1
     let url1 = Url::parse(TEST_URL).unwrap();
@@ -383,16 +412,23 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &[alice.default_subaddress()], &[], &mut rng);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &[alice.default_subaddress()],
+        &[],
+        &mut rng,
+        &mut watcher,
+    );
     add_block_to_ledger_db(
         &mut ledger,
         &[alice.default_subaddress(), bob.default_subaddress()],
         &[KeyImage::from(1)],
         &mut rng,
+        &mut watcher,
     );
     add_block_to_ledger_db(
         &mut ledger,
@@ -403,9 +439,15 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
         ],
         &[KeyImage::from(2)],
         &mut rng,
+        &mut watcher,
     );
-    let num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(3)], &mut rng);
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(3)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -523,16 +565,23 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &[alice.default_subaddress()], &[], &mut rng);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &[alice.default_subaddress()],
+        &[],
+        &mut rng,
+        &mut watcher,
+    );
     add_block_to_ledger_db(
         &mut ledger,
         &[alice.default_subaddress(), bob.default_subaddress()],
         &[KeyImage::from(1)],
         &mut rng,
+        &mut watcher,
     );
     add_block_to_ledger_db(
         &mut ledger,
@@ -543,9 +592,15 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
         ],
         &[KeyImage::from(2)],
         &mut rng,
+        &mut watcher,
     );
-    let _num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(3)], &mut rng);
+    let _num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(3)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -660,6 +715,7 @@ fn add_block_to_ledger_db(
     recipients: &[PublicAddress],
     key_images: &[KeyImage],
     rng: &mut (impl CryptoRng + RngCore),
+    watcher: &mut WatcherDB,
 ) -> u64 {
     let value: u64 = 10;
 
@@ -682,7 +738,36 @@ fn add_block_to_ledger_db(
     let num_blocks = ledger_db.num_blocks().expect("failed to get block height");
 
     let new_block;
+
+    // Get a random timestamp
+    let (timestamp, _timestamp_result_code) = if num_blocks > 0 {
+        (rng.next_u64(), TimestampResultCode::TimestampFound)
+    } else {
+        (u64::MAX, TimestampResultCode::BlockIndexOutOfBounds)
+    };
+
+    // num_blocks is the block_index of the block we are now adding
     if num_blocks > 0 {
+        for src_url in watcher.get_config_urls().unwrap().iter() {
+            let block = Block {
+                // Dummy block - we don't work with blocks in this test framework
+                index: num_blocks,
+                ..Default::default()
+            };
+            let mut block_signature =
+                BlockSignature::from_block_and_keypair(&block, &Ed25519Pair::from_random(rng))
+                    .expect("Could not create block signature from keypair");
+            block_signature.set_signed_at(timestamp);
+            watcher
+                .add_block_signature(
+                    src_url,
+                    num_blocks,
+                    block_signature,
+                    format!("00/{}", num_blocks),
+                )
+                .expect("Could not add block signature");
+        }
+
         let parent = ledger_db
             .get_block(num_blocks - 1)
             .expect("failed to get parent block");

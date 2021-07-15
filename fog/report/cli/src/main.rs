@@ -202,7 +202,7 @@ fn main() {
             FogUri::from_str(&config.fog_url.clone().expect("no fog url was specified"))
                 .expect("Could not parse fog report url as a valid fog url");
 
-        let report_id = config.fog_report_id.unwrap_or_default();
+        let report_id = config.fog_report_id.clone().unwrap_or_default();
 
         let spki = base64::decode(spki).expect("Couldn't decode spki as base 64");
 

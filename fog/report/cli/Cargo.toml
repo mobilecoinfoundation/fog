@@ -16,7 +16,9 @@ mc-fog-report-connection = { path = "../../../mobilecoin/fog/report/connection" 
 mc-fog-report-validation = { path = "../../../mobilecoin/fog/report/validation" }
 mc-util-keyfile = { path = "../../../mobilecoin/util/keyfile" }
 mc-util-uri = { path = "../../../mobilecoin/util/uri" }
+mc-sgx-types = { path = "../../../mobilecoin/sgx/types" }
 
+base64 = "0.12"
 binascii = "0.1.4"
 grpcio = "0.9.0"
 structopt = "0.3"

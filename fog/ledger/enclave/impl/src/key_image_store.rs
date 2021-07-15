@@ -102,7 +102,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         // the search_key value is not changing
         let omap_result_code = self.omap.vartime_write(&key, &value, Choice::from(1));
         if omap_result_code == OMAP_INVALID_KEY {
-            return Err(AddRecordsError::KeyWrongSize);
+            return Err(AddRecordsError::KeyRejected);
         } else if omap_result_code == OMAP_OVERFLOW {
             return Err(AddRecordsError::MapOverflow(
                 self.omap.len(),

@@ -153,7 +153,7 @@ where
         let mut resp = fog_types::ledger::CheckKeyImagesResponse {
             num_blocks: untrusted_keyimagequery_response.highest_processed_block_count,
             results: Default::default(),
-            global_txo_count: untrusted_keyimagequery_response.last_known_block_cumulative_count, /* ledger.numtxtout */
+            global_txo_count: untrusted_keyimagequery_response.last_known_block_cumulative_count, /* ledger.num_txos */
         };
 
         // Do the scope lock of keyimagetore

@@ -3,7 +3,7 @@
 //! A background thread, in the server side, that continuously checks the
 //! LedgerDB for new blocks, then gets all the key images associated to those
 //! blocks and adds them to the enclave.
-use crate::counters;
+use crate::{counters, server::DbPollSharedState};
 use fog_ledger_enclave::LedgerEnclaveProxy;
 use fog_ledger_enclave_api::messages::KeyImageData;
 use mc_common::{
@@ -17,7 +17,7 @@ use mc_watcher_api::TimestampResultCode;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     thread::{sleep, Builder as ThreadBuilder, JoinHandle},
     time::{Duration, Instant},
@@ -40,14 +40,24 @@ impl DbFetcher {
         logger: Logger,
         enclave: E,
         watcher: WatcherDB,
+        db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
     ) -> Self {
         let stop_requested = Arc::new(AtomicBool::new(false));
         let thread_stop_requested = stop_requested.clone();
+        let thread_shared_state = db_poll_shared_state.clone();
         let join_handle = Some(
             ThreadBuilder::new()
                 .name("LedgerDbFetcher".to_owned())
                 .spawn(move || {
-                    DbFetcherThread::start(db, thread_stop_requested, 0, logger, enclave, watcher)
+                    DbFetcherThread::start(
+                        db,
+                        thread_stop_requested,
+                        0,
+                        logger,
+                        enclave,
+                        watcher,
+                        thread_shared_state,
+                    )
                 })
                 .expect("Could not spawn thread"),
         );
@@ -82,6 +92,7 @@ struct DbFetcherThread<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync +
     logger: Logger,
     enclave: E,
     watcher: WatcherDB,
+    db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
 }
 
 /// Background worker thread implementation that takes care of periodically
@@ -97,6 +108,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
         logger: Logger,
         enclave: E,
         watcher: WatcherDB,
+        db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
     ) {
         let thread = Self {
             db,
@@ -105,6 +117,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             logger,
             enclave,
             watcher,
+            db_poll_shared_state,
         };
         thread.run();
     }
@@ -170,6 +183,23 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 }
 
                 self.add_records_to_enclave(self.next_block_index, records);
+                match self.db.num_txos() {
+                    Err(e) => {
+                        log::error!(
+                            self.logger,
+                            "Unexpected error when checking for ledger num txos {}: {:?}",
+                            self.next_block_index,
+                            e
+                        );
+                    }
+                    Ok(num_txos) => {
+                        let mut shared_state =
+                            self.db_poll_shared_state.lock().expect("mutex poisoned");
+                        // keep track of count for ledger enclave untrusted
+                        shared_state.highest_processed_block_count = self.next_block_index;
+                        shared_state.last_known_block_cumulative_txo_count = num_txos;
+                    }
+                }
                 self.next_block_index += 1;
                 has_more_work = true;
             }

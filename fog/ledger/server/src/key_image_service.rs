@@ -26,7 +26,7 @@ pub struct KeyImageService<L: Ledger + Clone, E: LedgerEnclaveProxy> {
     authenticator: Arc<dyn Authenticator + Send + Sync>,
     logger: Logger,
     /// Shared state from db polling thread.
-    db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
+    pub db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
 }
 
 impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {

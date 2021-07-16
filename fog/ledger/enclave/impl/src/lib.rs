@@ -221,6 +221,7 @@ mod tests {
                 rec3.timestamp,
             );
 
-        assert!(v_result.is_err() && !v_result.is_ok());
+        // we should not get back "invalid key" error
+        assert!(!v_result.is_err() && v_result.is_ok());
     }
 }

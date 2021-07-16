@@ -44,7 +44,7 @@ impl DbFetcher {
     ) -> Self {
         let stop_requested = Arc::new(AtomicBool::new(false));
         let thread_stop_requested = stop_requested.clone();
-        let thread_shared_state = db_poll_shared_state.clone();
+        let thread_shared_state = db_poll_shared_state;
         let join_handle = Some(
             ThreadBuilder::new()
                 .name("LedgerDbFetcher".to_owned())

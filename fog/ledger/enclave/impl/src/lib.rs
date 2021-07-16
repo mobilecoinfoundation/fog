@@ -216,7 +216,7 @@ mod tests {
         let v_result: core::result::Result<_, AddRecordsError> =
             key_image_store::KeyImageStore::add_record(
                 &mut keyimagestore,
-                rec3.key_image,
+                &rec3.key_image,
                 rec3.block_index,
                 rec3.timestamp,
             );

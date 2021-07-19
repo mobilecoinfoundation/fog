@@ -525,14 +525,14 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
         assert_eq!(result.blocks[0].global_txo_count, 3);
         assert_eq!(
             result.blocks[0].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
+            TimestampResultCode::TimestampFound as u32
         );
         assert_eq!(result.blocks[1].index, 2);
         assert_eq!(result.blocks[1].outputs.len(), 3);
         assert_eq!(result.blocks[1].global_txo_count, 6);
         assert_eq!(
             result.blocks[1].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
+            TimestampResultCode::TimestampFound as u32
         );
         assert_eq!(result.num_blocks, num_blocks);
         assert_eq!(result.global_txo_count, ledger.num_txos().unwrap());

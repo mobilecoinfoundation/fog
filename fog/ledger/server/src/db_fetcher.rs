@@ -196,10 +196,10 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                         let mut shared_state =
                             self.db_poll_shared_state.lock().expect("mutex poisoned");
                         // keep track of count for ledger enclave untrusted
-                        shared_state.highest_processed_block_count = self.next_block_index;
                         shared_state.last_known_block_cumulative_txo_count = num_txos;
                     }
                 }
+                shared_state.highest_processed_block_count = self.next_block_index;
                 self.next_block_index += 1;
                 has_more_work = true;
             }

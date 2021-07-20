@@ -42,6 +42,9 @@ impl DbFetcher {
         watcher: WatcherDB,
         db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
     ) -> Self {
+        let mut shared_state = db_poll_shared_state.lock().expect("mutex poisoned");
+        *shared_state = DbPollSharedState::default();
+
         let stop_requested = Arc::new(AtomicBool::new(false));
         let thread_stop_requested = stop_requested.clone();
         let thread_shared_state = db_poll_shared_state;
@@ -183,6 +186,8 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 }
 
                 self.add_records_to_enclave(self.next_block_index, records);
+                let mut shared_state = self.db_poll_shared_state.lock().expect("mutex poisoned");
+                shared_state.highest_processed_block_count = self.next_block_index;
                 match self.db.num_txos() {
                     Err(e) => {
                         log::error!(
@@ -193,13 +198,10 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                         );
                     }
                     Ok(num_txos) => {
-                        let mut shared_state =
-                            self.db_poll_shared_state.lock().expect("mutex poisoned");
                         // keep track of count for ledger enclave untrusted
                         shared_state.last_known_block_cumulative_txo_count = num_txos;
                     }
                 }
-                shared_state.highest_processed_block_count = self.next_block_index;
                 self.next_block_index += 1;
                 has_more_work = true;
             }

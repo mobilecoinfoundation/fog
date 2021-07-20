@@ -42,9 +42,6 @@ impl DbFetcher {
         watcher: WatcherDB,
         db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
     ) -> Self {
-        let mut shared_state = db_poll_shared_state.lock().expect("mutex poisoned");
-        *shared_state = DbPollSharedState::default();
-
         let stop_requested = Arc::new(AtomicBool::new(false));
         let thread_stop_requested = stop_requested.clone();
         let thread_shared_state = db_poll_shared_state;

@@ -184,20 +184,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
 
                 self.add_records_to_enclave(self.next_block_index, records);
                 let mut shared_state = self.db_poll_shared_state.lock().expect("mutex poisoned");
-                match self.db.num_blocks() {
-                    Err(e) => {
-                        log::error!(
-                            self.logger,
-                            "Unexpected error when checking for ledger num blocks {}: {:?}",
-                            self.next_block_index,
-                            e
-                        );
-                    }
-                    Ok(num_blocks) => {
-                        // keep track of count for ledger enclave untrusted
-                        shared_state.highest_processed_block_count = num_blocks;
-                    }
-                }
+                shared_state.highest_processed_block_count = self.next_block_index + 1;
                 match self.db.num_txos() {
                     Err(e) => {
                         log::error!(

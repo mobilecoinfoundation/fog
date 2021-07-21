@@ -171,8 +171,8 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 for key_image in block_contents.key_images {
                     let mut rec = KeyImageData {
                         key_image: KeyImage::from(2),
-                        block_index: 0u64,
-                        timestamp: 0u64,
+                        block_index: u64::MAX,
+                        timestamp: u64::MAX,
                     };
 
                     rec.key_image = key_image;

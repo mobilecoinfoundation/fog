@@ -40,7 +40,7 @@ use url::Url;
 
 const TEST_URL: &str = "http://www.my_url1.com";
 
-const OMAP_CAPACITY: u64 = 1024 * 1024;
+const OMAP_CAPACITY: u64 = 128 * 128;
 
 fn setup_watcher_db(logger: Logger) -> (WatcherDB, PathBuf) {
     let url = Url::parse(TEST_URL).unwrap();
@@ -329,14 +329,19 @@ fn fog_ledger_key_images_test(logger: Logger) {
             .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
             .expect("check_key_images failed");
 
+        let mut n = 1;
         // adding a delay to give fog ledger time to fully initialize
         while response.num_blocks != num_blocks {
             response = client
                 .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
                 .expect("check_key_images failed");
 
-            thread::sleep(time::Duration::from_secs(30));
-            break;
+            thread::sleep(time::Duration::from_secs(1));
+            // panic on the 20th time
+            n += 1; //
+            if (n > 20) {
+                panic!("Fog ledger not  fully initialized");
+            }
         }
 
         assert_eq!(response.num_blocks, num_blocks, "Maybe try adding a delay? Or an API to tell when fog ledger is fully initialized and has processed the database");

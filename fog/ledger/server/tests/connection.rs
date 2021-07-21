@@ -339,7 +339,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
             thread::sleep(time::Duration::from_secs(1));
             // panic on the 20th time
             n += 1; //
-            if (n > 20) {
+            if n > 20 {
                 panic!("Fog ledger not  fully initialized");
             }
         }

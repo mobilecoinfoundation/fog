@@ -14,6 +14,7 @@ use mc_ledger_db::{self, Error as LedgerError, Ledger};
 use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
 use mc_watcher::watcher_db::WatcherDB;
 use mc_watcher_api::TimestampResultCode;
+use retry::{delay, retry, OperationResult};
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -184,6 +185,8 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
 
                 self.add_records_to_enclave(self.next_block_index, records);
                 let mut shared_state = self.db_poll_shared_state.lock().expect("mutex poisoned");
+                // this is next_block_index + 1 because next_block_index is actually the block
+                // we just processed, so we have fully processed next_block_index + 1 blocks
                 shared_state.highest_processed_block_count = self.next_block_index + 1;
                 match self.db.num_txos() {
                     Err(e) => {
@@ -274,12 +277,18 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             self.enclave.add_key_image_data(records)
         };
 
-        match add_records_result {
-            Err(err) => {
-                // Failing to add records to the enclave is unrecoverable,
-                // When we encounter this failure mode we will begin logging a high-priority log
-                // message every ten minutes indefinitely.
-                loop {
+        let _info = retry(delay::Fixed::from_millis(5000), || {
+            match &add_records_result {
+                Ok(info) => {
+                    // Update metrics
+                    counters::BLOCKS_ADDED_COUNT.inc();
+                    counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_records as i64);
+                    OperationResult::Ok(info)
+                }
+                Err(err) => {
+                    // Failing to add records to the enclave is unrecoverable,
+                    // When we encounter this failure mode we will begin logging a high-priority log
+                    // message every ten minutes indefinitely.
                     log::crit!(
                         self.logger,
                         "Failed adding {} keyimage_outs for {} into enclave: {}",
@@ -287,22 +296,16 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                         block_index,
                         err
                     );
-                    sleep(Duration::from_secs(600));
+                    OperationResult::Retry(err)
                 }
             }
+        });
 
-            Ok(_) => {
-                log::info!(
-                    self.logger,
-                    "Added {} keyimage outs for {} into the enclave",
-                    num_records,
-                    block_index
-                );
-
-                // Update metrics
-                counters::BLOCKS_ADDED_COUNT.inc();
-                counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_records as i64);
-            }
-        }
+        log::info!(
+            self.logger,
+            "Added {} keyimage outs for {} into the enclave",
+            num_records,
+            block_index
+        );
     }
 }

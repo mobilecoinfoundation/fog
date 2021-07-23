@@ -49,6 +49,7 @@ serde = { version = "1.0", default-features = false, features = ["alloc", "deriv
 serde_json = "1.0"
 structopt = "0.3"
 url = "2.1"
+retry = "1.2"
 
 [build-dependencies]
 mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }

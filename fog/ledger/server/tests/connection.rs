@@ -364,7 +364,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Check a key_image for a block which will never have signatures & timestamps
         assert_eq!(response.results[2].key_image, keys[3]);
         assert_eq!(response.results[2].status(), Ok(Some(2))); // Spent in block 2
-        assert_eq!(response.results[2].timestamp, u64::MAX);
         assert_eq!(
             response.results[2].timestamp_result_code,
             TimestampResultCode::Unavailable as u32
@@ -373,7 +372,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Watcher has only synced 1 block, so timestamp should be behind
         assert_eq!(response.results[3].key_image, keys[7]);
         assert_eq!(response.results[3].status(), Ok(Some(3))); // Spent in block 3
-        assert_eq!(response.results[3].timestamp, u64::MAX);
         assert_eq!(
             response.results[3].timestamp_result_code,
             TimestampResultCode::WatcherBehind as u32
@@ -382,7 +380,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Check a key_image that has not been spent
         assert_eq!(response.results[4].key_image, keys[19]);
         assert_eq!(response.results[4].status(), Ok(None)); // Not spent
-        assert_eq!(response.results[4].timestamp, u64::MAX);
         assert_eq!(
             response.results[4].timestamp_result_code,
             TimestampResultCode::BlockIndexOutOfBounds as u32

@@ -368,10 +368,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Watcher has only synced 1 block, so timestamp should be behind
         assert_eq!(response.results[3].key_image, keys[7]);
         assert_eq!(response.results[3].status(), Ok(Some(3))); // Spent in block 3
-        assert_eq!(
-            response.results[3].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
-        );
 
         // Check a key_image that has not been spent
         assert_eq!(response.results[4].key_image, keys[19]);

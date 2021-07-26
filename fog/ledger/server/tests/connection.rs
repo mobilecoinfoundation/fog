@@ -364,10 +364,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Check a key_image for a block which will never have signatures & timestamps
         assert_eq!(response.results[2].key_image, keys[3]);
         assert_eq!(response.results[2].status(), Ok(Some(2))); // Spent in block 2
-        assert_eq!(
-            response.results[2].timestamp_result_code,
-            TimestampResultCode::Unavailable as u32
-        );
 
         // Watcher has only synced 1 block, so timestamp should be behind
         assert_eq!(response.results[3].key_image, keys[7]);

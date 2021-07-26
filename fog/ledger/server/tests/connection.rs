@@ -372,10 +372,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Check a key_image that has not been spent
         assert_eq!(response.results[4].key_image, keys[19]);
         assert_eq!(response.results[4].status(), Ok(None)); // Not spent
-        assert_eq!(
-            response.results[4].timestamp_result_code,
-            TimestampResultCode::BlockIndexOutOfBounds as u32
-        );
     }
 
     // FIXME: Check a key_image that generates a DatabaseError - tough to generate

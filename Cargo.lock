@@ -2923,7 +2923,6 @@ dependencies = [
  "chrono",
  "digest",
  "displaydoc",
- "failure",
  "hex 0.4.2",
  "hex_fmt",
  "lazy_static",
@@ -2962,7 +2961,7 @@ name = "mc-attest-net"
 version = "1.1.0"
 dependencies = [
  "cfg-if 0.1.10",
- "failure",
+ "displaydoc",
  "mbedtls",
  "mc-attest-core",
  "mc-common",
@@ -2979,7 +2978,7 @@ dependencies = [
 name = "mc-attest-trusted"
 version = "1.1.0"
 dependencies = [
- "failure",
+ "displaydoc",
  "mc-attest-core",
  "mc-sgx-compat",
  "mc-sgx-types",
@@ -3003,7 +3002,7 @@ dependencies = [
  "binascii",
  "cfg-if 0.1.10",
  "chrono",
- "failure",
+ "displaydoc",
  "hashbrown",
  "hex_fmt",
  "hostname 0.1.5",
@@ -3098,7 +3097,7 @@ dependencies = [
 name = "mc-consensus-enclave-api"
 version = "1.1.0"
 dependencies = [
- "failure",
+ "displaydoc",
  "mc-attest-ake",
  "mc-attest-core",
  "mc-attest-enclave-api",
@@ -3221,7 +3220,7 @@ dependencies = [
  "aead",
  "blake2",
  "digest",
- "failure",
+ "displaydoc",
  "hkdf",
  "mc-crypto-keys",
  "mc-oblivious-aes-gcm",
@@ -3275,9 +3274,9 @@ dependencies = [
  "binascii",
  "curve25519-dalek",
  "digest",
+ "displaydoc",
  "ed25519",
  "ed25519-dalek",
- "failure",
  "hex_fmt",
  "mc-crypto-digestible",
  "mc-crypto-digestible-signature",
@@ -3298,7 +3297,7 @@ name = "mc-crypto-message-cipher"
 version = "1.1.0"
 dependencies = [
  "aes-gcm",
- "failure",
+ "displaydoc",
  "generic-array",
  "mc-util-serial",
  "rand_core 0.6.2",
@@ -3313,7 +3312,7 @@ dependencies = [
  "aead",
  "aes-gcm",
  "digest",
- "failure",
+ "displaydoc",
  "generic-array",
  "hkdf",
  "mc-crypto-keys",
@@ -3518,7 +3517,7 @@ name = "mc-ledger-sync"
 version = "1.1.0"
 dependencies = [
  "crossbeam-channel 0.5.0",
- "failure",
+ "displaydoc",
  "grpcio",
  "mc-account-keys",
  "mc-api",
@@ -3549,7 +3548,6 @@ dependencies = [
  "blake2",
  "crossbeam-channel 0.5.0",
  "displaydoc",
- "failure",
  "grpcio",
  "hex_fmt",
  "libz-sys",
@@ -3664,8 +3662,8 @@ name = "mc-peers"
 version = "1.1.0"
 dependencies = [
  "crossbeam-channel 0.5.0",
+ "displaydoc",
  "ed25519",
- "failure",
  "grpcio",
  "mc-attest-api",
  "mc-attest-core",
@@ -3836,7 +3834,7 @@ version = "1.1.0"
 dependencies = [
  "blake2",
  "curve25519-dalek",
- "failure",
+ "displaydoc",
  "mc-account-keys",
  "mc-crypto-keys",
  "mc-fog-report-validation",
@@ -3882,7 +3880,7 @@ name = "mc-util-build-script"
 version = "1.1.0"
 dependencies = [
  "cargo-emit",
- "failure",
+ "displaydoc",
  "lazy_static",
  "url",
  "walkdir",

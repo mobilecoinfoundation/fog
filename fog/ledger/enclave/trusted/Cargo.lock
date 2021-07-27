@@ -314,7 +314,7 @@ dependencies = [
 [[package]]
 name = "cpufeatures"
 version = "0.1.5"
-source = "git+https://github.com/mobilecoinfoundation/RustCrypto-utils.git?rev=ca38e8d057961aaf0bcf67be3d0cc7642d0551dc#ca38e8d057961aaf0bcf67be3d0cc7642d0551dc"
+source = "git+https://github.com/mobilecoinfoundation/RustCrypto-utils.git?rev=9a22d2a3e5b829277cc05f4833751dd86c155218#9a22d2a3e5b829277cc05f4833751dd86c155218"
 dependencies = [
  "libc",
 ]
@@ -423,27 +423,6 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
-]
-
-[[package]]
-name = "failure"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
-dependencies = [
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "synstructure",
 ]
 
 [[package]]
@@ -674,7 +653,6 @@ name = "ledger_enclave_trusted"
 version = "1.1.0"
 dependencies = [
  "cargo-emit",
- "cpufeatures",
  "fog-ledger-enclave-api",
  "fog-ledger-enclave-edl",
  "fog-ledger-enclave-impl",
@@ -831,7 +809,6 @@ dependencies = [
  "chrono",
  "digest",
  "displaydoc",
- "failure",
  "hex",
  "hex_fmt",
  "lazy_static",
@@ -869,7 +846,7 @@ dependencies = [
 name = "mc-attest-trusted"
 version = "1.1.0"
 dependencies = [
- "failure",
+ "displaydoc",
  "mc-attest-core",
  "mc-sgx-compat",
  "mc-sgx-types",
@@ -882,7 +859,7 @@ version = "1.1.0"
 dependencies = [
  "binascii",
  "cfg-if 0.1.10",
- "failure",
+ "displaydoc",
  "hashbrown",
  "hex_fmt",
  "mc-crypto-digestible",
@@ -922,7 +899,7 @@ dependencies = [
  "aead",
  "blake2",
  "digest",
- "failure",
+ "displaydoc",
  "hkdf",
  "mc-crypto-keys",
  "mc-oblivious-aes-gcm",
@@ -976,9 +953,9 @@ dependencies = [
  "binascii",
  "curve25519-dalek",
  "digest",
+ "displaydoc",
  "ed25519",
  "ed25519-dalek",
- "failure",
  "hex_fmt",
  "mc-crypto-digestible",
  "mc-crypto-digestible-signature",
@@ -1001,7 +978,7 @@ dependencies = [
  "aead",
  "aes-gcm",
  "digest",
- "failure",
+ "displaydoc",
  "generic-array",
  "hkdf",
  "mc-crypto-keys",
@@ -1204,7 +1181,7 @@ name = "mc-util-build-script"
 version = "1.1.0"
 dependencies = [
  "cargo-emit",
- "failure",
+ "displaydoc",
  "lazy_static",
  "url",
  "walkdir",

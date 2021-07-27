@@ -32,7 +32,7 @@ mc-util-serial = { path = "../mobilecoin/util/serial" }
 mc-util-uri = { path = "../mobilecoin/util/uri" }
 mc-api = { path = "../mobilecoin/api" }
 
-aes-gcm = { version = "0.6", default-features = false }
+aes-gcm = { version = "0.9.2", default-features = false }
 anyhow = "1.0"
 displaydoc = { version = "0.2", default-features = false }
 jni = { version = "0.16.0", default-features = false }

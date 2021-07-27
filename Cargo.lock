@@ -25,22 +25,23 @@ checksum = "5d2e7343e7fc9de883d1b0341e0b13970f764c14101234857d2ddafa1cb1cac2"
 
 [[package]]
 name = "aead"
-version = "0.3.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fc95d1bdb8e6666b2b217308eeeb09f2d6728d104be3e31916cc74d15420331"
+checksum = "922b33332f54fc0ad13fa3e514601e8d30fb54e1f3eadc36643f6526db645621"
 dependencies = [
  "generic-array",
 ]
 
 [[package]]
 name = "aes"
-version = "0.4.0"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7001367fde4c768a19d1029f0a8be5abd9308e1119846d5bd9ad26297b8faf5"
+checksum = "495ee669413bfbe9e8cace80f4d3d78e6d8c8d99579f97fb93bde351b185f2d4"
 dependencies = [
- "aes-soft",
- "aesni",
- "block-cipher",
+ "cfg-if 1.0.0",
+ "cipher",
+ "cpufeatures",
+ "opaque-debug 0.3.0",
 ]
 
 [[package]]
@@ -51,18 +52,20 @@ checksum = "92e60aeefd2a0243bd53a42e92444e039f67c3d7f0382c9813577696e7c10bf3"
 dependencies = [
  "aes-soft",
  "aesni",
- "ctr",
+ "ctr 0.4.0",
  "stream-cipher",
 ]
 
 [[package]]
 name = "aes-gcm"
-version = "0.6.0"
-source = "git+https://github.com/mobilecoinofficial/AEADs?rev=d1a8517d3dd867ed9c5794002add67992a42f6aa#d1a8517d3dd867ed9c5794002add67992a42f6aa"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc3be92e19a7ef47457b8e6f90707e12b6ac5d20c6f3866584fa3be0787d839f"
 dependencies = [
  "aead",
  "aes",
- "block-cipher",
+ "cipher",
+ "ctr 0.7.0",
  "ghash",
  "subtle",
 ]
@@ -552,6 +555,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cipher"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ee52072ec15386f770805afd189a01c8841be8696bed250fa2f13c4c0d6dfb7"
+dependencies = [
+ "generic-array",
+]
+
+[[package]]
 name = "clang-sys"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -648,9 +660,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpuid-bool"
-version = "0.1.2"
-source = "git+https://github.com/eranrund/RustCrypto-utils?rev=74f8e04e9d18d93fc6d05c72756c236dc88daa19#74f8e04e9d18d93fc6d05c72756c236dc88daa19"
+name = "cpufeatures"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66c99696f6c9dd7f35d486b9d04d7e6e202aa3e8c40d553f2fdf5e7e0c6a71ef"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "crc"
@@ -838,6 +854,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3592740fd55aaf61dd72df96756bd0d11e6037b89dcf30ae2e1895b267692be"
 dependencies = [
  "stream-cipher",
+]
+
+[[package]]
+name = "ctr"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a232f92a03f37dd7d7dd2adc67166c77e9cd88de5b019b9a9eecfaeaf7bfd481"
+dependencies = [
+ "cipher",
 ]
 
 [[package]]
@@ -2181,10 +2206,11 @@ dependencies = [
 
 [[package]]
 name = "ghash"
-version = "0.3.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6e27f0689a6e15944bdce7e45425efb87eaa8ab0c6e87f11d0987a9133e2531"
+checksum = "7bbd60caa311237d508927dbba7594b483db3ef05faa55172fcf89b1bcda7853"
 dependencies = [
+ "opaque-debug 0.3.0",
  "polyval",
 ]
 
@@ -2587,9 +2613,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.80"
+version = "0.2.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d58d1b70b004888f764dfbf6a26a3b0342a1632d33968e4a179d8011c760614"
+checksum = "320cfe77175da3a483efed4bc0adc1968ca050b098ce4f2f1c13a56626128790"
 
 [[package]]
 name = "libloading"
@@ -2899,7 +2925,6 @@ dependencies = [
  "chrono",
  "digest",
  "displaydoc",
- "failure",
  "hex 0.4.2",
  "hex_fmt",
  "lazy_static",
@@ -2938,7 +2963,7 @@ name = "mc-attest-net"
 version = "1.1.0"
 dependencies = [
  "cfg-if 0.1.10",
- "failure",
+ "displaydoc",
  "mbedtls",
  "mc-attest-core",
  "mc-common",
@@ -2955,7 +2980,7 @@ dependencies = [
 name = "mc-attest-trusted"
 version = "1.1.0"
 dependencies = [
- "failure",
+ "displaydoc",
  "mc-attest-core",
  "mc-sgx-compat",
  "mc-sgx-types",
@@ -2979,7 +3004,7 @@ dependencies = [
  "binascii",
  "cfg-if 0.1.10",
  "chrono",
- "failure",
+ "displaydoc",
  "hashbrown",
  "hex_fmt",
  "hostname 0.1.5",
@@ -3074,7 +3099,7 @@ dependencies = [
 name = "mc-consensus-enclave-api"
 version = "1.1.0"
 dependencies = [
- "failure",
+ "displaydoc",
  "mc-attest-ake",
  "mc-attest-core",
  "mc-attest-enclave-api",
@@ -3194,24 +3219,14 @@ dependencies = [
 name = "mc-crypto-box"
 version = "1.1.0"
 dependencies = [
- "aes-gcm",
+ "aead",
  "blake2",
  "digest",
- "failure",
+ "displaydoc",
  "hkdf",
- "mc-crypto-ct-aead",
  "mc-crypto-keys",
+ "mc-oblivious-aes-gcm",
  "rand_core 0.6.2",
-]
-
-[[package]]
-name = "mc-crypto-ct-aead"
-version = "1.1.0"
-dependencies = [
- "aead",
- "aes-gcm",
- "block-cipher",
- "subtle",
 ]
 
 [[package]]
@@ -3261,9 +3276,9 @@ dependencies = [
  "binascii",
  "curve25519-dalek",
  "digest",
+ "displaydoc",
  "ed25519",
  "ed25519-dalek",
- "failure",
  "hex_fmt",
  "mc-crypto-digestible",
  "mc-crypto-digestible-signature",
@@ -3284,7 +3299,7 @@ name = "mc-crypto-message-cipher"
 version = "1.1.0"
 dependencies = [
  "aes-gcm",
- "failure",
+ "displaydoc",
  "generic-array",
  "mc-util-serial",
  "rand_core 0.6.2",
@@ -3299,7 +3314,7 @@ dependencies = [
  "aead",
  "aes-gcm",
  "digest",
- "failure",
+ "displaydoc",
  "generic-array",
  "hkdf",
  "mc-crypto-keys",
@@ -3504,7 +3519,7 @@ name = "mc-ledger-sync"
 version = "1.1.0"
 dependencies = [
  "crossbeam-channel 0.5.0",
- "failure",
+ "displaydoc",
  "grpcio",
  "mc-account-keys",
  "mc-api",
@@ -3535,7 +3550,6 @@ dependencies = [
  "blake2",
  "crossbeam-channel 0.5.0",
  "displaydoc",
- "failure",
  "grpcio",
  "hex_fmt",
  "libz-sys",
@@ -3594,6 +3608,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mc-oblivious-aes-gcm"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "126762b52a0017e74dd490b13fe04a53c1d5e51e66ca1762fa344118696d5357"
+dependencies = [
+ "aead",
+ "aes",
+ "cipher",
+ "ctr 0.7.0",
+ "ghash",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "mc-oblivious-map"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3635,8 +3664,8 @@ name = "mc-peers"
 version = "1.1.0"
 dependencies = [
  "crossbeam-channel 0.5.0",
+ "displaydoc",
  "ed25519",
- "failure",
  "grpcio",
  "mc-attest-api",
  "mc-attest-core",
@@ -3807,7 +3836,7 @@ version = "1.1.0"
 dependencies = [
  "blake2",
  "curve25519-dalek",
- "failure",
+ "displaydoc",
  "mc-account-keys",
  "mc-crypto-keys",
  "mc-fog-report-validation",
@@ -3853,7 +3882,7 @@ name = "mc-util-build-script"
 version = "1.1.0"
 dependencies = [
  "cargo-emit",
- "failure",
+ "displaydoc",
  "lazy_static",
  "url",
  "walkdir",
@@ -4490,11 +4519,13 @@ dependencies = [
 
 [[package]]
 name = "polyval"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9a50142b55ab3ed0e9f68dfb3709f1d90d29da24e91033f28b96330643107dc"
+checksum = "e597450cbf209787f0e6de80bf3795c6b2356a380ee87837b545aded8dbc1823"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
+ "cpufeatures",
+ "opaque-debug 0.3.0",
  "universal-hash",
 ]
 
@@ -5233,13 +5264,13 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "sha2"
-version = "0.9.3"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa827a14b29ab7f44778d14a88d3cb76e949c45083f7dbfa507d0cb699dc12de"
+checksum = "b362ae5752fd2137731f9fa25fd4d9058af34666ca1966fb969119cc35719f12"
 dependencies = [
  "block-buffer",
  "cfg-if 1.0.0",
- "cpuid-bool",
+ "cpufeatures",
  "digest",
  "opaque-debug 0.3.0",
 ]

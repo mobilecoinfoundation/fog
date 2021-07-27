@@ -178,7 +178,7 @@ commands:
             popd
 
             # Clean dependencies not in the Cargo.lock
-            time cargo trim --orphan-clean
+            time cargo trim --orphan
 
             # Make sure all dependencies are downloaded, since there appears to be
             # a bug where cargo trim erroneously removes certain git repos.

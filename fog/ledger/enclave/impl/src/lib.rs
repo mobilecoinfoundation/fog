@@ -273,46 +273,6 @@ mod tests {
             keyimagestore.add_record(key_image3, rec3.block_index, rec3.timestamp);
 
         assert!(v_result3.is_ok() && !v_result3.is_err());
-        //query the ledger oram for the record using the key_image
-        let v2 = keyimagestore.find_record(key_image2);
-
-        //query the ledger oram for the record using the key_image
-        let v3 = keyimagestore.find_record(key_image3);
-
-        // this test should pass since we added this rec into the oram
-        assert_eq!(rec2.block_index, v2.spent_at);
-        assert_eq!(rec2.timestamp, v2.timestamp);
-        assert_eq!(
-            v2.key_image_result_code,
-            fog_types::ledger::KeyImageResultCode::Spent as u32
-        );
-
-        // this test should pass since we did not add this rec into the oram
-        assert_ne!(not_found_rec.block_index, v2.spent_at);
-        assert_ne!(not_found_rec.timestamp, v2.timestamp);
-
-        // this test should pass since we added this rec into the oram
-        assert_eq!(rec3.block_index, v3.spent_at);
-        assert_eq!(rec3.timestamp, v3.timestamp);
-        assert_eq!(
-            v3.key_image_result_code,
-            fog_types::ledger::KeyImageResultCode::Spent as u32
-        );
-
-        // this test should pass since we did not add this rec into the oram
-        assert_ne!(not_found_rec.block_index, v3.spent_at);
-        assert_ne!(not_found_rec.timestamp, v3.timestamp);
-
-        let key_image4 = &KeyImage::from(2); // create key image that is not added to oram
-
-        //query the ledger oram for the record using the key_image not added to oram
-        let v4 = keyimagestore.find_record(key_image4);
-
-        assert_eq!(
-            v4.key_image_result_code,
-            fog_types::ledger::KeyImageResultCode::KeyImageError as u32
-        );
-
         //we can add the record even if the key image is all zero bytes
         let rec3 = KeyImageData {
             key_image: KeyImage::from(0),

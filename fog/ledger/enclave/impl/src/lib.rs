@@ -194,7 +194,9 @@ where
 mod tests {
     use super::*;
     use fog_ledger_enclave_api::{messages::KeyImageData, AddRecordsError};
+    use key_image_store::KeyImageStore;
     use mc_common::logger::create_root_logger;
+    use mc_oblivious_traits::HeapORAMStorageCreator;
     use mc_transaction_core::ring_signature::KeyImage;
     // Test that we were able to add key image record to the oram
     #[test]
@@ -202,11 +204,116 @@ mod tests {
         let desired_capacity: u64 = 1024 * 1024;
         let logger = create_root_logger();
         // create a new keyimagestore
-        let mut keyimagestore = key_image_store::KeyImageStore::<
-            mc_oblivious_traits::HeapORAMStorageCreator,
-        >::new(desired_capacity, logger);
+        let mut keyimagestore =
+            KeyImageStore::<HeapORAMStorageCreator>::new(desired_capacity, logger);
 
-        //we should get back "invalid key" error
+        // create test KeyImageData records to store sample block_index and timestamp
+        // records to be added to oram
+        let rec = KeyImageData {
+            key_image: KeyImage::from(2),
+            block_index: 15968249514437158236,
+            timestamp: 14715610560481527175,
+        };
+
+        let rec2 = KeyImageData {
+            key_image: KeyImage::from(2),
+            block_index: 15867249514237159136,
+            timestamp: 14315610570481526166,
+        };
+
+        let rec3 = KeyImageData {
+            key_image: KeyImage::from(2),
+            block_index: 14978249314436157236,
+            timestamp: 14613610561491525175,
+        };
+
+        // record not added to oram
+        let not_found_rec = KeyImageData {
+            key_image: KeyImage::from(2),
+            block_index: 16967239515437158243,
+            timestamp: 13714610510481517185,
+        };
+
+        let key_image = &KeyImage::from(2); // create key image
+
+        // add test KeyImageData record to ledger oram
+        let v_result1: core::result::Result<_, AddRecordsError> =
+            keyimagestore.add_record(key_image, rec.block_index, rec.timestamp);
+
+        assert!(v_result1.is_ok() && !v_result1.is_err());
+        //create temp variables to store KeyImageData which we will use as key to query
+        // ledger oram with find_record
+
+        //query the ledger oram for the record using the key_image
+        let v = keyimagestore.find_record(key_image);
+
+        // this test should pass since we added this rec into the oram
+        assert_eq!(rec.block_index, v.spent_at);
+        assert_eq!(rec.timestamp, v.timestamp);
+        assert_eq!(
+            v.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::Spent as u32
+        );
+
+        // this test should pass since we did not add this rec into the oram
+        assert_ne!(not_found_rec.block_index, v.spent_at);
+        assert_ne!(not_found_rec.timestamp, v.timestamp);
+
+        let key_image2 = &KeyImage::from(2); // create key image
+
+        // add test KeyImageData record to ledger oram
+        let v_result2: core::result::Result<_, AddRecordsError> =
+            keyimagestore.add_record(key_image2, rec2.block_index, rec2.timestamp);
+
+        assert!(v_result2.is_ok() && !v_result2.is_err());
+
+        let key_image3 = &KeyImage::from(2); // create key image
+                                             // add test KeyImageData record to ledger oram
+        let v_result3: core::result::Result<_, AddRecordsError> =
+            keyimagestore.add_record(key_image3, rec3.block_index, rec3.timestamp);
+
+        assert!(v_result3.is_ok() && !v_result3.is_err());
+        //query the ledger oram for the record using the key_image
+        let v2 = keyimagestore.find_record(key_image2);
+
+        //query the ledger oram for the record using the key_image
+        let v3 = keyimagestore.find_record(key_image3);
+
+        // this test should pass since we added this rec into the oram
+        assert_eq!(rec2.block_index, v2.spent_at);
+        assert_eq!(rec2.timestamp, v2.timestamp);
+        assert_eq!(
+            v2.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::Spent as u32
+        );
+
+        // this test should pass since we did not add this rec into the oram
+        assert_ne!(not_found_rec.block_index, v2.spent_at);
+        assert_ne!(not_found_rec.timestamp, v2.timestamp);
+
+        // this test should pass since we added this rec into the oram
+        assert_eq!(rec3.block_index, v3.spent_at);
+        assert_eq!(rec3.timestamp, v3.timestamp);
+        assert_eq!(
+            v3.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::Spent as u32
+        );
+
+        // this test should pass since we did not add this rec into the oram
+        assert_ne!(not_found_rec.block_index, v3.spent_at);
+        assert_ne!(not_found_rec.timestamp, v3.timestamp);
+
+        let key_image4 = &KeyImage::from(2); // create key image that is not added to oram
+
+        //query the ledger oram for the record using the key_image not added to oram
+        let v4 = keyimagestore.find_record(key_image4);
+
+        assert_eq!(
+            v4.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::KeyImageError as u32
+        );
+
+        //we can add the record even if the key image is all zero bytes
         let rec3 = KeyImageData {
             key_image: KeyImage::from(0),
             block_index: 14978249314436157236,
@@ -214,12 +321,7 @@ mod tests {
         };
 
         let v_result: core::result::Result<_, AddRecordsError> =
-            key_image_store::KeyImageStore::add_record(
-                &mut keyimagestore,
-                &rec3.key_image,
-                rec3.block_index,
-                rec3.timestamp,
-            );
+            keyimagestore.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
         // we should not get back "invalid key" error
         assert!(!v_result.is_err() && v_result.is_ok());

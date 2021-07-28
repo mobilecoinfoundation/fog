@@ -344,7 +344,6 @@ fn fog_ledger_key_images_test(logger: Logger) {
             }
         }
 
-        assert_eq!(response.num_blocks, num_blocks, "Maybe try adding a delay? Or an API to tell when fog ledger is fully initialized and has processed the database");
         // FIXME assert_eq!(response.num_txos, ...);
         assert_eq!(response.results[0].key_image, keys[0]);
         assert_eq!(response.results[0].status(), Ok(Some(1)));

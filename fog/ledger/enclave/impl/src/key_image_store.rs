@@ -109,7 +109,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
                 self.omap.capacity(),
             ));
         } else if omap_result_code == OMAP_FOUND {
-            log::debug!(self.logger, "An omap key was found");
+            log::debug!(self.logger, "A key image record was clobbered");
         } else if omap_result_code != OMAP_NOT_FOUND {
             panic!(
                 "omap_result_code had an unexpected value: {}",

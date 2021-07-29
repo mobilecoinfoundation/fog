@@ -9,7 +9,7 @@ use crate::{
     ingest_peer_service::IngestPeerService,
     ingest_service::IngestService,
     state_file::StateFile,
-    worker::{IngestWorker, PeerCheckupWorker},
+    worker::{IngestWorker, PeerCheckupWorker, ReportCacheWorker},
     SeqDisplay,
 };
 use fog_api::{
@@ -113,6 +113,7 @@ pub struct IngestServer<
     peer_server: Option<grpcio::Server>,
     ingest_worker: Option<IngestWorker>,
     peer_checkup_worker: Option<PeerCheckupWorker>,
+    report_cache_worker: Option<ReportCacheWorker>,
     logger: Logger,
 }
 
@@ -168,6 +169,7 @@ where
             peer_server: None,
             ingest_worker: None,
             peer_checkup_worker: None,
+            report_cache_worker: None,
             logger,
         }
     }
@@ -184,11 +186,14 @@ where
 
     /// Helper which gathers errors when starting server
     fn start_helper(&mut self) -> Result<(), IngestServiceError> {
+        // Ensure that the report cache is updated successfully before anything else
+        // happens
         self.controller.update_enclave_report_cache()?;
         self.start_ingest_rpc_server()?;
         self.start_peer_rpc_server()?;
         self.start_ingest_worker()?;
         self.start_peer_checkup_worker()?;
+        self.start_report_cache_worker()?;
         Ok(())
     }
 
@@ -323,6 +328,17 @@ where
         Ok(())
     }
 
+    /// Start the report cache worker thread
+    fn start_report_cache_worker(&mut self) -> Result<(), IngestServiceError> {
+        assert!(self.report_cache_worker.is_none());
+        log::info!(self.logger, "Starting report cache worker");
+        self.report_cache_worker = Some(ReportCacheWorker::new(
+            self.controller.clone(),
+            self.logger.clone(),
+        ));
+        Ok(())
+    }
+
     /// Stop the servers and threads
     /// They cannot be restarted, so this should normally be done only just
     /// before tearing down the whole server.
@@ -331,6 +347,8 @@ where
         self.ingest_worker = None;
         // This blocks on teardown of peer checkup worker
         self.peer_checkup_worker = None;
+        // This blocks on teardown of report cache worker
+        self.report_cache_worker = None;
         if let Some(mut server) = self.peer_server.take() {
             block_on(server.shutdown()).expect("Could not stop peer grpc server");
         }

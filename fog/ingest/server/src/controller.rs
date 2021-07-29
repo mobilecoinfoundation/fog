@@ -259,7 +259,7 @@ where
     pub fn new_keys(&self) -> Result<IngestSummary, Error> {
         let mut state = self.get_state();
         self.new_keys_inner(&mut state)?;
-        Ok(self.get_ingest_summary())
+        Ok(self.get_ingest_summary_inner(&mut state))
     }
 
     // Does work of new_keys but takes MutexGuard for controller_state as argument
@@ -803,7 +803,12 @@ where
     /// Attempt to sync ingress keys from a remote server, which may be idle or
     /// active. We can only do this while we are idle.
     pub fn sync_keys_from_remote(&self, remote: &IngestPeerUri) -> Result<IngestSummary, Error> {
-        if !self.get_state().is_idle() {
+        // A valid report cache is required to initiate an outgoing attested connection.
+        self.update_enclave_report_cache()?;
+
+        // Lock the state for the duration of this call
+        let mut state = self.get_state();
+        if !state.is_idle() {
             return Err(Error::ServerNotIdle);
         }
 
@@ -824,12 +829,17 @@ where
         let (pubkey, _) = self.enclave.set_ingress_private_key(msg.into())?;
         log::info!(self.logger, "Key successfully set in enclave: {}", pubkey);
 
+        *self.last_sealed_key.lock().unwrap() = None;
+        self.write_state_file_inner(&mut state);
+        let result = self.get_ingest_summary_inner(&mut state);
+
+        // Don't hold the state mutex while we are talking to IAS
+        drop(state);
+
         // Update our report cache since we changed the private key
         self.update_enclave_report_cache()?;
 
-        *self.last_sealed_key.lock().unwrap() = None;
-        self.write_state_file();
-        Ok(self.get_ingest_summary())
+        Ok(result)
     }
 
     /// Set the pubkey expiry window

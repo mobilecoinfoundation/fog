@@ -197,15 +197,6 @@ where
         Ok(())
     }
 
-    /// Attest to another ingest node and store the private key from its enclave
-    /// in our enclave This is called directly by some tests
-    pub fn sync_keys_from_remote(
-        &mut self,
-        remote_peer_uri: &IngestPeerUri,
-    ) -> Result<IngestSummary, IngestServiceError> {
-        self.controller.sync_keys_from_remote(remote_peer_uri)
-    }
-
     /// Start the ingest rpc server
     fn start_ingest_rpc_server(&mut self) -> Result<(), IngestServiceError> {
         log::info!(self.logger, "Starting RPC server.");
@@ -378,6 +369,16 @@ where
     /// This is used in tests when it would be simpler than making an RPC client
     pub fn retire(&self) -> Result<IngestSummary, IngestServiceError> {
         self.controller.retire()
+    }
+
+    /// Attest to another ingest node and store the private key from its enclave
+    /// in our enclave
+    /// This is used in tests when it would be simpler than making an RPC client
+    pub fn sync_keys_from_remote(
+        &mut self,
+        remote_peer_uri: &IngestPeerUri,
+    ) -> Result<IngestSummary, IngestServiceError> {
+        self.controller.sync_keys_from_remote(remote_peer_uri)
     }
 }
 

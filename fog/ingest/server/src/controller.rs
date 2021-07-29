@@ -6,19 +6,18 @@ use crate::{
     connection_traits::IngestConnection,
     controller_state::{IngestControllerState, StateChangeError},
     counters,
-    error::{
-        IngestServiceError as Error, PeerBackupError, ReportParseError, RestoreStateError,
-        SetPeersError,
-    },
+    error::{IngestServiceError as Error, PeerBackupError, RestoreStateError, SetPeersError},
     server::IngestServerConfig,
     SeqDisplay,
 };
-use fog_api::ingest_common::{IngestControllerMode, IngestStateFile, IngestSummary};
+use fog_api::{
+    extra::try_extract_unvalidated_ingress_pubkey_from_fog_report,
+    ingest_common::{IngestControllerMode, IngestStateFile, IngestSummary},
+};
 use fog_ingest_enclave::{Error as EnclaveError, IngestEnclave, IngestSgxEnclave};
 use fog_recovery_db_iface::{IngressPublicKeyStatus, RecoveryDb, ReportData, ReportDb};
 use fog_types::{common::BlockRange, ingest::TxsForIngest};
 use fog_uri::IngestPeerUri;
-use mc_attest_core::{VerificationReport, VerificationReportData};
 use mc_attest_enclave_api::{EnclaveMessage, PeerAuthRequest, PeerAuthResponse, PeerSession};
 use mc_attest_net::RaClient;
 use mc_common::{
@@ -29,7 +28,6 @@ use mc_connection::Connection;
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_sgx_report_cache_api::ReportableEnclave;
 use mc_sgx_report_cache_untrusted::{Error as ReportCacheError, ReportCache};
-use mc_sgx_types::sgx_report_data_t;
 use mc_transaction_core::{Block, BlockContents, BlockIndex};
 use mc_util_uri::ConnectionUri;
 use std::{
@@ -278,7 +276,7 @@ where
         *self.last_sealed_key.lock().unwrap() = None;
         self.write_state_file_inner(state);
 
-        // Update report cache
+        // Update report cache (since ingress key changed)
         if let Err(err) = self.update_enclave_report_cache() {
             log::error!(
                 self.logger,
@@ -1086,7 +1084,7 @@ where
             let report = self.enclave.get_ias_report()?;
             // Check that key in report data matches ingress_public_key.
             // If not, then there is some kind of race.
-            let found_key = try_extract_ingress_pubkey_from_report(&report)?;
+            let found_key = try_extract_unvalidated_ingress_pubkey_from_fog_report(&report)?;
             if &found_key == ingress_public_key {
                 report
             } else {
@@ -1094,7 +1092,7 @@ where
                 self.update_enclave_report_cache()?;
 
                 let report = self.enclave.get_ias_report()?;
-                let found_key = try_extract_ingress_pubkey_from_report(&report)?;
+                let found_key = try_extract_unvalidated_ingress_pubkey_from_fog_report(&report)?;
                 if &found_key == ingress_public_key {
                     report
                 } else {
@@ -1402,20 +1400,4 @@ where
 
         Ok(())
     }
-}
-
-// Helper function which extracts ingress pubkey bytes from (our own) report, to
-// double check
-fn try_extract_ingress_pubkey_from_report(
-    report: &VerificationReport,
-) -> Result<CompressedRistrettoPublic, ReportParseError> {
-    let verification_report_data = VerificationReportData::try_from(report)?;
-    // This extracts the user-data attached to the report, which is a thin wrapper
-    // around [u8; 64]
-    let report_data = verification_report_data.quote.report_body()?.report_data();
-    // Unwrap the wrapper
-    let report_data = sgx_report_data_t::from(report_data);
-    // The second half of this is the data we care about, per the fog-ingest-enclave
-    // identity implementation. These 32 bytes should be Ristretto.
-    Ok(CompressedRistrettoPublic::try_from(&report_data.d[32..64])?)
 }

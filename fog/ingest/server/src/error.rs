@@ -5,19 +5,18 @@
 use crate::connection_error::Error as ConnectionError;
 
 use displaydoc::Display;
+use fog_api::extra::ReportParseError;
 use fog_ingest_enclave::Error as EnclaveError;
 use fog_recovery_db_iface::RecoveryDbError;
 use fog_sql_recovery_db::Error as SqlRecoveryDbError;
 use fog_uri::IngestPeerUri;
 use grpcio::Error as GrpcError;
 use mc_api::ConversionError;
-use mc_attest_core::VerifyError;
 use mc_common::ResponderId;
-use mc_crypto_keys::{CompressedRistrettoPublic, KeyError};
+use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_ledger_db::Error as LedgerDbError;
 use mc_sgx_report_cache_api::Error as ReportableEnclaveError;
 use mc_sgx_report_cache_untrusted::Error as ReportCacheError;
-use mc_util_encodings::Error as EncodingError;
 use mc_util_uri::{UriConversionError, UriParseError};
 use std::collections::BTreeMap;
 
@@ -134,35 +133,6 @@ impl From<GrpcError> for IngestServiceError {
 impl From<ReportParseError> for IngestServiceError {
     fn from(src: ReportParseError) -> Self {
         Self::ReportParse(src)
-    }
-}
-
-/// An error which occurs when parsing an AVR
-#[derive(Debug, Display)]
-pub enum ReportParseError {
-    /// Verification error: {0}
-    Verify(VerifyError),
-    /// Encoding error: {0}
-    Encoding(EncodingError),
-    /// KeyError: {0}
-    Key(KeyError),
-}
-
-impl From<VerifyError> for ReportParseError {
-    fn from(src: VerifyError) -> Self {
-        Self::Verify(src)
-    }
-}
-
-impl From<EncodingError> for ReportParseError {
-    fn from(src: EncodingError) -> Self {
-        Self::Encoding(src)
-    }
-}
-
-impl From<KeyError> for ReportParseError {
-    fn from(src: KeyError) -> Self {
-        Self::Key(src)
     }
 }
 

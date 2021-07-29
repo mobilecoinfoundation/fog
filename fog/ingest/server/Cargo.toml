@@ -40,9 +40,7 @@ mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys", default-features = 
 mc-ledger-db = { path = "../../../mobilecoin/ledger/db" }
 mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
 mc-sgx-report-cache-untrusted = { path = "../../../mobilecoin/sgx/report-cache/untrusted" }
-mc-sgx-types = { path = "../../../mobilecoin/sgx/types" }
 mc-transaction-core = { path = "../../../mobilecoin/transaction/core" }
-mc-util-encodings = { path = "../../../mobilecoin/util/encodings" }
 mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
 mc-util-metrics = { path = "../../../mobilecoin/util/metrics" }
 mc-util-serial = { path = "../../../mobilecoin/util/serial" }

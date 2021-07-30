@@ -5,7 +5,7 @@
 use crate::connection_error::Error as ConnectionError;
 
 use displaydoc::Display;
-use fog_api::extra::ReportParseError;
+use fog_api::report_parse::ReportParseError;
 use fog_ingest_enclave::Error as EnclaveError;
 use fog_recovery_db_iface::RecoveryDbError;
 use fog_sql_recovery_db::Error as SqlRecoveryDbError;

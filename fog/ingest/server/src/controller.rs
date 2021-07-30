@@ -11,8 +11,8 @@ use crate::{
     SeqDisplay,
 };
 use fog_api::{
-    extra::try_extract_unvalidated_ingress_pubkey_from_fog_report,
     ingest_common::{IngestControllerMode, IngestStateFile, IngestSummary},
+    report_parse::try_extract_unvalidated_ingress_pubkey_from_fog_report,
 };
 use fog_ingest_enclave::{Error as EnclaveError, IngestEnclave, IngestSgxEnclave};
 use fog_recovery_db_iface::{IngressPublicKeyStatus, RecoveryDb, ReportData, ReportDb};

@@ -54,7 +54,7 @@ pub enum IngestServiceError {
     Io(std::io::Error),
     /// GRPC Error: {0}
     Grpc(GrpcError),
-    /// Error parsing Attestation Verification Report: {0}
+    /// Report Parse: {0}
     ReportParse(ReportParseError),
 }
 

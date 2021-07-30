@@ -298,14 +298,13 @@ pub struct ReportCacheWorker {
 }
 
 impl ReportCacheWorker {
-    /// Create a new PeerCheckupWorker thread
+    /// Create a new ReportCacheWorker thread
     ///
     /// Arguments:
     /// * Controller for this ingest server
-    /// * Period determining how often to checkup on a peer
     /// * Logger to send log messages to
     ///
-    /// Returns a freshly started PeerCheckupWorker thread handle
+    /// Returns a freshly started ReportCacheWorker thread handle
     pub fn new<
         R: RaClient + Send + Sync + 'static,
         DB: RecoveryDb + ReportDb + Clone + Send + Sync + 'static,

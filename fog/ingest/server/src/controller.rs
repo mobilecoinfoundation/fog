@@ -236,6 +236,10 @@ where
             drop(state);
 
             // Refresh report cache
+            log::debug!(
+                self.logger,
+                "Refreshing enclave report cache after private key change"
+            );
             if let Err(err) = self.update_enclave_report_cache() {
                 log::error!(
                     self.logger,
@@ -277,6 +281,10 @@ where
         self.write_state_file_inner(state);
 
         // Update report cache (since ingress key changed)
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache after new private key"
+        );
         if let Err(err) = self.update_enclave_report_cache() {
             log::error!(
                 self.logger,
@@ -612,6 +620,7 @@ where
 
         // A valid report cache is required to initiate an outgoing attested connection.
         // Activating doesn't happen very often so this should be okay.
+        log::debug!(self.logger, "Refreshing enclave report cache on activate");
         self.update_enclave_report_cache()?;
 
         let peers = state.get_peers();
@@ -802,6 +811,10 @@ where
     /// active. We can only do this while we are idle.
     pub fn sync_keys_from_remote(&self, remote: &IngestPeerUri) -> Result<IngestSummary, Error> {
         // A valid report cache is required to initiate an outgoing attested connection.
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache before attesting to remote"
+        );
         self.update_enclave_report_cache()?;
 
         // Lock the state for the duration of this call
@@ -835,6 +848,10 @@ where
         drop(state);
 
         // Update our report cache since we changed the private key
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache after remote private key fetch"
+        );
         self.update_enclave_report_cache()?;
 
         Ok(result)
@@ -1089,6 +1106,10 @@ where
                 report
             } else {
                 // Hmm, let's try refreshing the enclave cache
+                log::debug!(
+                    self.logger,
+                    "Refreshing enclave report cache after mismatch detected"
+                );
                 self.update_enclave_report_cache()?;
 
                 let report = self.enclave.get_ias_report()?;
@@ -1098,6 +1119,21 @@ where
                 } else {
                     // This means that the caller is wrong about what the
                     // current ingress public key is, and we don't have anything we can publish.
+                    //
+                    // Note: If we publish a report containing a key that doesn't actually match
+                    // what we are scanning for, that is likely catastrophic -- it's not clear that
+                    // `report_lost_key` will work, because the key we thought we were scanning
+                    // with, and recording in the database that we were scanning
+                    // with, doesn't match what we actually scanned with. And if
+                    // we don't know when that started happening, then it's not
+                    // clear what range of blocks we need to tell the users to download.
+                    //
+                    // So if we can't fix the mismatch, then logging an error, refusing to publish
+                    // report, and trying again later seems like the best
+                    // approach. If this doesn't resolve itself, then eng needs
+                    // to root-cause it, and ops likely should just, assume that this is
+                    // some cache or something getting in a bad state, nuke the server and activate
+                    // a backup that has the right key.
                     log::error!(self.logger, "Report doesn't contain the expected public key even after report refresh: {:?} != {:?}", found_key, ingress_public_key);
                     return Err(Error::PublishReport);
                 }

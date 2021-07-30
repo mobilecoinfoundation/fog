@@ -1,3 +1,5 @@
+// Copyright (c) 2021 The MobileCoin Foundation
+
 use core::convert::TryFrom;
 use displaydoc::Display;
 use mc_attest_core::{VerificationReport, VerificationReportData, VerifyError};

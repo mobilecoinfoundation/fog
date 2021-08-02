@@ -228,13 +228,6 @@ mod tests {
             timestamp: 14613610561491525175,
         };
 
-        // record not added to oram
-        let not_found_rec = KeyImageData {
-            key_image: KeyImage::from(2),
-            block_index: 16967239515437158243,
-            timestamp: 13714610510481517185,
-        };
-
         // add test KeyImageData record to ledger oram
         let v_result1: core::result::Result<_, AddRecordsError> =
             key_image_store.add_record(&rec.key_image, rec.block_index, rec.timestamp);

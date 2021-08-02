@@ -29,7 +29,7 @@ pub enum Error {
     /// An panic occurred on another thread holding a lock
     Poison,
 
-    /// An error when something goes wrong with adding a record :{0}
+    /// Add records: {0}
     AddRecords(AddRecordsError),
 
     /// Enclave not initialized

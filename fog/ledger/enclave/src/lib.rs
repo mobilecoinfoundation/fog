@@ -7,9 +7,8 @@
 extern crate fog_ocall_oram_storage_untrusted;
 
 pub use fog_ledger_enclave_api::{
-    messages::KeyImageData, CheckKeyImagesResponse, EnclaveCall, Error, GetOutputsResponse,
-    KeyImageResult, KeyImageResultCode, LedgerEnclave, LedgerEnclaveProxy, OutputContext,
-    OutputResult, Result,
+    CheckKeyImagesResponse, EnclaveCall, Error, GetOutputsResponse, KeyImageData, KeyImageResult,
+    KeyImageResultCode, LedgerEnclave, LedgerEnclaveProxy, OutputContext, OutputResult, Result,
 };
 
 use fog_ledger_enclave_api::UntrustedKeyImageQueryResponse;

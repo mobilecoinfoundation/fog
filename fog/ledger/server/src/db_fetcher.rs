@@ -5,7 +5,7 @@
 //! blocks and adds them to the enclave.
 use crate::{counters, server::DbPollSharedState};
 use fog_ledger_enclave::LedgerEnclaveProxy;
-use fog_ledger_enclave_api::messages::KeyImageData;
+use fog_ledger_enclave_api::KeyImageData;
 use mc_common::logger::{log, Logger};
 use mc_ledger_db::{self, Error as LedgerError, Ledger};
 use mc_transaction_core::BlockIndex;

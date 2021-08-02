@@ -8,11 +8,10 @@
 extern crate alloc;
 
 mod error;
-pub mod messages;
-use crate::messages::KeyImageData;
+mod messages;
 pub use crate::{
     error::{AddRecordsError, Error},
-    messages::EnclaveCall,
+    messages::{EnclaveCall, KeyImageData},
 };
 use alloc::vec::Vec;
 use core::result::Result as StdResult;

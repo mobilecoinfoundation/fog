@@ -5,7 +5,7 @@
 use fog_ledger_enclave::{
     GetOutputsResponse, LedgerEnclave, OutputContext, Result as EnclaveResult,
 };
-use fog_ledger_enclave_api::{messages::KeyImageData, UntrustedKeyImageQueryResponse};
+use fog_ledger_enclave_api::{KeyImageData, UntrustedKeyImageQueryResponse};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::{HashMap, ResponderId};

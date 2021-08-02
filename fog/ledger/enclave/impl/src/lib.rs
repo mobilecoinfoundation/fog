@@ -244,7 +244,7 @@ mod tests {
         // ledger oram with find_record
 
         //query the ledger oram for the record using the key_image
-        let v = key_image_store.find_record(rec.key_image);
+        let v = key_image_store.find_record(&rec.key_image);
 
         // this test should pass since we added this rec into the oram
         assert_eq!(rec.block_index, v.spent_at);
@@ -256,12 +256,12 @@ mod tests {
 
         // add test KeyImageData record to ledger oram
         let v_result2: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec.key_image2, rec2.block_index, rec2.timestamp);
+            key_image_store.add_record(&rec2.key_image, rec2.block_index, rec2.timestamp);
 
         assert!(v_result2.is_ok() && !v_result2.is_err());
 
         let v_result3: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec.key_image3, rec3.block_index, rec3.timestamp);
+            key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
         assert!(v_result3.is_ok() && !v_result3.is_err());
         //we can add the record even if the key image is all zero bytes
@@ -278,7 +278,7 @@ mod tests {
         assert!(!v_result.is_err());
 
         //query the ledger oram for the record using the key_image not added
-        let v_keyimagenotfound = key_image_store.find_record(KeyImage::from(4));
+        let v_keyimagenotfound = key_image_store.find_record(&KeyImage::from(4));
         assert_eq!(
             v_keyimagenotfound.key_image_result_code,
             fog_types::ledger::KeyImageResultCode::NotSpent as u32

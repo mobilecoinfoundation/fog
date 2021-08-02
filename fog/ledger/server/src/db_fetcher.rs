@@ -6,12 +6,9 @@
 use crate::{counters, server::DbPollSharedState};
 use fog_ledger_enclave::LedgerEnclaveProxy;
 use fog_ledger_enclave_api::messages::KeyImageData;
-use mc_common::{
-    logger::{log, Logger},
-    trace_time,
-};
+use mc_common::logger::{log, Logger};
 use mc_ledger_db::{self, Error as LedgerError, Ledger};
-use mc_transaction_core::{ring_signature::KeyImage, BlockIndex};
+use mc_transaction_core::BlockIndex;
 use mc_watcher::watcher_db::WatcherDB;
 use mc_watcher_api::TimestampResultCode;
 use retry::{delay, retry, OperationResult};
@@ -141,7 +138,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
         }
     }
 
-    /// Attempt to load the next block for each of the ledger db invocations we
+    /// Attempt to load the next block that we
     /// are aware of and tracking.
     /// Returns true if we might have more block data to load.
     fn load_block_data(&mut self) -> bool {
@@ -162,23 +159,19 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             }
             Ok(block_contents) => {
                 // Get the timestamp for the block.
-                let timestamp = Self::get_watcher_timestamp(
+                let mytimestamp = Self::get_watcher_timestamp(
                     self.next_block_index,
                     &self.watcher,
                     watcher_timeout,
                     &self.logger,
                 );
 
-                for key_image in block_contents.key_images {
-                    let mut rec = KeyImageData {
-                        key_image: KeyImage::from(2),
-                        block_index: u64::MAX,
-                        timestamp: u64::MAX,
+                for the_key_image in block_contents.key_images {
+                    let rec = KeyImageData {
+                        key_image: the_key_image,
+                        block_index: self.next_block_index,
+                        timestamp: mytimestamp,
                     };
-
-                    rec.key_image = key_image;
-                    rec.block_index = self.next_block_index;
-                    rec.timestamp = timestamp;
 
                     records.push(rec);
                 }
@@ -197,9 +190,9 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                             e
                         );
                     }
-                    Ok(num_txos) => {
+                    Ok(global_txo_count) => {
                         // keep track of count for ledger enclave untrusted
-                        shared_state.last_known_block_cumulative_txo_count = num_txos;
+                        shared_state.last_known_block_cumulative_txo_count = global_txo_count;
                     }
                 }
                 self.next_block_index += 1;
@@ -267,18 +260,8 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
     fn add_records_to_enclave(&mut self, block_index: u64, records: Vec<KeyImageData>) {
         let num_records = records.len();
 
-        let add_records_result = {
-            trace_time!(
-                self.logger,
-                "Added {} records into the enclave",
-                num_records
-            );
-            let _metrics_timer = counters::ENCLAVE_ADD_RECORDS_TIME.start_timer();
-            self.enclave.add_key_image_data(records)
-        };
-
         let _info = retry(delay::Fixed::from_millis(5000), || {
-            match &add_records_result {
+            match self.enclave.add_key_image_data(records.clone()) {
                 Ok(info) => {
                     // Update metrics
                     counters::BLOCKS_ADDED_COUNT.inc();

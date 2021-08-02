@@ -120,7 +120,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
     }
 
     // return new struct KeyImageResult which contains block index and timestamp of
-    // key image key image as ref to convert key image to 32 bits,
+    // key image as ref to convert key image to 32 bits,
     // call the oram to query to to key image data
     pub fn find_record(&mut self, key_image: &KeyImage) -> KeyImageResult {
         let mut result = KeyImageResult {
@@ -128,7 +128,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
             spent_at: u64::MAX,
             key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: u64::MAX,
-            timestamp_result_code: 1,
+            timestamp_result_code: 1, /* result code 1 is for the mc watcher is found in the
+                                       * protobuf */
         };
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
@@ -141,9 +142,10 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         // So this prevents the OMAP_INVALID_KEY error path.
         key[0] = !key[0];
 
-        let mut value = A8Bytes::<ValueSize>::default(); // value used to save the reuslt of querying
-                                                         //the oram for key image value using key
-                                                         // we want for the spent time stamp to have u64 max if it is not found
+        // value used to save the reuslt of querying
+        //the oram for key image value using key
+        // we want for the spent time stamp to have u64 max if it is not found
+        let mut value = A8Bytes::<ValueSize>::default();
 
         // set the bytes to all ones so  binary corresponds to u64::MAX because we want
         // value to be the same size irrespective if it is found or not

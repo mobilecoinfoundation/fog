@@ -56,7 +56,7 @@ pub struct LedgerServerConfig {
 
     /// The capacity to build the OMAP (ORAM hash table) with.
     /// About 75% of this capacity can be used.
-    /// The hash table will overflow when there are more TxOut's than this,
+    /// The hash table will overflow when there are more Keyimages than this,
     /// and the server will have to be restarted with a larger number.
     ///
     /// Note: At time of writing, the hash table will be allocated to use all

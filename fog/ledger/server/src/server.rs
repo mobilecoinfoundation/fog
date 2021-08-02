@@ -154,11 +154,11 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
             )?);
 
             self.db_fetcher = Some(DbFetcher::new(
-                self.key_image_service.ledger.clone(),
+                self.key_image_service.get_ledger(),
                 self.logger.clone(),
                 self.enclave.clone(),
-                self.key_image_service.watcher.clone(),
-                self.key_image_service.db_poll_shared_state.clone(),
+                self.key_image_service.get_watcher(),
+                self.key_image_service.get_db_poll_shared_state(),
             ));
 
             let env = Arc::new(

@@ -37,6 +37,7 @@ pub enum Error {
 
     /// Prost encode error
     ProstEncode,
+
     /// Prost decode error
     ProstDecode,
 }
@@ -46,12 +47,13 @@ pub enum Error {
 pub enum AddRecordsError {
     /// Key was wrong sizes
     KeyWrongSize,
+
     /// Key was rejected
     KeyRejected,
-    /// Value was too large
-    ValueTooLarge,
+
     /// Value was the wrong size
     ValueWrongSize,
+
     /// Map Overflowed: len = {0}, capacity = {1}
     MapOverflow(u64, u64),
 }

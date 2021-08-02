@@ -32,11 +32,12 @@ pub type Result<T> = StdResult<T, Error>;
 /// client. This is returned by `client_get_outputs` and allows untrusted to
 /// gather data that will be encrypted for the client in `outputs_for_client`.
 ///
-/// Eventually we will do the key image check in ORAM, but for now untrusted
-/// will do the check directly.
+/// Key image check is now in ORAM, replacing untrusted
+/// which was doing the check directly.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct OutputContext {
-    /// A vector for output context
+    /// A vector for output context which is used for get_outputs method
+    /// memberships proofs
     pub indexes: Vec<u64>,
     /// A merkle root block for output context
     pub merkle_root_block: u64,
@@ -48,17 +49,8 @@ pub struct UntrustedKeyImageQueryResponse {
     /// The number of blocks at the time that the request was evaluated.
     pub highest_processed_block_count: u64,
 
-    /// The timestamp of the highest processed block at the time that the
-    /// request was evaluated.
-    pub highest_processed_block_signature_timestamp: u64,
-
-    /// The index of the last known block, which can be obtained by calculating
-    /// last_known_block_count - 1. We don't store the index but instead store a
-    /// count so that we have a way of representing no known block (0).
-    pub last_known_block_count: u64,
-
     /// The cumulative txo count of the last known block.
-    pub last_known_block_cumulative_count: u64,
+    pub last_known_block_cumulative_txo_count: u64,
 }
 
 /// The API for interacting with a ledger node's enclave.

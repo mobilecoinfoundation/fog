@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     Debug,
     Clone,
+    Copy,
     PartialEq,
     PartialOrd,
     core::cmp::Eq,
@@ -23,11 +24,13 @@ use serde::{Deserialize, Serialize};
     Ord,
 )]
 pub struct KeyImageData {
-    /// A key image for key image data
+    /// We use in the ORAM to check key image and add key image
     pub key_image: KeyImage,
-    /// A block index for key image data
+    /// We use in the ORAM to return block index or add block index when check
+    /// key image and add key image data
     pub block_index: u64,
-    /// A timestamp for key image data
+    ///  use in the ORAM to return time stamp or add time stamp when check key
+    /// image and add key image data
     pub timestamp: u64,
 }
 

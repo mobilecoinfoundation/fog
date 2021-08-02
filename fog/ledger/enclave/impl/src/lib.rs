@@ -27,7 +27,7 @@ use mc_common::{
 };
 use mc_crypto_ake_enclave::{AkeEnclaveState, NullIdentity};
 use mc_crypto_keys::X25519Public;
-use mc_oblivious_traits::{HeapORAMStorageCreator, ORAMStorageCreator};
+use mc_oblivious_traits::ORAMStorageCreator;
 use mc_sgx_compat::sync::Mutex;
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
 
@@ -37,7 +37,7 @@ where
     OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>,
 {
     /// The encrypted storage
-    keyimagestore: Mutex<Option<KeyImageStore<OSC>>>,
+    key_image_store: Mutex<Option<KeyImageStore<OSC>>>,
 
     /// The enclave state
     ake: AkeEnclaveState<NullIdentity>,
@@ -54,7 +54,7 @@ where
     /// Constructor function for the ledger enclave
     pub fn new(logger: Logger) -> Self {
         Self {
-            keyimagestore: Mutex::new(None),
+            key_image_store: Mutex::new(None),
             ake: Default::default(),
             logger,
         }
@@ -91,9 +91,8 @@ where
 {
     fn enclave_init(&self, self_id: &ResponderId, desired_capacity: u64) -> Result<()> {
         self.ake.init(Default::default(), self_id.clone())?;
-        let mut lk = self.keyimagestore.lock()?;
+        let mut lk = self.key_image_store.lock()?;
 
-        SgxLedgerEnclave::<HeapORAMStorageCreator>::new(self.logger.clone());
         *lk = Some(KeyImageStore::new(desired_capacity, self.logger.clone()));
         Ok(())
     }
@@ -141,7 +140,7 @@ where
         msg: EnclaveMessage<ClientSession>,
         untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
     ) -> Result<Vec<u8>> {
-        let channel_id = msg.channel_id.clone();
+        let channel_id = msg.channel_id.clone(); //client session does not implement copy trait so clone
         let user_plaintext = self.ake.client_decrypt(msg)?;
 
         let req: fog_types::ledger::CheckKeyImagesRequest = mc_util_serial::decode(&user_plaintext)
@@ -153,17 +152,19 @@ where
         let mut resp = fog_types::ledger::CheckKeyImagesResponse {
             num_blocks: untrusted_keyimagequery_response.highest_processed_block_count,
             results: Default::default(),
-            global_txo_count: untrusted_keyimagequery_response.last_known_block_cumulative_count, /* ledger.num_txos */
+            global_txo_count: untrusted_keyimagequery_response
+                .last_known_block_cumulative_txo_count,
         };
 
         // Do the scope lock of keyimagetore
         {
-            let mut lk = self.keyimagestore.lock()?;
+            let mut lk = self.key_image_store.lock()?;
             let store = lk.as_mut().ok_or(Error::EnclaveNotInitialized)?;
 
             resp.results = req
                 .queries
-                .iter() // Attempt and deserialize the untrusted portion of this request.
+                .iter() // Attempt and deserialize the untrusted check key image query portion of this
+                // request.
                 .map(|key| store.find_record(&key.key_image))
                 .collect();
         }
@@ -177,9 +178,9 @@ where
         Ok(response.data)
     }
 
-    // Add a key image data to the oram sing the key image
+    // Add a key image data to the oram using the key image
     fn add_key_image_data(&self, records: Vec<KeyImageData>) -> Result<()> {
-        let mut lk = self.keyimagestore.lock()?;
+        let mut lk = self.key_image_store.lock()?;
         let store = lk.as_mut().ok_or(Error::EnclaveNotInitialized)?;
         // add test KeyImageData record to ledger oram
         for rec in records {
@@ -204,7 +205,7 @@ mod tests {
         let desired_capacity: u64 = 1024 * 1024;
         let logger = create_root_logger();
         // create a new keyimagestore
-        let mut keyimagestore =
+        let mut key_image_store =
             KeyImageStore::<HeapORAMStorageCreator>::new(desired_capacity, logger);
 
         // create test KeyImageData records to store sample block_index and timestamp
@@ -234,18 +235,16 @@ mod tests {
             timestamp: 13714610510481517185,
         };
 
-        let key_image = &KeyImage::from(2); // create key image
-
         // add test KeyImageData record to ledger oram
         let v_result1: core::result::Result<_, AddRecordsError> =
-            keyimagestore.add_record(key_image, rec.block_index, rec.timestamp);
+            key_image_store.add_record(&rec.key_image, rec.block_index, rec.timestamp);
 
         assert!(v_result1.is_ok() && !v_result1.is_err());
         //create temp variables to store KeyImageData which we will use as key to query
         // ledger oram with find_record
 
         //query the ledger oram for the record using the key_image
-        let v = keyimagestore.find_record(key_image);
+        let v = key_image_store.find_record(rec.key_image);
 
         // this test should pass since we added this rec into the oram
         assert_eq!(rec.block_index, v.spent_at);
@@ -255,22 +254,14 @@ mod tests {
             fog_types::ledger::KeyImageResultCode::Spent as u32
         );
 
-        // this test should pass since we did not add this rec into the oram
-        assert_ne!(not_found_rec.block_index, v.spent_at);
-        assert_ne!(not_found_rec.timestamp, v.timestamp);
-
-        let key_image2 = &KeyImage::from(2); // create key image
-
         // add test KeyImageData record to ledger oram
         let v_result2: core::result::Result<_, AddRecordsError> =
-            keyimagestore.add_record(key_image2, rec2.block_index, rec2.timestamp);
+            key_image_store.add_record(&rec.key_image2, rec2.block_index, rec2.timestamp);
 
         assert!(v_result2.is_ok() && !v_result2.is_err());
 
-        let key_image3 = &KeyImage::from(2); // create key image
-                                             // add test KeyImageData record to ledger oram
         let v_result3: core::result::Result<_, AddRecordsError> =
-            keyimagestore.add_record(key_image3, rec3.block_index, rec3.timestamp);
+            key_image_store.add_record(&rec.key_image3, rec3.block_index, rec3.timestamp);
 
         assert!(v_result3.is_ok() && !v_result3.is_err());
         //we can add the record even if the key image is all zero bytes
@@ -281,9 +272,16 @@ mod tests {
         };
 
         let v_result: core::result::Result<_, AddRecordsError> =
-            keyimagestore.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
+            key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
         // we should not get back "invalid key" error
-        assert!(!v_result.is_err() && v_result.is_ok());
+        assert!(!v_result.is_err());
+
+        //query the ledger oram for the record using the key_image not added
+        let v_keyimagenotfound = key_image_store.find_record(KeyImage::from(4));
+        assert_eq!(
+            v_keyimagenotfound.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::NotSpent as u32
+        );
     }
 }

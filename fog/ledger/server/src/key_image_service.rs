@@ -20,13 +20,13 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct KeyImageService<L: Ledger + Clone, E: LedgerEnclaveProxy> {
-    pub ledger: L,
-    pub watcher: WatcherDB,
+    ledger: L,
+    watcher: WatcherDB,
     enclave: E,
     authenticator: Arc<dyn Authenticator + Send + Sync>,
     logger: Logger,
     /// Shared state from db polling thread.
-    pub db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
+    db_poll_shared_state: Arc<Mutex<DbPollSharedState>>,
 }
 
 impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
@@ -48,6 +48,18 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
         }
     }
 
+    pub fn get_watcher(&mut self) -> WatcherDB {
+        return self.watcher.clone();
+    }
+
+    pub fn get_ledger(&mut self) -> L {
+        return self.ledger.clone();
+    }
+
+    pub fn get_db_poll_shared_state(&mut self) -> Arc<Mutex<DbPollSharedState>> {
+        return self.db_poll_shared_state.clone();
+    }
+
     /// Unwrap and forward to enclave
     // self.enclave.check_key_images should take both an AttestMessage and an
     // UntrustedKeyImageQueryResponse object that contains any data that is
@@ -60,27 +72,17 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
     ) -> Result<attest::Message, RpcStatus> {
         log::trace!(self.logger, "Getting encrypted request");
 
-        let (
-            highest_processed_block_count,
-            highest_processed_block_signature_timestamp,
-            last_known_block_count,
-            last_known_block_cumulative_count,
-        ) = {
+        let (highest_processed_block_count, last_known_block_cumulative_txo_count) = {
             let shared_state = self.db_poll_shared_state.lock().expect("mutex poisoned");
             (
                 shared_state.highest_processed_block_count,
-                shared_state.highest_processed_block_signature_timestamp,
-                shared_state.last_known_block_count,
                 shared_state.last_known_block_cumulative_txo_count,
             )
         };
 
         let untrusted_query_response = UntrustedKeyImageQueryResponse {
-            highest_processed_block_count, // should go up after same as next block index
-            highest_processed_block_signature_timestamp, /* time stamp goes with the next block
-                                            * index */
-            last_known_block_count,
-            last_known_block_cumulative_count,
+            highest_processed_block_count,
+            last_known_block_cumulative_txo_count,
         };
 
         let result_blob = self

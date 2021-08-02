@@ -49,15 +49,15 @@ impl<L: Ledger + Clone, E: LedgerEnclaveProxy> KeyImageService<L, E> {
     }
 
     pub fn get_watcher(&mut self) -> WatcherDB {
-        return self.watcher.clone();
+        self.watcher.clone()
     }
 
     pub fn get_ledger(&mut self) -> L {
-        return self.ledger.clone();
+        self.ledger.clone()
     }
 
     pub fn get_db_poll_shared_state(&mut self) -> Arc<Mutex<DbPollSharedState>> {
-        return self.db_poll_shared_state.clone();
+        self.db_poll_shared_state.clone()
     }
 
     /// Unwrap and forward to enclave

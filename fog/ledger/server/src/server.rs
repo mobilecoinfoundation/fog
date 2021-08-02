@@ -238,12 +238,6 @@ pub struct DbPollSharedState {
     /// available data.
     pub highest_processed_block_count: u64,
 
-    /// A block signature timestamp for the highest processed block
-    pub highest_processed_block_signature_timestamp: u64,
-
-    /// The last block count for which we were able to load data.
-    pub last_known_block_count: u64,
-
     /// The cumulative txo count of the last known block.
     pub last_known_block_cumulative_txo_count: u64,
 }

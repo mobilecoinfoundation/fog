@@ -193,7 +193,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fog_ledger_enclave_api::{messages::KeyImageData, AddRecordsError};
+    use fog_ledger_enclave_api::{AddRecordsError, KeyImageData};
     use key_image_store::KeyImageStore;
     use mc_common::logger::create_root_logger;
     use mc_oblivious_traits::HeapORAMStorageCreator;

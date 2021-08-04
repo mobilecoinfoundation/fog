@@ -35,6 +35,7 @@ use mc_crypto_rand::McRng;
 use mc_fog_report_validation::{FogReportResponses, FogResolver};
 use mc_fog_types::{Report, ReportResponse};
 use mc_transaction_core::{
+    get_tx_out_shared_secret,
     onetime_keys::{create_shared_secret, recover_onetime_private_key},
     ring_signature::KeyImage,
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
@@ -308,6 +309,40 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni(
         };
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
     })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_init_1jni_1with_1secret(
+    env: JNIEnv,
+    obj: JObject,
+    tx_out_shared_secret: JObject,
+    masked_value: jlong,
+) {
+    jni_ffi_call(&env, |env| {
+        let tx_out_shared_secret: MutexGuard<RistrettoPublic> =
+            env.get_rust_field(tx_out_shared_secret, RUST_OBJ_FIELD)?;
+        let value =
+            (masked_value as u64) ^ mc_transaction_core::get_value_mask(&tx_out_shared_secret);
+        let amount: Amount = Amount::new(value, &tx_out_shared_secret)?;
+
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, amount)?)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Amount_get_1bytes(
+    env: JNIEnv,
+    obj: JObject,
+) -> jbyteArray {
+    jni_ffi_call_or(
+        || Ok(JObject::null().into_inner()),
+        &env,
+        |env| {
+            let amount_key: MutexGuard<Amount> = env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+            let bytes = mc_util_serial::encode(&*amount_key);
+            Ok(env.byte_array_from_slice(&bytes)?)
+        },
+    )
 }
 
 #[no_mangle]
@@ -1300,6 +1335,32 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_bigint2string(
         |env| {
             let val = jni_big_int_to_u64(&env, value)?;
             Ok(env.new_string(val.to_string())?.into_inner())
+        },
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_Util_get_1shared_1secret(
+    env: JNIEnv,
+    _obj: JObject,
+    view_private_key: JObject,
+    tx_out_public_key: JObject,
+) -> jlong {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let view_private_key: MutexGuard<RistrettoPrivate> =
+                env.get_rust_field(view_private_key, RUST_OBJ_FIELD)?;
+            let tx_out_public_key: MutexGuard<RistrettoPublic> =
+                env.get_rust_field(tx_out_public_key, RUST_OBJ_FIELD)?;
+
+            let key = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
+
+            let mbox = Box::new(Mutex::new(key));
+            let ptr: *mut Mutex<RistrettoPublic> = Box::into_raw(mbox);
+
+            Ok(ptr as jlong)
         },
     )
 }

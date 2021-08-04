@@ -163,14 +163,22 @@ commands:
 
             # Configure cargo-trim with the project's Cargo.lock files
             mkdir -p ~/.config
-            cargo trim --directory "$(pwd)"
-            cargo trim --directory "$(pwd)/mobilecoin/consensus/enclave/trusted"
-            cargo trim --directory "$(pwd)/fog/ingest/enclave/trusted"
-            cargo trim --directory "$(pwd)/fog/ledger/enclave/trusted"
-            cargo trim --directory "$(pwd)/fog/view/enclave/trusted"
+            cargo trim init
+            pushd "mobilecoin/consensus/enclave/trusted"
+            cargo trim init
+            popd
+            pushd "fog/ingest/enclave/trusted"
+            cargo trim init
+            popd
+            pushd "fog/ledger/enclave/trusted"
+            cargo trim init
+            popd
+            pushd "fog/view/enclave/trusted"
+            cargo trim init
+            popd
 
             # Clean dependencies not in the Cargo.lock
-            time cargo trim --orphan-clean
+            time cargo trim --orphan
 
             # Make sure all dependencies are downloaded, since there appears to be
             # a bug where cargo trim erroneously removes certain git repos.

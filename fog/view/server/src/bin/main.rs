@@ -11,9 +11,6 @@ use mc_util_grpc::AdminServer;
 use std::{env, sync::Arc};
 use structopt::StructOpt;
 
-// FIXME: This should be a config parameter
-const VIEW_OMAP_CAPACITY: u64 = 1024 * 1024;
-
 fn main() {
     mc_common::setup_panic_handler();
     let _sentry_guard = mc_common::sentry::init();
@@ -39,7 +36,7 @@ fn main() {
     let sgx_enclave = SgxViewEnclave::new(
         enclave_path,
         config.client_responder_id.clone(),
-        VIEW_OMAP_CAPACITY,
+        config.omap_capacity,
         logger.clone(),
     );
 
@@ -58,7 +55,7 @@ fn main() {
     let config2 = config.clone();
     let get_config_json = Arc::new(move || {
         serde_json::to_string(&config2)
-            .map_err(|err| RpcStatus::new(RpcStatusCode::INTERNAL, Some(format!("{:?}", err))))
+            .map_err(|err| RpcStatus::with_message(RpcStatusCode::INTERNAL, format!("{:?}", err)))
     });
     let _admin_server = config.admin_listen_uri.as_ref().map(|admin_listen_uri| {
         AdminServer::start(

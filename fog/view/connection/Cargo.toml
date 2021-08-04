@@ -18,4 +18,4 @@ fog-types = { path = "../../fog_types" }
 fog-uri = { path = "../../uri" }
 fog-view-protocol = { path = "../protocol" }
 
-grpcio = "0.6.0"
+grpcio = "0.9.0"

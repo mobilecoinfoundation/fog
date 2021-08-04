@@ -69,3 +69,6 @@ lock.mdb
 
 # Homebrew bundle
 /Brewfile.lock.json
+
+# css files (should not be committed)
+*.css

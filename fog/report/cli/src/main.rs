@@ -15,16 +15,18 @@
 
 use binascii::bin2hex;
 use grpcio::EnvBuilder;
-use mc_account_keys::PublicAddress;
-use mc_attest_core::{Verifier, DEBUG_ENCLAVE};
-use mc_common::logger::{create_root_logger, Logger};
-use mc_crypto_keys::CompressedRistrettoPublic;
+use mc_account_keys::{AccountKey, PublicAddress};
+use mc_attest_core::{VerificationReportData, Verifier, DEBUG_ENCLAVE};
+use mc_common::logger::{create_root_logger, log, Logger};
+use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_fog_report_connection::{Error, GrpcFogReportConnection};
 use mc_fog_report_validation::{
     FogPubkeyResolver, FogReportResponses, FogResolver, FullyValidatedFogPubkey,
 };
+use mc_sgx_types::sgx_report_data_t;
 use mc_util_uri::FogUri;
 use std::{
+    convert::TryFrom,
     path::PathBuf,
     process::exit,
     str::FromStr,
@@ -33,28 +35,71 @@ use std::{
 };
 use structopt::StructOpt;
 
-/// The command-line arguments
+/// A command line utility to reach out to the fog report server and fetch the
+/// ingest report, and optionally validate it.
+///
+/// This command prints the bytes of the ingress pubkey in hex, with no newline,
+/// so that it can be easily captured by automation.
+/// Optionally, it also shows the pubkey-expiry value, in this case the output
+/// is json formatted.
+///
+/// The action can be specified in a few ways:
+/// - Supply a path to a public address file. This will perform full validation,
+///   as if we were sending to this fog user.
+/// - Supply a fog-url and a fog-spki. This will perform full validation, that
+///   would be performed for a fog user with these values in their address.
+/// - Supply only a fog-url. This can only be used with the "no-validate"
+///   option.
 #[derive(Debug, StructOpt)]
 struct Config {
-    /// Path to mobilecoin public address
+    /// Path to mobilecoin public address. Fog url and spki will be extracted,
+    /// and fog signature will be checked, unless no-validate is passed.
     #[structopt(long = "public-address", short = "p")]
-    pub public_address: PathBuf,
+    pub public_address: Option<PathBuf>,
+
+    /// The fog url to hit.
+    /// If a public address is supplied, this cannot be supplied.
+    #[structopt(long = "fog-url", short = "u")]
+    pub fog_url: Option<String>,
+
+    /// The fog report id to find.
+    /// This is optional and almost always defaulted to "".
+    /// If a public address is supplied, this cannot be supplied.
+    #[structopt(long = "fog-report-id", short = "i")]
+    pub fog_report_id: Option<String>,
+
+    /// The fog authority spki, in base 64
+    /// If omitted, then NO verification of any kind (IAS, MRSIGNER, cert
+    /// chains) will be performed.
+    /// If a public address is supplied, this cannot be supplied.
+    #[structopt(long = "fog-spki", short = "s")]
+    pub fog_spki: Option<String>,
 
     /// How long to retry if NoReports, this is useful for tests
     #[structopt(long = "retry-seconds", short = "r", default_value = "10")]
     pub retry_seconds: u64,
+
+    /// Outputs json containing the hex bytes of fog ingress pubkey,
+    /// and the pubkey expiry value
+    #[structopt(long = "show-expiry", short = "v")]
+    pub show_expiry: bool,
+
+    /// Skip all validation of the fog response, including IAS, cert checking,
+    /// and fog authority signature.
+    #[structopt(long = "no-validate", short = "n")]
+    pub no_validate: bool,
 }
 
 /// Get fog response with retries, retrying if NoReports error occurs
 fn get_fog_response_with_retries(
     fog_uri: FogUri,
     retry_duration: Duration,
-    logger: Logger,
+    logger: &Logger,
 ) -> FogReportResponses {
     // Create the grpc object and report verifier
     let grpc_env = Arc::new(EnvBuilder::new().name_prefix("cli").build());
 
-    let conn = GrpcFogReportConnection::new(grpc_env, logger);
+    let conn = GrpcFogReportConnection::new(grpc_env, logger.clone());
 
     let deadline = Instant::now() + retry_duration;
     loop {
@@ -78,20 +123,60 @@ fn get_fog_response_with_retries(
 }
 
 /// Try to resolve a public address to a fog public key
-fn get_pubkey(responses: FogReportResponses, pub_addr: PublicAddress) -> FullyValidatedFogPubkey {
-    let report_verifier = {
+fn get_validated_pubkey(
+    responses: FogReportResponses,
+    pub_addr: PublicAddress,
+    logger: &Logger,
+) -> FullyValidatedFogPubkey {
+    let mut verifier = Verifier::default();
+
+    {
         let mr_signer_verifier = fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
-
-        let mut verifier = Verifier::default();
         verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
-        verifier
-    };
+    }
 
-    let resolver = FogResolver::new(responses, &report_verifier);
+    log::debug!(logger, "IAS verifier: {:?}", &verifier);
+
+    let resolver = FogResolver::new(responses, &verifier);
     resolver
-        .expect("Could not get FogPubkeyResolved")
+        .expect("Could not get FogPubkey resolved")
         .get_fog_pubkey(&pub_addr)
         .expect("Could not validate fog pubkey")
+}
+
+/// Try to grab pubkey and expiry out of the response without validating
+fn get_unvalidated_pubkey(
+    responses: FogReportResponses,
+    fog_uri: FogUri,
+    fog_report_id: String,
+    _logger: &Logger,
+) -> (RistrettoPublic, u64) {
+    let resp = responses
+        .get(&fog_uri.to_string())
+        .expect("Didn't find response from this URI");
+    let rep = resp
+        .reports
+        .iter()
+        .find(|rep| rep.fog_report_id == fog_report_id)
+        .expect("Didn't find report with the right report id");
+    let pubkey_expiry = rep.pubkey_expiry;
+    // This parses the b64 json from intel
+    let verification_report_data = VerificationReportData::try_from(&rep.report)
+        .expect("Could not parse verification report data");
+    // This extracts the user-data attached to the report, which is a thin wrapper
+    // around [u8; 64]
+    let report_data = verification_report_data
+        .quote
+        .report_body()
+        .expect("bad report body")
+        .report_data();
+    // Unwrap the wrapper
+    let report_data = sgx_report_data_t::from(report_data);
+    // The second half of this is the data we care about, per the fog-ingest-enclave
+    // identity implementation. These 32 bytes should be Ristretto.
+    let pubkey = RistrettoPublic::try_from(&report_data.d[32..64])
+        .expect("report didn't contain a valid key");
+    (pubkey, pubkey_expiry)
 }
 
 fn main() {
@@ -100,30 +185,117 @@ fn main() {
     let config = Config::from_args();
     let logger = create_root_logger();
 
-    // Read user public keys from disk
-    let pub_addr = mc_util_keyfile::read_pubfile(config.public_address)
-        .expect("Could not read public address file");
+    // Get public address either from a file, or synthesize from BOTH fog-url and
+    // spki. If we only have fog-url, we can't make a public address and we
+    // won't do any validation.
+    let pub_addr: Option<PublicAddress> = if let Some(ref path) = config.public_address {
+        let pub_addr =
+            mc_util_keyfile::read_pubfile(path).expect("Could not read public address file");
+        if config.fog_url.is_some() {
+            panic!("Can't specify public address file and fog url");
+        }
+        if config.fog_report_id.is_some() {
+            panic!("Can't specify public address file and fog report id");
+        }
+        if config.fog_spki.is_some() {
+            panic!("Can't specify public address file and fog spki");
+        }
+        Some(pub_addr)
+    } else if let Some(ref spki) = config.fog_spki {
+        log::debug!(logger, "Creating synthetic public address");
+        let fog_report_url =
+            FogUri::from_str(&config.fog_url.clone().expect("no fog url was specified"))
+                .expect("Could not parse fog report url as a valid fog url");
 
-    // Get fog url
-    let fog_uri = FogUri::from_str(
-        pub_addr
-            .fog_report_url()
-            .expect("public address had no fog url"),
-    )
-    .expect("Could not parse fog report url as a valid fog url");
+        let report_id = config.fog_report_id.clone().unwrap_or_default();
 
-    // Try to make request
-    let responses =
-        get_fog_response_with_retries(fog_uri, Duration::from_secs(config.retry_seconds), logger);
+        let spki = base64::decode(spki).expect("Couldn't decode spki as base 64");
 
-    // Try to validate response
-    let result = get_pubkey(responses, pub_addr);
+        let account_key = AccountKey::new_with_fog(
+            &Default::default(),
+            &Default::default(),
+            fog_report_url,
+            report_id,
+            spki,
+        );
+        Some(account_key.default_subaddress())
+    } else {
+        None
+    };
+
+    // Get pubkey and pubkey expiry, using either validated or unvalidated path
+    let (pubkey, pubkey_expiry): (RistrettoPublic, u64) = if config.no_validate {
+        let fog_uri_str: String = pub_addr
+            .map(|addr| {
+                addr.fog_report_url()
+                    .expect("Fog url is missing")
+                    .to_string()
+            })
+            .unwrap_or_else(|| {
+                config
+                    .fog_url
+                    .as_ref()
+                    .expect("Either public address or fog url must be supplied")
+                    .to_string()
+            });
+        let fog_uri = FogUri::from_str(&fog_uri_str)
+            .expect("Could not parse fog report url as a valid fog url");
+
+        // Try to make request
+        let responses = get_fog_response_with_retries(
+            fog_uri.clone(),
+            Duration::from_secs(config.retry_seconds),
+            &logger,
+        );
+
+        // Try to parse the response
+        get_unvalidated_pubkey(
+            responses,
+            fog_uri,
+            config.fog_report_id.unwrap_or_default(),
+            &logger,
+        )
+    } else {
+        // Use the validated code path. Requires that we are given (or constructed) a
+        // public address.
+        let pub_addr = pub_addr.expect("Not enough info to validate, either supply full address or spki, or pass --no-validate");
+
+        // Get fog url
+        let fog_uri = FogUri::from_str(
+            pub_addr
+                .fog_report_url()
+                .expect("public address had no fog url"),
+        )
+        .expect("Could not parse fog report url as a valid fog url");
+
+        // Try to make request
+        let responses = get_fog_response_with_retries(
+            fog_uri,
+            Duration::from_secs(config.retry_seconds),
+            &logger,
+        );
+
+        // Try to validate response
+        let result = get_validated_pubkey(responses, pub_addr, &logger);
+        (result.pubkey, result.pubkey_expiry)
+    };
 
     let mut hex_buf = [0u8; 64];
     bin2hex(
-        CompressedRistrettoPublic::from(&result.pubkey).as_ref(),
+        CompressedRistrettoPublic::from(&pubkey).as_ref(),
         &mut hex_buf[..],
     )
     .expect("Failed converting to hex");
-    print!("{}", std::str::from_utf8(&hex_buf).unwrap());
+    let hex_str = std::str::from_utf8(&hex_buf).unwrap();
+
+    // if show-expiry is selected, we show key and expiry, formatted as json
+    // else just print the hex bytes of key
+    if config.show_expiry {
+        print!(
+            "{{ \"pubkey\": \"{}\", \"pubkey_expiry\": {} }}",
+            hex_str, pubkey_expiry
+        );
+    } else {
+        print!("{}", hex_str);
+    }
 }

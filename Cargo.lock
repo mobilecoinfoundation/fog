@@ -1647,6 +1647,7 @@ version = "1.1.0"
 dependencies = [
  "base64 0.12.3",
  "binascii",
+ "fog-api",
  "fog-ingest-enclave-measurement",
  "grpcio",
  "mc-account-keys",

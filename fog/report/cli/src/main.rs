@@ -14,16 +14,16 @@
 //! useful diagnostic tool.
 
 use binascii::bin2hex;
+use fog_api::report_parse::try_extract_unvalidated_ingress_pubkey_from_fog_report;
 use grpcio::EnvBuilder;
 use mc_account_keys::{AccountKey, PublicAddress};
-use mc_attest_core::{VerificationReportData, Verifier, DEBUG_ENCLAVE};
+use mc_attest_core::{Verifier, DEBUG_ENCLAVE};
 use mc_common::logger::{create_root_logger, log, Logger};
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_fog_report_connection::{Error, GrpcFogReportConnection};
 use mc_fog_report_validation::{
     FogPubkeyResolver, FogReportResponses, FogResolver, FullyValidatedFogPubkey,
 };
-use mc_sgx_types::sgx_report_data_t;
 use mc_util_uri::FogUri;
 use std::{
     convert::TryFrom,
@@ -160,22 +160,11 @@ fn get_unvalidated_pubkey(
         .find(|rep| rep.fog_report_id == fog_report_id)
         .expect("Didn't find report with the right report id");
     let pubkey_expiry = rep.pubkey_expiry;
-    // This parses the b64 json from intel
-    let verification_report_data = VerificationReportData::try_from(&rep.report)
-        .expect("Could not parse verification report data");
-    // This extracts the user-data attached to the report, which is a thin wrapper
-    // around [u8; 64]
-    let report_data = verification_report_data
-        .quote
-        .report_body()
-        .expect("bad report body")
-        .report_data();
-    // Unwrap the wrapper
-    let report_data = sgx_report_data_t::from(report_data);
-    // The second half of this is the data we care about, per the fog-ingest-enclave
-    // identity implementation. These 32 bytes should be Ristretto.
-    let pubkey = RistrettoPublic::try_from(&report_data.d[32..64])
-        .expect("report didn't contain a valid key");
+    // This parses the fog report and extracts the ingress key
+    let ingress_pubkey = try_extract_unvalidated_ingress_pubkey_from_fog_report(&rep.report)
+        .expect("Could not parse report");
+    let pubkey =
+        RistrettoPublic::try_from(&ingress_pubkey).expect("report didn't contain a valid key");
     (pubkey, pubkey_expiry)
 }
 

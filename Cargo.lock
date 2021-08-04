@@ -1087,7 +1087,6 @@ dependencies = [
  "mc-crypto-keys",
  "mc-fog-api",
  "mc-fog-api-test-utils",
- "mc-sgx-types",
  "mc-transaction-core",
  "mc-util-build-grpc",
  "mc-util-build-script",

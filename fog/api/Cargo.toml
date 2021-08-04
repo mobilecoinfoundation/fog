@@ -21,7 +21,6 @@ mc-attest-core = { path = "../../mobilecoin/attest/core" }
 mc-consensus-api = { path = "../../mobilecoin/consensus/api" }
 mc-crypto-keys = { path = "../../mobilecoin/crypto/keys" }
 mc-fog-api = { path = "../../mobilecoin/fog/api" }
-mc-sgx-types = { path = "../../mobilecoin/sgx/types" }
 mc-util-encodings = { path = "../../mobilecoin/util/encodings" }
 mc-util-from-random = { path = "../../mobilecoin/util/from-random" }
 mc-util-grpc = { path = "../../mobilecoin/util/grpc" }

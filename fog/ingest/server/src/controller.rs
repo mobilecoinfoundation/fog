@@ -10,7 +10,10 @@ use crate::{
     server::IngestServerConfig,
     SeqDisplay,
 };
-use fog_api::ingest_common::{IngestControllerMode, IngestStateFile, IngestSummary};
+use fog_api::{
+    ingest_common::{IngestControllerMode, IngestStateFile, IngestSummary},
+    report_parse::try_extract_unvalidated_ingress_pubkey_from_fog_report,
+};
 use fog_ingest_enclave::{Error as EnclaveError, IngestEnclave, IngestSgxEnclave};
 use fog_recovery_db_iface::{IngressPublicKeyStatus, RecoveryDb, ReportData, ReportDb};
 use fog_types::{common::BlockRange, ingest::TxsForIngest};
@@ -200,15 +203,51 @@ where
     /// Forward set_ingress_private_key from ingest enclave api,
     /// but with checks for idle state, and updates to sealed backups
     pub fn set_ingress_private_key(&self, msg: EnclaveMessage<PeerSession>) -> Result<(), Error> {
-        if !self.get_state().is_idle() {
+        // Lock our state for this entire call
+        let mut state = self.get_state();
+        if !state.is_idle() {
             return Err(Error::ServerNotIdle);
         }
 
+        // TODO: We could make enclave.set_ingress_private_key return a bool
+        // which tells us if the key changed, and that would be simpler.
+        // But it's an enclave upgrade if we do that, and we're developing this in
+        // a patch release branch.
+        let old_ingress_pubkey: CompressedRistrettoPublic = self
+            .enclave
+            .get_ingress_pubkey()
+            .expect("Failed to get ingress pubkey")
+            .into();
+
         self.enclave.set_ingress_private_key(msg)?;
 
-        // Seal whatever private keys we ended up with to disk
-        *self.last_sealed_key.lock().unwrap() = None;
-        self.write_state_file();
+        let new_ingress_pubkey: CompressedRistrettoPublic = self
+            .enclave
+            .get_ingress_pubkey()
+            .expect("Failed to get ingress pubkey")
+            .into();
+
+        if old_ingress_pubkey != new_ingress_pubkey {
+            // Seal the new private keys we ended up with to disk
+            *self.last_sealed_key.lock().unwrap() = None;
+            self.write_state_file_inner(&mut state);
+
+            // Don't hold the lock while we make network calls to IAS
+            drop(state);
+
+            // Refresh report cache
+            log::debug!(
+                self.logger,
+                "Refreshing enclave report cache after private key change"
+            );
+            if let Err(err) = self.update_enclave_report_cache() {
+                log::error!(
+                    self.logger,
+                    "Failed to update enclave report cache after changing ingress private key: {}",
+                    err
+                );
+            }
+        }
 
         Ok(())
     }
@@ -222,8 +261,7 @@ where
     pub fn new_keys(&self) -> Result<IngestSummary, Error> {
         let mut state = self.get_state();
         self.new_keys_inner(&mut state)?;
-        self.write_state_file_inner(&mut state);
-        Ok(self.get_ingest_summary())
+        Ok(self.get_ingest_summary_inner(&mut state))
     }
 
     // Does work of new_keys but takes MutexGuard for controller_state as argument
@@ -241,6 +279,19 @@ where
         // Write sealed key file
         *self.last_sealed_key.lock().unwrap() = None;
         self.write_state_file_inner(state);
+
+        // Update report cache (since ingress key changed)
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache after new private key"
+        );
+        if let Err(err) = self.update_enclave_report_cache() {
+            log::error!(
+                self.logger,
+                "Failed to update enclave report cache after choosing new keys: {}",
+                err
+            );
+        }
 
         Ok(())
     }
@@ -568,6 +619,8 @@ where
         }
 
         // A valid report cache is required to initiate an outgoing attested connection.
+        // Activating doesn't happen very often so this should be okay.
+        log::debug!(self.logger, "Refreshing enclave report cache on activate");
         self.update_enclave_report_cache()?;
 
         let peers = state.get_peers();
@@ -757,14 +810,20 @@ where
     /// Attempt to sync ingress keys from a remote server, which may be idle or
     /// active. We can only do this while we are idle.
     pub fn sync_keys_from_remote(&self, remote: &IngestPeerUri) -> Result<IngestSummary, Error> {
-        if !self.get_state().is_idle() {
+        // A valid report cache is required to initiate an outgoing attested connection.
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache before attesting to remote"
+        );
+        self.update_enclave_report_cache()?;
+
+        // Lock the state for the duration of this call
+        let mut state = self.get_state();
+        if !state.is_idle() {
             return Err(Error::ServerNotIdle);
         }
 
         log::info!(self.logger, "Syncing from Remote URI: {}", remote);
-
-        // A valid report cache is required to initiate an outgoing attested connection.
-        self.update_enclave_report_cache()?;
 
         let mut connection = PeerConnection::<IngestSgxEnclave>::new(
             self.enclave.clone(),
@@ -782,8 +841,20 @@ where
         log::info!(self.logger, "Key successfully set in enclave: {}", pubkey);
 
         *self.last_sealed_key.lock().unwrap() = None;
-        self.write_state_file();
-        Ok(self.get_ingest_summary())
+        self.write_state_file_inner(&mut state);
+        let result = self.get_ingest_summary_inner(&mut state);
+
+        // Don't hold the state mutex while we are talking to IAS
+        drop(state);
+
+        // Update our report cache since we changed the private key
+        log::debug!(
+            self.logger,
+            "Refreshing enclave report cache after remote private key fetch"
+        );
+        self.update_enclave_report_cache()?;
+
+        Ok(result)
     }
 
     /// Set the pubkey expiry window
@@ -917,9 +988,6 @@ where
                 ));
             }
 
-            // A valid report cache is required to initiate an outgoing attested connection.
-            self.update_enclave_report_cache()?;
-
             // Check peers from STORED data to be in the correct backup state
             for peer_uri in new_peers.iter() {
                 if peer_uri
@@ -1028,17 +1096,63 @@ where
         ingress_public_key: &CompressedRistrettoPublic,
         state: &mut MutexGuard<IngestControllerState>,
     ) -> Result<IngressPublicKeyStatus, Error> {
-        self.update_enclave_report_cache()?;
+        // Get a report and check that it makes sense with what we think is happening
+        let report = {
+            let report = self.enclave.get_ias_report()?;
+            // Check that key in report data matches ingress_public_key.
+            // If not, then there is some kind of race.
+            let found_key = try_extract_unvalidated_ingress_pubkey_from_fog_report(&report)?;
+            if &found_key == ingress_public_key {
+                report
+            } else {
+                // Hmm, let's try refreshing the enclave cache
+                log::debug!(
+                    self.logger,
+                    "Refreshing enclave report cache after mismatch detected"
+                );
+                self.update_enclave_report_cache()?;
+
+                let report = self.enclave.get_ias_report()?;
+                let found_key = try_extract_unvalidated_ingress_pubkey_from_fog_report(&report)?;
+                if &found_key == ingress_public_key {
+                    report
+                } else {
+                    // This means that the caller is wrong about what the
+                    // current ingress public key is, and we don't have anything we can publish.
+                    //
+                    // Note: If we publish a report containing a key that doesn't actually match
+                    // what we are scanning for, that is likely catastrophic -- it's not clear that
+                    // `report_lost_key` will work, because the key we thought we were scanning
+                    // with, and recording in the database that we were scanning
+                    // with, doesn't match what we actually scanned with. And if
+                    // we don't know when that started happening, then it's not
+                    // clear what range of blocks we need to tell the users to download.
+                    //
+                    // So if we can't fix the mismatch, then logging an error, refusing to publish
+                    // report, and trying again later seems like the best
+                    // approach. If this doesn't resolve itself, then eng needs
+                    // to root-cause it, and ops likely should just, assume that this is
+                    // some cache or something getting in a bad state, nuke the server and activate
+                    // a backup that has the right key.
+                    log::error!(self.logger, "Report doesn't contain the expected public key even after report refresh: {:?} != {:?}", found_key, ingress_public_key);
+                    return Err(Error::PublishReport);
+                }
+            }
+        };
 
         let report_data = ReportData {
             ingest_invocation_id: state.get_ingest_invocation_id(),
-            report: self.enclave.get_ias_report()?,
+            report,
             pubkey_expiry: state.get_next_block_index() + state.get_pubkey_expiry_window(),
         };
         let report_id = self.config.fog_report_id.as_ref();
 
         self.recovery_db
             .set_report(ingress_public_key, report_id, &report_data)
+            .map(|x| {
+                counters::LAST_PUBLISHED_PUBKEY_EXPIRY.set(report_data.pubkey_expiry as i64);
+                x
+            })
             .map_err(|err| {
                 log::error!(
                     self.logger,
@@ -1084,7 +1198,7 @@ where
                     }
                 }
 
-                // This may mean that summary is stale, so we sohuld retry
+                // This may mean that summary is stale, so we should retry
                 log::info!(self.logger, "sealed key didn't match summary we just computed, this is likely a race. retrying");
                 *last_sealed = None;
             };
@@ -1120,15 +1234,6 @@ where
         // If there are no peers, then we don't need to checkup on them
         if peers.is_empty() {
             return;
-        }
-
-        // A valid report cache is required to initiate an outgoing attested connection.
-        if let Err(err) = self.update_enclave_report_cache() {
-            log::error!(
-                self.logger,
-                "Could not update enclave report cache: {}",
-                err
-            );
         }
 
         for peer_uri in peers {

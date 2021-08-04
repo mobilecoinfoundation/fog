@@ -5,6 +5,7 @@
 use crate::connection_error::Error as ConnectionError;
 
 use displaydoc::Display;
+use fog_api::report_parse::ReportParseError;
 use fog_ingest_enclave::Error as EnclaveError;
 use fog_recovery_db_iface::RecoveryDbError;
 use fog_sql_recovery_db::Error as SqlRecoveryDbError;
@@ -53,6 +54,8 @@ pub enum IngestServiceError {
     Io(std::io::Error),
     /// GRPC Error: {0}
     Grpc(GrpcError),
+    /// Report Parse: {0}
+    ReportParse(ReportParseError),
 }
 
 impl From<EnclaveError> for IngestServiceError {
@@ -124,6 +127,12 @@ impl From<std::io::Error> for IngestServiceError {
 impl From<GrpcError> for IngestServiceError {
     fn from(src: GrpcError) -> Self {
         Self::Grpc(src)
+    }
+}
+
+impl From<ReportParseError> for IngestServiceError {
+    fn from(src: ReportParseError) -> Self {
+        Self::ReportParse(src)
     }
 }
 

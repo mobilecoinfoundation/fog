@@ -5,6 +5,7 @@ use fog_recovery_db_iface::{RecoveryDb, ReportDb};
 use mc_attest_net::RaClient;
 use mc_common::logger::{log, Logger};
 use mc_ledger_db::{Error as LedgerError, Ledger, LedgerDB};
+use mc_sgx_report_cache_untrusted::REPORT_REFRESH_INTERVAL;
 use mc_transaction_core::BlockIndex;
 use mc_watcher::watcher_db::WatcherDB;
 use mc_watcher_api::TimestampResultCode;
@@ -254,14 +255,26 @@ impl PeerCheckupWorker {
         let stop_requested = Arc::new(AtomicBool::new(false));
         Self {
             stop_requested: stop_requested.clone(),
-            thread: Some(std::thread::spawn(move || loop {
-                if stop_requested.load(Ordering::SeqCst) {
-                    log::info!(logger, "Stop Requested: Polling loop stopped",);
-                    break;
-                }
+            thread: Some(std::thread::spawn(move || {
+                log::debug!(logger, "Peer checkup thread started");
 
-                controller.peer_checkup();
-                std::thread::sleep(peer_checkup_period);
+                let mut last_refreshed_at = Instant::now();
+
+                loop {
+                    if stop_requested.load(Ordering::SeqCst) {
+                        log::debug!(logger, "Peer checkup thread stop requested.");
+                        break;
+                    }
+
+                    let now = Instant::now();
+                    if now - last_refreshed_at > peer_checkup_period {
+                        log::info!(logger, "Peer checkup period exceeded, refreshing...");
+                        controller.peer_checkup();
+                        last_refreshed_at = now;
+                    }
+
+                    std::thread::sleep(Duration::from_secs(1));
+                }
             })),
         }
     }
@@ -272,6 +285,75 @@ impl Drop for PeerCheckupWorker {
         if let Some(thread) = self.thread.take() {
             self.stop_requested.store(true, Ordering::SeqCst);
             thread.join().expect("Could not join peer checkup thread");
+        }
+    }
+}
+
+/// The report cache worker is a thread responsible for periodically calling
+/// update report cache. This is a separate thread so that it can be on a
+/// time-based schedule, so it will happen even if there are few blocks.
+pub struct ReportCacheWorker {
+    stop_requested: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl ReportCacheWorker {
+    /// Create a new ReportCacheWorker thread
+    ///
+    /// Arguments:
+    /// * Controller for this ingest server
+    /// * Logger to send log messages to
+    ///
+    /// Returns a freshly started ReportCacheWorker thread handle
+    pub fn new<
+        R: RaClient + Send + Sync + 'static,
+        DB: RecoveryDb + ReportDb + Clone + Send + Sync + 'static,
+    >(
+        controller: Arc<IngestController<R, DB>>,
+        logger: Logger,
+    ) -> Self
+    where
+        IngestServiceError: From<<DB as RecoveryDb>::Error>,
+    {
+        let stop_requested = Arc::new(AtomicBool::new(false));
+        Self {
+            stop_requested: stop_requested.clone(),
+            thread: Some(std::thread::spawn(move || {
+                log::debug!(logger, "Report cache thread started");
+
+                let mut last_refreshed_at = Instant::now();
+
+                loop {
+                    if stop_requested.load(Ordering::SeqCst) {
+                        log::debug!(logger, "Report cache thread stop requested.");
+                        break;
+                    }
+
+                    let now = Instant::now();
+                    if now - last_refreshed_at > REPORT_REFRESH_INTERVAL {
+                        log::info!(logger, "Report refresh interval exceeded, refreshing...");
+                        match controller.update_enclave_report_cache() {
+                            Ok(()) => {
+                                last_refreshed_at = now;
+                            }
+                            Err(err) => {
+                                log::error!(logger, "update_enclave_report_cache failed: {}", err);
+                            }
+                        }
+                    }
+
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            })),
+        }
+    }
+}
+
+impl Drop for ReportCacheWorker {
+    fn drop(&mut self) {
+        if let Some(thread) = self.thread.take() {
+            self.stop_requested.store(true, Ordering::SeqCst);
+            thread.join().expect("Could not join report cache thread");
         }
     }
 }

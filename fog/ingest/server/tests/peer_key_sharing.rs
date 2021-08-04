@@ -122,7 +122,7 @@ where
                     fog_report_id: Default::default(),
                     max_transactions: 10_000,
                     pubkey_expiry_window: 100,
-                    peer_checkup_period: None,
+                    peer_checkup_period: Some(std::time::Duration::from_millis(10000)),
                     watcher_timeout: Duration::default(),
                     state_file: None,
                     enclave_path: get_enclave_path(fog_ingest_enclave::ENCLAVE_FILE),
@@ -201,6 +201,57 @@ where
             }
 
             assert_eq!(primary_pubkey, backup_pubkey);
+
+            // Now, let's call "new_keys" on the backup, which should make it pick new keys
+            loop {
+                // We are racing the primary here, so we'll use retries
+                let mut tries = 3;
+                backup_ingest_client.new_keys(&Default::default()).unwrap();
+
+                // Confirm that the key changed
+                backup_pubkey = backup_ingest_client
+                    .get_status(&Default::default())
+                    .unwrap()
+                    .take_ingress_pubkey();
+                if primary_pubkey != backup_pubkey {
+                    break;
+                }
+                tries -= 1;
+                if tries == 0 {
+                    assert_ne!(primary_pubkey, backup_pubkey, "new_keys is not working");
+                }
+            }
+
+            // Confirm that after at most 30 seconds, the backup is changed (by the active
+            // server) back to primary key
+            for _ in 0..30 {
+                if primary_pubkey == backup_pubkey {
+                    break;
+                }
+
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+
+                backup_pubkey = backup_ingest_client
+                    .get_status(&Default::default())
+                    .unwrap()
+                    .take_ingress_pubkey();
+            }
+
+            // Lets confirm that new_keys doesn't work on the primary
+            let result = primary_ingest_client.new_keys(&Default::default());
+            assert!(
+                result.is_err(),
+                "new_keys should return an error code when the server is active: {:?}",
+                result
+            );
+            let final_primary_key = primary_ingest_client
+                .get_status(&Default::default())
+                .unwrap()
+                .take_ingress_pubkey();
+            assert_eq!(
+                primary_pubkey, final_primary_key,
+                "active server's pubkey should not have changed"
+            );
         }
 
         // grpcio detaches all its threads and does not join them :(

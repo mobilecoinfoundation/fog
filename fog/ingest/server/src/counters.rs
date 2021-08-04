@@ -2,7 +2,7 @@
 
 use mc_util_metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
 
-// Numerical values for the 3 possible modes.
+// Numerical values for the 2 possible modes.
 pub const MODE_IDLE: i64 = 0;
 pub const MODE_ACTIVE: i64 = 1;
 
@@ -14,6 +14,9 @@ lazy_static::lazy_static! {
 
     // Number of blocks processed since startup.
     pub static ref BLOCKS_PROCESSED_COUNT: IntCounter = OP_COUNTERS.counter("blocks_processed_count");
+
+    // The latest pubkey_expiry of a report that we published
+    pub static ref LAST_PUBLISHED_PUBKEY_EXPIRY: IntGauge = OP_COUNTERS.gauge("last_published_pubkey_expiry");
 
     // Time it takes to process a single block.
     pub static ref PROCESS_NEXT_BLOCK_TIME: Histogram = OP_COUNTERS.histogram("process_next_block_time");
@@ -33,6 +36,6 @@ lazy_static::lazy_static! {
     // Whether this ingest server is currently in the Active mode.
     pub static ref MODE_IS_ACTIVE: IntGauge = OP_COUNTERS.gauge("mode_is_active");
 
-    // Current mode of ingest server (0=Idle, 1=Active, 2=Retiring).
+    // Current mode of ingest server (0=Idle, 1=Active).
     pub static ref MODE: IntGauge = OP_COUNTERS.gauge("mode");
 }

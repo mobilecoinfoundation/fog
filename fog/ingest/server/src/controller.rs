@@ -1149,6 +1149,10 @@ where
 
         self.recovery_db
             .set_report(ingress_public_key, report_id, &report_data)
+            .map(|x| {
+                counters::LAST_PUBLISHED_PUBKEY_EXPIRY.set(report_data.pubkey_expiry as i64);
+                x
+            })
             .map_err(|err| {
                 log::error!(
                     self.logger,

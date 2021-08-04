@@ -13,11 +13,11 @@ pub use crate::{
     error::{AddRecordsError, Error},
     messages::{EnclaveCall, KeyImageData},
 };
-use alloc::vec::Vec;
-use core::result::Result as StdResult;
 pub use fog_types::ledger::{
     CheckKeyImagesResponse, GetOutputsResponse, KeyImageResult, KeyImageResultCode, OutputResult,
 };
+use alloc::vec::Vec;
+use core::result::Result as StdResult;
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
 use mc_crypto_keys::X25519Public;
@@ -35,10 +35,9 @@ pub type Result<T> = StdResult<T, Error>;
 /// which was doing the check directly.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct OutputContext {
-    /// A vector for output context which is used for get_outputs method
-    /// memberships proofs
+    /// The global txout indices being requested
     pub indexes: Vec<u64>,
-    /// A merkle root block for output context
+    /// The common merkle-root block that all the proofs should share
     pub merkle_root_block: u64,
 }
 

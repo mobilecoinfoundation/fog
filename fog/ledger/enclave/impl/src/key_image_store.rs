@@ -77,7 +77,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         }
     }
 
-    // add a key image containing block index and timestamp
+    /// add a key image containing block index and timestamp
     pub fn add_record(
         &mut self,
         key_image: &KeyImage,
@@ -119,9 +119,9 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         Ok(())
     }
 
-    // return new struct KeyImageResult which contains block index and timestamp of
-    // key image as ref to convert key image to 32 bits,
-    // call the oram to query to to key image data
+    /// return new struct KeyImageResult which contains block index and timestamp of
+    /// key image as ref to convert key image to 32 bits,
+    /// call the oram to query to to key image data
     pub fn find_record(&mut self, key_image: &KeyImage) -> KeyImageResult {
         let mut result = KeyImageResult {
             key_image: *key_image,
@@ -129,7 +129,7 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
             key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: u64::MAX,
             timestamp_result_code: 1, /* result code 1 is for the mc watcher is found in the
-                                       * protobuf */
+                                       * protobuf is the default but it can change */
         };
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image

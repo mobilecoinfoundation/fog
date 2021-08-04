@@ -383,7 +383,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
         assert_eq!(response.results[4].status(), Ok(None)); // Not spent
         assert_eq!(response.results[4].timestamp, u64::MAX);
         assert_eq!(
-            response.results[3].timestamp_result_code,
+            response.results[4].timestamp_result_code,
             TimestampResultCode::TimestampFound as u32
         );
     }

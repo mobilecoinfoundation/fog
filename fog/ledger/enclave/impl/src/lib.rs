@@ -228,8 +228,7 @@ mod tests {
         };
 
         // add test KeyImageData record to ledger oram
-        let v_result1: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec.key_image, rec.block_index, rec.timestamp);
+        let v_result1 = key_image_store.add_record(&rec.key_image, rec.block_index, rec.timestamp);
 
         assert!(v_result1.is_ok() && !v_result1.is_err());
         //create temp variables to store KeyImageData which we will use as key to query
@@ -247,13 +246,11 @@ mod tests {
         );
 
         // add test KeyImageData record to ledger oram
-        let v_result2: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec2.key_image, rec2.block_index, rec2.timestamp);
+        let v_result2 = key_image_store.add_record(&rec2.key_image, rec2.block_index, rec2.timestamp);
 
         assert!(v_result2.is_ok() && !v_result2.is_err());
 
-        let v_result3: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
+        let v_result3 = key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
         assert!(v_result3.is_ok() && !v_result3.is_err());
         //we can add the record even if the key image is all zero bytes
@@ -263,8 +260,7 @@ mod tests {
             timestamp: 14613610561491525175,
         };
 
-        let v_result: core::result::Result<_, AddRecordsError> =
-            key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
+        let v_result = key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
         // we should not get back "invalid key" error
         assert!(!v_result.is_err());

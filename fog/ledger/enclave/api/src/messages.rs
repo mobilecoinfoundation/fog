@@ -24,13 +24,11 @@ use serde::{Deserialize, Serialize};
     Ord,
 )]
 pub struct KeyImageData {
-    /// We use in the ORAM to check key image and add key image
+    /// A key image which has appeared in the blockchain
     pub key_image: KeyImage,
-    /// We use in the ORAM to return block index or add block index when check
-    /// key image and add key image data
+    /// The index of the block in which this key image appeared
     pub block_index: u64,
-    ///  use in the ORAM to return time stamp or add time stamp when check key
-    /// image and add key image data
+    ///  The timestamp of the block in which this key image appeared
     pub timestamp: u64,
 }
 
@@ -101,6 +99,6 @@ pub enum EnclaveCall {
 
     /// The [LedgerEnclave::add_key_image_data()] method.
     ///
-    ///  Add a key image data to the oram sing the key image.
+    ///  Add key image data to the ORAM.
     AddKeyImageData(Vec<KeyImageData>),
 }

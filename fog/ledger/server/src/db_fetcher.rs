@@ -223,7 +223,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 Ok((ts, res)) => match res {
                     TimestampResultCode::WatcherBehind => {
                         if watcher_behind_timer.elapsed() > watcher_timeout {
-                            log::warn!(logger, "watcher is still behind on block index = {} after waiting {} seconds, ingest will be blocked", block_index, watcher_timeout.as_secs());
+                            log::warn!(logger, "watcher is still behind on block index = {} after waiting {} seconds, ledger service will be blocked", block_index, watcher_timeout.as_secs());
                             watcher_behind_timer = Instant::now();
                         }
                         std::thread::sleep(Self::POLLING_FREQUENCY);
@@ -233,11 +233,11 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                         return u64::MAX;
                     }
                     TimestampResultCode::Unavailable => {
-                        log::crit!(logger, "watcher configuration is wrong and timestamps will not be available with this configuration. Ingest is blocked at block index {}", block_index);
+                        log::crit!(logger, "watcher configuration is wrong and timestamps will not be available with this configuration. Ledger service is blocked at block index {}", block_index);
                         std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
                     }
                     TimestampResultCode::WatcherDatabaseError => {
-                        log::crit!(logger, "The watcher database has an error which prevents us from getting timestamps. Ingest is blocked at block index {}", block_index);
+                        log::crit!(logger, "The watcher database has an error which prevents us from getting timestamps. Ledger service is blocked at block index {}", block_index);
                         std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
                     }
                     TimestampResultCode::TimestampFound => {

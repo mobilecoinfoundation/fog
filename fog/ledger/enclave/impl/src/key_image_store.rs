@@ -2,6 +2,7 @@
 //! Object representing trusted storage for key image records.
 //! Mediates between the bytes used in ORAM and the protobuf format,
 //! the various ORAM vs. fog api error codes, etc.
+#![deny(missing_docs)]
 use aligned_cmov::{
     subtle::{Choice, ConstantTimeEq},
     typenum::{U1024, U16, U32, U4096, U64},
@@ -21,26 +22,29 @@ use mc_oblivious_traits::{
 };
 use mc_transaction_core::ring_signature::KeyImage;
 
-// internal constants
-// KeySize and ValueSize reflect the needs of key_image_store
-// We must choose an oblivious map algorithm that can support that
+/// internal constants
+/// KeySize and ValueSize reflect the needs of key_image_store
+/// We must choose an oblivious map algorithm that can support that
 type KeySize = U32;
 type ValueSize = U16;
-// BlockSize is a tuning parameter for OMap which must become the ValueSize of
-// the selected ORAM
+/// BlockSize is a tuning parameter for OMap which must become the ValueSize of
+/// the selected ORAM
 type BlockSize = U1024;
-// This selects an oblivious ram algorithm which can support queries of size
-// BlockSize The ORAMStorageCreator type is a generic parameter to KeyImageStore
+/// This selects an oblivious ram algorithm which can support queries of size
+/// BlockSize The ORAMStorageCreator type is a generic parameter to
+/// KeyImageStore
 type ObliviousRAMAlgo<OSC> = PathORAM4096Z4Creator<McRng, OSC>;
-// These are the requirements on the storage, this is imposed by the choice of
-// oram algorithm
+/// These are the requirements on the storage, this is imposed by the choice of
+/// oram algorithm
+/// Storage Data Size U4096 for ORAM algorithm
 pub type StorageDataSize = U4096;
+/// Storage Meta Size U64 for ORAL algorithm
 pub type StorageMetaSize = U64;
 
-// This selects the stash size we will construct the oram with
+/// This selects the stash size we will construct the oram with
 const STASH_SIZE: usize = 32;
 
-// This selects the oblivious map algorithm
+/// This selects the oblivious map algorithm
 type ObliviousMapCreator<OSC> = CuckooHashTableCreator<BlockSize, McRng, ObliviousRAMAlgo<OSC>>;
 
 /// Object which holds ORAM and services KeyImageRecord requests
@@ -119,8 +123,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
         Ok(())
     }
 
-    /// return new struct KeyImageResult which contains block index and timestamp of
-    /// key image as ref to convert key image to 32 bits,
+    /// return new struct KeyImageResult which contains block index and
+    /// timestamp of key image as ref to convert key image to 32 bits,
     /// call the oram to query to to key image data
     pub fn find_record(&mut self, key_image: &KeyImage) -> KeyImageResult {
         let mut result = KeyImageResult {
@@ -129,7 +133,8 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
             key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: u64::MAX,
             timestamp_result_code: 1, /* result code 1 is for the mc watcher is found in the
-                                       * protobuf is the default but it can change */
+                                       * protobuf and cannot be a const because it depends on the
+                                       * standard set in the mc watcher */
         };
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image
@@ -157,9 +162,9 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
 
         // Do ORAM read operation and branchlessly handle the result code
         // OMAP_FOUND -> KeyImageResultCode::Spent
-        // OMAP_NOT_FOUND -> KeyImageResultCode::NotSPent
+        // OMAP_NOT_FOUND -> KeyImageResultCode::NotSpent
         // OMAP_INVALID_KEY -> KeyImageResultCode::KeyImageError
-        // Other -> KeyImageResultCode::KeyImageError debug_assert!(false)
+        // Other -> debug_assert!(false)
         {
             let oram_result_code = self.omap.read(&key, &mut value);
             result.key_image_result_code.cmov(

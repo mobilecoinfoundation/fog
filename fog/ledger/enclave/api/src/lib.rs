@@ -13,11 +13,11 @@ pub use crate::{
     error::{AddRecordsError, Error},
     messages::{EnclaveCall, KeyImageData},
 };
+use alloc::vec::Vec;
+use core::result::Result as StdResult;
 pub use fog_types::ledger::{
     CheckKeyImagesResponse, GetOutputsResponse, KeyImageResult, KeyImageResultCode, OutputResult,
 };
-use alloc::vec::Vec;
-use core::result::Result as StdResult;
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
 use mc_crypto_keys::X25519Public;
@@ -41,7 +41,9 @@ pub struct OutputContext {
     pub merkle_root_block: u64,
 }
 
-/// We will do the key image check in ORAM, but for now untrusted
+/// Enclave response to a query contains information known only to the enclave
+/// (the check), but also some information only known outside the enclave, which
+/// is injected when the enclave is called
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct UntrustedKeyImageQueryResponse {
     /// The number of blocks at the time that the request was evaluated.

@@ -128,6 +128,7 @@ Eve:
   (This is the current threat model for MoblieCoin consensus server.)
 
 * Otherwise, Eve obeys the SAME set of invariants as described for Oscar, with the following modifications:
+  * Eve can observe the ring elements used to construct a user's outgoing transaction at the time of construction.
 
 (Note: In a future release, we plan to improve the system so that these modifications are not necessary, and Eve
 has no additional information beyond the baseline adversary.)

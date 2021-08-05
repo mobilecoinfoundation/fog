@@ -63,7 +63,6 @@ mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
 mc-util-test-helper = { path = "../../../mobilecoin/util/test-helper" }
 mc-util-uri = { path = "../../../mobilecoin/util/uri" }
 
-
 fog-test-infra = { path = "../../test_infra" }
 fog-ledger-test-infra = { path = "../test_infra" }
 fog-ledger-connection = { path = "../connection" }

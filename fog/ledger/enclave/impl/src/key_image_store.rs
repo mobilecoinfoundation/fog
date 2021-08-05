@@ -21,6 +21,7 @@ use mc_oblivious_traits::{
     OMAP_NOT_FOUND, OMAP_OVERFLOW,
 };
 use mc_transaction_core::ring_signature::KeyImage;
+use mc_watcher_api::TimestampResultCode;
 
 /// internal constants
 /// KeySize and ValueSize reflect the needs of key_image_store
@@ -132,9 +133,16 @@ impl<OSC: ORAMStorageCreator<StorageDataSize, StorageMetaSize>> KeyImageStore<OS
             spent_at: u64::MAX,
             key_image_result_code: KeyImageResultCode::KeyImageError as u32,
             timestamp: u64::MAX,
-            timestamp_result_code: 1, /* result code 1 is for the mc watcher is found in the
-                                       * protobuf and cannot be a const because it depends on the
-                                       * standard set in the mc watcher */
+            timestamp_result_code: TimestampResultCode::TimestampFound as u32, /* result code 1
+                                                                                * is for the mc
+                                                                                * watcher is
+                                                                                * found in the
+                                                                                * protobuf and
+                                                                                * cannot be a
+                                                                                * const because
+                                                                                * it depends on
+                                                                                * the
+                                                                                * standard set in the mc watcher */
         };
 
         let mut key = A8Bytes::<KeySize>::default(); // key used to query the oram for key image

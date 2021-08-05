@@ -582,6 +582,7 @@ dependencies = [
  "mc-sgx-report-cache-api",
  "mc-transaction-core",
  "mc-util-serial",
+ "mc-watcher-api",
 ]
 
 [[package]]

@@ -16,7 +16,7 @@ The trusted side is required to *encrypt* data blocks that leave, and *authentic
 them when they return.
 
 - Each data block (4096 bytes) comes with a small metadata block (~64 bytes).
-- Both data and metadata are encrypted using AES 128.
+- Both data and metadata are encrypted using AES 256.
 - Each data block holds "extended metadata" including a counter, and the hashes
   of its left and right children.
 - The ciphertexts are hashed (see below for details) together with extended metadata

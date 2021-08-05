@@ -33,7 +33,7 @@ extern crate alloc;
 
 use alloc::vec;
 
-use aes_ctr::{stream_cipher, Aes128Ctr};
+use aes_ctr::{stream_cipher, Aes256Ctr};
 use aligned_cmov::{typenum, A64Bytes, A8Bytes, ArrayLength, GenericArray};
 use alloc::vec::Vec;
 use balanced_tree_index::TreeIndex;
@@ -98,7 +98,7 @@ lazy_static! {
 
 /// Cipher type. Anything implementing StreamCipher and NewStreamCipher at 128
 /// bit security should be acceptable
-type CipherType = Aes128Ctr;
+type CipherType = Aes256Ctr;
 /// Parameters of the cipher as typedefs (which eases syntax)
 type NonceSize = <CipherType as NewStreamCipher>::NonceSize;
 type KeySize = <CipherType as NewStreamCipher>::KeySize;

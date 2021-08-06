@@ -162,8 +162,7 @@ where
 
             resp.results = req
                 .queries
-                .iter() // Attempt and deserialize the untrusted check key image query portion of this
-                // request.
+                .iter() //  get the key images used to find the key image data using the oram
                 .map(|key| store.find_record(&key.key_image))
                 .collect();
         }
@@ -181,7 +180,7 @@ where
     fn add_key_image_data(&self, records: Vec<KeyImageData>) -> Result<()> {
         let mut lk = self.key_image_store.lock()?;
         let store = lk.as_mut().ok_or(Error::EnclaveNotInitialized)?;
-        // add test KeyImageData record to ledger oram
+        // add KeyImageData record to ledger oram
         for rec in records {
             store.add_record(&rec.key_image, rec.block_index, rec.timestamp)?;
         }
@@ -231,8 +230,6 @@ mod tests {
         let v_result1 = key_image_store.add_record(&rec.key_image, rec.block_index, rec.timestamp);
 
         assert!(v_result1.is_ok() && !v_result1.is_err());
-        // Create temp variables to store KeyImageData which we will use as key to query
-        // ledger oram with find_record
 
         //query the ledger oram for the record using the key_image
         let v = key_image_store.find_record(&rec.key_image);
@@ -251,6 +248,17 @@ mod tests {
 
         assert!(v_result2.is_ok() && !v_result2.is_err());
 
+        //query the ledger oram for the record using the key_image
+        let v2 = key_image_store.find_record(&rec2.key_image);
+
+        // this test should pass since we added this rec into the oram
+        assert_eq!(rec2.block_index, v2.spent_at);
+        assert_eq!(rec2.timestamp, v2.timestamp);
+        assert_eq!(
+            v2.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::Spent as u32
+        );
+
         let v_result3 =
             key_image_store.add_record(&rec3.key_image, rec3.block_index, rec3.timestamp);
 
@@ -267,6 +275,17 @@ mod tests {
 
         // we should not get back "invalid key" error
         assert!(!v_result.is_err());
+
+        //query the ledger oram for the record using the key_image
+        let v3 = key_image_store.find_record(&rec3.key_image);
+
+        // this test should pass since we added this rec into the oram
+        assert_eq!(rec3.block_index, v3.spent_at);
+        assert_eq!(rec3.timestamp, v3.timestamp);
+        assert_eq!(
+            v3.key_image_result_code,
+            fog_types::ledger::KeyImageResultCode::Spent as u32
+        );
 
         //query the ledger oram for the record using the key_image not added
         let v_keyimagenotfound = key_image_store.find_record(&KeyImage::from(4));

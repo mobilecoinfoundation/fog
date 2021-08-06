@@ -133,7 +133,7 @@ message KeyImageResult {
     /// never be found with the current configuration of the Key Image Service's watcher.
     /// This is fixed32 to avoid leaking information about found / not found in the size of the encrypted
     /// payload.
-    /// The possible values are described in enum TimestampResultCode.
+    /// The possible values are described in enum TimestampResultCode. None of the other codes are going to be used except the key image spent
     fixed32 timestamp_result_code = 4;
     /// The result code indicating whether the key image was spent.
     /// The possible values are described in enum KeyImageResultCode.

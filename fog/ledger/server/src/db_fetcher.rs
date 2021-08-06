@@ -17,12 +17,10 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
-    thread::{sleep, Builder as ThreadBuilder, JoinHandle},
+    thread::{Builder as ThreadBuilder, JoinHandle},
     time::{Duration, Instant},
 };
 
-/// Time to wait between database fetch attempts.
-pub const DB_POLL_INTERNAL: Duration = Duration::from_millis(100);
 /// An object for managing background data fetches from the ledger database.
 pub struct DbFetcher {
     /// Join handle used to wait for the thread to terminate.
@@ -133,8 +131,6 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             // but that could take some time which is why the loop is also gated
             // on the stop trigger in case a stop is requested during loading.
             while self.load_block_data() && !self.stop_requested.load(Ordering::SeqCst) {}
-
-            sleep(DB_POLL_INTERNAL);
         }
     }
 

@@ -744,7 +744,7 @@ fn add_block_to_ledger_db(
 
     let new_block;
 
-    // Get a random timestamp
+    // Get timestamp derived from the number of blocks
     let (timestamp, _timestamp_result_code) = if num_blocks > 0 {
         (num_blocks * 100, TimestampResultCode::TimestampFound)
     } else {

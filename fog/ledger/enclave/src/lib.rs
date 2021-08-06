@@ -69,8 +69,7 @@ impl LedgerSgxEnclave {
     ///
     /// Arguments:
     /// * enclave_path: The path to the signed enclave .so file
-    /// * client_responder_id: The responder_id to be used when client is
-    ///   connecting to us
+    /// * self_id: The responder_id to be used when client is connecting to us
     /// * desired_capacity: The desired capacity in the oblivious map. Must be a
     ///   power of two. Actual capacity will be ~70% of this. Memory utilization
     ///   will be about 256 bytes * this + some overhead

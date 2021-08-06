@@ -6,7 +6,10 @@
 use crate::{counters, server::DbPollSharedState};
 use fog_ledger_enclave::LedgerEnclaveProxy;
 use fog_ledger_enclave_api::KeyImageData;
-use mc_common::logger::{log, Logger};
+use mc_common::{
+    logger::{log, Logger},
+    trace_time,
+};
 use mc_ledger_db::{self, Error as LedgerError, Ledger};
 use mc_transaction_core::BlockIndex;
 use mc_watcher::watcher_db::WatcherDB;
@@ -257,6 +260,12 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
         let num_records = records.len();
 
         let _info = retry(delay::Fixed::from_millis(5000), || {
+            trace_time!(
+                self.logger,
+                "Added {} records into the enclave",
+                num_records
+            );
+            let _metrics_timer = counters::ENCLAVE_ADD_KEY_IMAGE_DATA_TIME.start_timer();
             match self.enclave.add_key_image_data(records.clone()) {
                 Ok(info) => {
                     // Update metrics

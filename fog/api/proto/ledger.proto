@@ -125,7 +125,7 @@ message KeyImageResult {
     fixed64 spent_at = 2;
     /// The timestamp of the block containing this key image.
     /// The value is u64::MAX if the timestamp cannot be found.
-    /// If the timestamp cannot be found, even when  key_image_result_code == Spent,
+    /// If the timestamp cannot be found, even when key_image_result_code == Spent,
     /// that represents an internal error of the server
     /// which should be reported to the developers.
     /// Note: The timestamps are based on untrusted reporting of time from the consensus validators.

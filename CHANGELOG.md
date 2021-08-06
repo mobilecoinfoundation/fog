@@ -33,7 +33,7 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
  - Update `rand_hc` to 0.3.0
  - Update `rand` to 0.8.3
  - Update `schnorrkel` to 0.10.1
- - Update `sha2` to 0.9.5
+ - Update `sha2` to 0.9.3
  - Update `x25519-dalek` to 1.1.1
 
 ### Fixed

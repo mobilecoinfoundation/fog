@@ -11,5 +11,5 @@ lazy_static::lazy_static! {
           // Number of blocks added (to the enclave) since startup.
           pub static ref BLOCKS_ADDED_COUNT: IntCounter = OP_COUNTERS.counter("blocks_added_count");
           // Number of keyimages fetched (from the database) since startup.
-          pub static ref KEYIMAGES_FETCHED_COUNT: IntCounter = OP_COUNTERS.counter("keyimages_fetched_count");
+          pub static ref KEY_IMAGES_FETCHED_COUNT: IntCounter = OP_COUNTERS.counter("keyimages_fetched_count");
 }

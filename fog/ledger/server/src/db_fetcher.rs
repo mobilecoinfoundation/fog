@@ -142,7 +142,6 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
     /// Returns true if we might have more block data to load.
     fn load_block_data(&mut self) -> bool {
         let mut has_more_work = false;
-        let mut records: Vec<KeyImageData> = Vec::new();
         let watcher_timeout: Duration = Duration::from_millis(5000);
 
         match self.db.get_block_contents(self.next_block_index) {
@@ -158,22 +157,22 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             }
             Ok(block_contents) => {
                 // Get the timestamp for the block.
-                let mytimestamp = Self::get_watcher_timestamp(
+                let timestamp = Self::get_watcher_timestamp(
                     self.next_block_index,
                     &self.watcher,
                     watcher_timeout,
                     &self.logger,
                 );
 
-                for the_key_image in block_contents.key_images {
-                    let rec = KeyImageData {
-                        key_image: the_key_image,
+                let records = block_contents
+                    .key_images
+                    .iter()
+                    .map(|key_image| KeyImageData {
+                        key_image: *key_image,
                         block_index: self.next_block_index,
-                        timestamp: mytimestamp,
-                    };
-
-                    records.push(rec);
-                }
+                        timestamp,
+                    })
+                    .collect();
 
                 self.add_records_to_enclave(self.next_block_index, records);
                 let mut shared_state = self.db_poll_shared_state.lock().expect("mutex poisoned");
@@ -265,12 +264,13 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 "Added {} records into the enclave",
                 num_records
             );
-            let _metrics_timer = counters::ENCLAVE_ADD_KEY_IMAGE_DATA_TIME.start_timer();
+            let metrics_timer = counters::ENCLAVE_ADD_KEY_IMAGE_DATA_TIME.start_timer();
+            let _ = metrics_timer.stop_and_discard();
             match self.enclave.add_key_image_data(records.clone()) {
                 Ok(info) => {
                     // Update metrics
                     counters::BLOCKS_ADDED_COUNT.inc();
-                    counters::KEYIMAGES_FETCHED_COUNT.inc_by(num_records as i64);
+                    counters::KEY_IMAGES_FETCHED_COUNT.inc_by(num_records as i64);
                     OperationResult::Ok(info)
                 }
                 Err(err) => {

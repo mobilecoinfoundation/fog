@@ -7,6 +7,7 @@
 //! combined with a form of dependency injection, would provide the machines
 //! with all the unit testing they would ever need. Fate, it seems, has a sense
 //! of irony...
+
 #![no_std]
 #![deny(missing_docs)]
 extern crate alloc;

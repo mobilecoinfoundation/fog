@@ -265,7 +265,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 num_records
             );
             let metrics_timer = counters::ENCLAVE_ADD_KEY_IMAGE_DATA_TIME.start_timer();
-            let _ = metrics_timer.stop_and_discard();
+
             match self.enclave.add_key_image_data(records.clone()) {
                 Ok(info) => {
                     // Update metrics
@@ -274,6 +274,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                     OperationResult::Ok(info)
                 }
                 Err(err) => {
+                    let _ = metrics_timer.stop_and_discard();
                     // Failing to add records to the enclave is unrecoverable,
                     // When we encounter this failure mode we will begin logging a high-priority log
                     // message every ten minutes indefinitely.

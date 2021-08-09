@@ -1130,6 +1130,7 @@ name = "fog-api"
 version = "1.1.0"
 dependencies = [
  "cargo-emit",
+ "displaydoc",
  "fog-enclave-connection",
  "fog-kex-rng",
  "fog-types",
@@ -1138,6 +1139,7 @@ dependencies = [
  "grpcio",
  "mc-api",
  "mc-attest-api",
+ "mc-attest-core",
  "mc-consensus-api",
  "mc-crypto-keys",
  "mc-fog-api",
@@ -1145,6 +1147,7 @@ dependencies = [
  "mc-transaction-core",
  "mc-util-build-grpc",
  "mc-util-build-script",
+ "mc-util-encodings",
  "mc-util-from-random",
  "mc-util-grpc",
  "mc-util-serial",
@@ -1670,6 +1673,7 @@ version = "1.1.0"
 dependencies = [
  "base64 0.12.3",
  "binascii",
+ "fog-api",
  "fog-ingest-enclave-measurement",
  "grpcio",
  "mc-account-keys",
@@ -1678,7 +1682,6 @@ dependencies = [
  "mc-crypto-keys",
  "mc-fog-report-connection",
  "mc-fog-report-validation",
- "mc-sgx-types",
  "mc-util-keyfile",
  "mc-util-uri",
  "structopt",

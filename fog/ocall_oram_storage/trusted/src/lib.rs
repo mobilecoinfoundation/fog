@@ -33,7 +33,10 @@ extern crate alloc;
 
 use alloc::vec;
 
-use aes_ctr::{stream_cipher, Aes256Ctr};
+use aes::{
+    cipher::{generic_array::GenericArray as CipherGenericArray, NewCipher, StreamCipher},
+    Aes256Ctr,
+};
 use aligned_cmov::{typenum, A64Bytes, A8Bytes, ArrayLength, GenericArray};
 use alloc::vec::Vec;
 use balanced_tree_index::TreeIndex;
@@ -47,9 +50,6 @@ use lazy_static::lazy_static;
 use mc_oblivious_traits::{HeapORAMStorage, ORAMStorage, ORAMStorageCreator};
 use mc_sgx_compat::sync::Mutex;
 use rand_core::{CryptoRng, RngCore};
-use stream_cipher::{
-    generic_array::GenericArray as CipherGenericArray, NewStreamCipher, StreamCipher,
-};
 use subtle::ConstantTimeEq;
 use typenum::{PartialDiv, PowerOfTwo, Sum, Unsigned, U8};
 
@@ -96,12 +96,12 @@ lazy_static! {
     static ref OCALL_REENTRANCY_MUTEX: Mutex<()> = Mutex::new(());
 }
 
-/// Cipher type. Anything implementing StreamCipher and NewStreamCipher at 128
+/// Cipher type. Anything implementing StreamCipher and NewCipher at 128
 /// bit security should be acceptable
 type CipherType = Aes256Ctr;
 /// Parameters of the cipher as typedefs (which eases syntax)
-type NonceSize = <CipherType as NewStreamCipher>::NonceSize;
-type KeySize = <CipherType as NewStreamCipher>::KeySize;
+type NonceSize = <CipherType as NewCipher>::NonceSize;
+type KeySize = <CipherType as NewCipher>::KeySize;
 
 // Make an aes nonce per the docu
 fn make_aes_nonce(block_idx: u64, block_ctr: u64) -> CipherGenericArray<u8, NonceSize> {
@@ -346,8 +346,8 @@ where
                     // Decrypt
                     let aes_nonce = make_aes_nonce(indices[idx], extra_meta.block_ctr);
                     let mut cipher = CipherType::new(&self.aes_key, &aes_nonce);
-                    cipher.decrypt(&mut dest[idx]);
-                    cipher.decrypt(meta);
+                    cipher.apply_keystream(&mut dest[idx]);
+                    cipher.apply_keystream(meta);
                     dest_meta[idx].copy_from_slice(meta);
                 }
             }
@@ -430,8 +430,8 @@ where
                     // Encrypt
                     let aes_nonce = make_aes_nonce(indices[idx], block_ctr);
                     let mut cipher = CipherType::new(&self.aes_key, &aes_nonce);
-                    cipher.encrypt(&mut src[idx]);
-                    cipher.encrypt(meta);
+                    cipher.apply_keystream(&mut src[idx]);
+                    cipher.apply_keystream(meta);
                 }
 
                 // Compute the hash for this block and store it, to go with parent next round

@@ -128,7 +128,6 @@ Eve:
   (This is the current threat model for MoblieCoin consensus server.)
 
 * Otherwise, Eve obeys the SAME set of invariants as described for Oscar, with the following modifications:
-  * Eve can determine the number of new payment records retrieved during balance checking, but not precisely which payment records belong to the user.
   * Eve can observe the ring elements used to construct a user's outgoing transaction at the time of construction.
 
 (Note: In a future release, we plan to improve the system so that these modifications are not necessary, and Eve

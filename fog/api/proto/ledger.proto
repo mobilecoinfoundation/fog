@@ -124,8 +124,10 @@ message KeyImageResult {
     /// key_image_result_code is not Spent, then spent_at is undefined, but > 0.
     fixed64 spent_at = 2;
     /// The timestamp of the block containing this key image.
-    /// The value is u64::MAX if the timestamp cannot be found. Callers must check the
-    /// timestamp_result_code to determine why the timestamp could not be found.
+    /// The value is u64::MAX if the timestamp cannot be found.
+    /// If the timestamp cannot be found, even when key_image_result_code == Spent,
+    /// that represents an internal error of the server
+    /// which should be reported to the developers.
     /// Note: The timestamps are based on untrusted reporting of time from the consensus validators.
     /// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
     fixed64 timestamp = 3;
@@ -134,6 +136,9 @@ message KeyImageResult {
     /// This is fixed32 to avoid leaking information about found / not found in the size of the encrypted
     /// payload.
     /// The possible values are described in enum TimestampResultCode.
+    /// This is a legacy result code which was forwarded by ledger server from the Watcher db API if a timestamp is not available.
+    /// The ledger server now handles all of these errors and the result will always be `TimestampFound`.
+    /// Clients should ignore this value, and in a future revision we may make it always zero.
     fixed32 timestamp_result_code = 4;
     /// The result code indicating whether the key image was spent.
     /// The possible values are described in enum KeyImageResultCode.

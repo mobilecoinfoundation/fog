@@ -10,10 +10,12 @@ use alloc::vec::Vec;
 use core::slice;
 use fog_ledger_enclave_api::{EnclaveCall, LedgerEnclave};
 use fog_ledger_enclave_impl::SgxLedgerEnclave;
+use fog_ocall_oram_storage_trusted::OcallORAMStorageCreator;
 use lazy_static::lazy_static;
 use mc_enclave_boundary::trusted::RetryBuffer;
 use mc_sgx_compat::panic::catch_unwind;
 use mc_sgx_report_cache_api::ReportableEnclave;
+use mc_sgx_slog::default_logger;
 use mc_sgx_types::{c_void, sgx_is_outside_enclave, sgx_status_t};
 use mc_util_serial::{deserialize, serialize};
 
@@ -22,7 +24,7 @@ lazy_static! {
     static ref RETRY_BUFFER: RetryBuffer = RetryBuffer::new(&ecall_dispatcher);
 
     /// Storage for business logic / implementation state of ledger enclave
-    static ref ENCLAVE: SgxLedgerEnclave = Default::default();
+    static ref ENCLAVE: SgxLedgerEnclave<OcallORAMStorageCreator> = SgxLedgerEnclave::new(default_logger());
 }
 
 /// Dispatch ecalls with the unified signature
@@ -34,8 +36,10 @@ pub fn ecall_dispatcher(inbuf: &[u8]) -> Result<Vec<u8>, sgx_status_t> {
     // And actually do it
     let outdata = match call_details {
         // Utility methods
-        EnclaveCall::EnclaveInit(self_id) => serialize(&ENCLAVE.enclave_init(&self_id))
-            .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?,
+        EnclaveCall::EnclaveInit(self_id, desired_capacity) => {
+            serialize(&ENCLAVE.enclave_init(&self_id, desired_capacity))
+                .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
+        }
         // Node-to-Client Attestation
         EnclaveCall::ClientAccept(auth_msg) => serialize(&ENCLAVE.client_accept(auth_msg))
             .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?,
@@ -65,14 +69,14 @@ pub fn ecall_dispatcher(inbuf: &[u8]) -> Result<Vec<u8>, sgx_status_t> {
             serialize(&ENCLAVE.get_outputs_data(resp, client))
                 .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
         }
-        // Key images
-        EnclaveCall::CheckKeyImages(msg) => {
-            serialize(&ENCLAVE.check_key_images(msg)).or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
-        }
-        EnclaveCall::CheckKeyImagesData(resp, client) => {
-            serialize(&ENCLAVE.check_key_images_data(resp, client))
+        // Check Key image
+        EnclaveCall::CheckKeyImages(req, untrusted_keyimagequery_response) => {
+            serialize(&ENCLAVE.check_key_images(req, untrusted_keyimagequery_response))
                 .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?
         }
+        // Add Key Image Data
+        EnclaveCall::AddKeyImageData(records) => serialize(&ENCLAVE.add_key_image_data(records))
+            .or(Err(sgx_status_t::SGX_ERROR_UNEXPECTED))?,
     };
 
     Ok(outdata)

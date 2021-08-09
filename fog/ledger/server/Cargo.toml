@@ -28,6 +28,7 @@ mc-util-encodings = { path = "../../../mobilecoin/util/encodings" }
 mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
 mc-util-grpc = { path = "../../../mobilecoin/util/grpc" }
 mc-util-metrics = { path = "../../../mobilecoin/util/metrics" }
+mc-util-serial = { path = "../../../mobilecoin/util/serial" }
 mc-util-uri = { path = "../../../mobilecoin/util/uri" }
 mc-watcher = { path = "../../../mobilecoin/watcher" }
 mc-watcher-api = { path = "../../../mobilecoin/watcher/api" }
@@ -36,6 +37,7 @@ fog-api = { path = "../../api" }
 fog-uri = { path = "../../uri" }
 fog-ledger-enclave = { path = "../enclave" }
 fog-ledger-enclave-api = { path = "../enclave/api" }
+fog-types = { path = "../../fog_types" }
 
 displaydoc = { version = "0.2", default-features = false }
 futures = "0.3"
@@ -43,6 +45,7 @@ grpcio = "0.9.0"
 hex = "0.4"
 lazy_static = "1.4"
 rand = "0.8"
+retry = "1.2"
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
 serde_json = "1.0"
 structopt = "0.3"

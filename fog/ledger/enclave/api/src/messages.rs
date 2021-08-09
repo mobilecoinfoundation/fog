@@ -1,19 +1,43 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 //! The message types used by the ledger_enclave_api.
-
-use fog_types::ledger::{CheckKeyImagesResponse, GetOutputsResponse};
+use crate::UntrustedKeyImageQueryResponse;
+use alloc::vec::Vec;
+use fog_types::ledger::GetOutputsResponse;
 use mc_attest_core::{Quote, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientSession, EnclaveMessage};
 use mc_common::ResponderId;
+use mc_transaction_core::ring_signature::KeyImage;
 use serde::{Deserialize, Serialize};
+
+/// A struct representing the key image stores data
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    PartialOrd,
+    core::cmp::Eq,
+    core::hash::Hash,
+    Ord,
+)]
+pub struct KeyImageData {
+    /// A key image which has appeared in the blockchain
+    pub key_image: KeyImage,
+    /// The index of the block in which this key image appeared
+    pub block_index: u64,
+    ///  The timestamp of the block in which this key image appeared
+    pub timestamp: u64,
+}
 
 /// An enumeration of API calls and their arguments for use across serialization
 /// boundaries.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum EnclaveCall {
     /// The [LedgerEnclave::enclave_init()] method.
-    EnclaveInit(ResponderId),
+    EnclaveInit(ResponderId, u64),
 
     /// The [LedgerEnclave::client_accept()] method.
     ///
@@ -68,10 +92,13 @@ pub enum EnclaveCall {
     /// The [LedgerEnclave::client_check_key_images()] method.
     ///
     /// Start a new key image check from a client.
-    CheckKeyImages(EnclaveMessage<ClientSession>),
+    CheckKeyImages(
+        EnclaveMessage<ClientSession>,
+        UntrustedKeyImageQueryResponse,
+    ),
 
-    /// The [LedgerEnclave::key_image_checks_for_client()] method.
+    /// The [LedgerEnclave::add_key_image_data()] method.
     ///
-    /// Encrypt the key image check results for transmission to a client.
-    CheckKeyImagesData(CheckKeyImagesResponse, ClientSession),
+    ///  Add key image data to the ORAM.
+    AddKeyImageData(Vec<KeyImageData>),
 }

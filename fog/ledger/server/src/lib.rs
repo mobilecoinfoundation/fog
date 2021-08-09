@@ -3,6 +3,7 @@
 mod block_service;
 mod config;
 mod counters;
+mod db_fetcher;
 mod key_image_service;
 mod merkle_proof_service;
 mod server;

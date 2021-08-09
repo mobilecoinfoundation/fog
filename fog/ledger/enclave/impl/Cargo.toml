@@ -17,6 +17,15 @@ mc-common = { path = "../../../../mobilecoin/common", default-features = false }
 mc-crypto-keys = { path = "../../../../mobilecoin/crypto/keys", default-features = false }
 mc-util-serial = { path = "../../../../mobilecoin/util/serial" }
 mc-sgx-report-cache-api = { path = "../../../../mobilecoin/sgx/report-cache/api" }
+mc-crypto-rand = { path = "../../../../mobilecoin/crypto/rand" }
+mc-transaction-core = { path = "../../../../mobilecoin/transaction/core" }
+mc-sgx-compat = { path = "../../../../mobilecoin/sgx/compat", default-features = false }
+mc-watcher-api = { path = "../../../../mobilecoin/watcher/api" }
+
+aligned-cmov = "2.0"
+mc-oblivious-map = "2.0"
+mc-oblivious-ram = "2.0"
+mc-oblivious-traits = "2.0"
 
 # internal
 fog-types = { path = "../../../fog_types" }

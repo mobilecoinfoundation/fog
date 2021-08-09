@@ -28,6 +28,34 @@ pub enum Error {
 
     /// An panic occurred on another thread holding a lock
     Poison,
+
+    /// Add records: {0}
+    AddRecords(AddRecordsError),
+
+    /// Enclave not initialized
+    EnclaveNotInitialized,
+
+    /// Prost encode error
+    ProstEncode,
+
+    /// Prost decode error
+    ProstDecode,
+}
+
+/// An error when something goes wrong with adding a record
+#[derive(Serialize, Deserialize, Debug, Display, Clone, PartialEq, PartialOrd)]
+pub enum AddRecordsError {
+    /// Key was wrong sizes
+    KeyWrongSize,
+
+    /// Key was rejected
+    KeyRejected,
+
+    /// Value was the wrong size
+    ValueWrongSize,
+
+    /// Map Overflowed: len = {0}, capacity = {1}
+    MapOverflow(u64, u64),
 }
 
 impl<T> From<PoisonError<T>> for Error {
@@ -45,6 +73,12 @@ impl From<SgxError> for Error {
 impl From<AttestEnclaveError> for Error {
     fn from(src: AttestEnclaveError) -> Error {
         Error::Attest(src)
+    }
+}
+
+impl From<AddRecordsError> for Error {
+    fn from(src: AddRecordsError) -> Error {
+        Error::AddRecords(src)
     }
 }
 

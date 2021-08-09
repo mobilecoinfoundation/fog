@@ -10,7 +10,6 @@ mc-attest-core = { path = "../../../mobilecoin/attest/core" }
 mc-attest-enclave-api = { path = "../../../mobilecoin/attest/enclave-api" }
 mc-common = { path = "../../../mobilecoin/common", features = ["log"] }
 mc-crypto-keys = { path = "../../../mobilecoin/crypto/keys" }
-mc-crypto-rand = { path = "../../../mobilecoin/crypto/rand" }
 mc-enclave-boundary = { path = "../../../mobilecoin/enclave-boundary" }
 mc-sgx-debug-edl = { path = "../../../mobilecoin/sgx/debug-edl" }
 mc-sgx-panic-edl = { path = "../../../mobilecoin/sgx/panic-edl" }
@@ -23,7 +22,6 @@ mc-util-serial = { path = "../../../mobilecoin/util/serial" }
 
 fog-ocall-oram-storage-edl = { path = "../../ocall_oram_storage/edl" }
 fog-ocall-oram-storage-untrusted = { path = "../../ocall_oram_storage/untrusted" }
-fog-recovery-db-iface = { path = "../../recovery_db_iface" }
 fog-types = { path = "../../fog_types" }
 fog-view-enclave-api = { path = "./api" }
 fog-view-enclave-edl = { path = "./edl" }
@@ -39,7 +37,6 @@ mc-util-from-random = { path = "../../../mobilecoin/util/from-random" }
 fog-test-infra = { path = "../../test_infra" }
 
 [build-dependencies]
-mc-util-build-enclave = { path = "../../../mobilecoin/util/build/enclave" }
 mc-util-build-script = { path = "../../../mobilecoin/util/build/script" }
 mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }
 

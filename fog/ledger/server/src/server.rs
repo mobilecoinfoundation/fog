@@ -1,8 +1,8 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
 use crate::{
-    config::LedgerServerConfig, counters, BlockService, KeyImageService, MerkleProofService,
-    UntrustedTxOutService,
+    config::LedgerServerConfig, counters, db_fetcher::DbFetcher, BlockService, KeyImageService,
+    MerkleProofService, UntrustedTxOutService,
 };
 use displaydoc::Display;
 use fog_api::ledger_grpc;
@@ -22,7 +22,7 @@ use mc_util_grpc::{
 };
 use mc_util_uri::ConnectionUri;
 use mc_watcher::watcher_db::WatcherDB;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Display)]
 pub enum LedgerServerError {
@@ -75,6 +75,7 @@ pub struct LedgerServer<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'stat
     ra_client: R,
     report_cache_thread: Option<ReportCacheThread>,
     logger: Logger,
+    db_fetcher: Option<DbFetcher>,
 }
 
 impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E, R> {
@@ -98,10 +99,13 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
                 Arc::new(AnonymousAuthenticator::default())
             };
 
+        let shared_state = Arc::new(Mutex::new(DbPollSharedState::default()));
+
         let key_image_service = KeyImageService::new(
             ledger.clone(),
             watcher.clone(),
             enclave.clone(),
+            shared_state,
             client_authenticator.clone(),
             logger.clone(),
         );
@@ -135,6 +139,7 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
             ra_client,
             report_cache_thread: None,
             logger,
+            db_fetcher: None,
         }
     }
 
@@ -147,6 +152,14 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
                 &counters::ENCLAVE_REPORT_TIMESTAMP,
                 self.logger.clone(),
             )?);
+
+            self.db_fetcher = Some(DbFetcher::new(
+                self.key_image_service.get_ledger(),
+                self.logger.clone(),
+                self.enclave.clone(),
+                self.key_image_service.get_watcher(),
+                self.key_image_service.get_db_poll_shared_state(),
+            ));
 
             let env = Arc::new(
                 grpcio::EnvBuilder::new()
@@ -205,6 +218,10 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> LedgerServer<E,
                 .stop()
                 .expect("Could not stop report cache thread");
         }
+
+        if let Some(ref mut db_fetcher) = self.db_fetcher.take() {
+            db_fetcher.stop().expect("Could not stop db fetcher");
+        }
     }
 }
 
@@ -212,4 +229,15 @@ impl<E: LedgerEnclaveProxy, R: RaClient + Send + Sync + 'static> Drop for Ledger
     fn drop(&mut self) {
         self.stop();
     }
+}
+
+/// State that we want to expose from the db poll thread
+#[derive(Debug, Default)]
+pub struct DbPollSharedState {
+    /// The highest block count for which we can guarantee we have loaded all
+    /// available data.
+    pub highest_processed_block_count: u64,
+
+    /// The cumulative txo count of the last known block.
+    pub last_known_block_cumulative_txo_count: u64,
 }

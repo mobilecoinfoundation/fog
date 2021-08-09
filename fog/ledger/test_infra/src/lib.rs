@@ -3,9 +3,9 @@
 //! Functionality for mocking and testing components in the ledger server
 
 use fog_ledger_enclave::{
-    CheckKeyImagesResponse, GetOutputsResponse, KeyImageContext, LedgerEnclave, OutputContext,
-    Result as EnclaveResult,
+    GetOutputsResponse, LedgerEnclave, OutputContext, Result as EnclaveResult,
 };
+use fog_ledger_enclave_api::{KeyImageData, UntrustedKeyImageQueryResponse};
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
 use mc_common::{HashMap, ResponderId};
@@ -40,7 +40,7 @@ impl ReportableEnclave for MockEnclave {
 }
 
 impl LedgerEnclave for MockEnclave {
-    fn enclave_init(&self, _self_id: &ResponderId) -> EnclaveResult<()> {
+    fn enclave_init(&self, _self_id: &ResponderId, _desired_capacity: u64) -> EnclaveResult<()> {
         unimplemented!()
     }
 
@@ -69,14 +69,15 @@ impl LedgerEnclave for MockEnclave {
     fn check_key_images(
         &self,
         _msg: EnclaveMessage<ClientSession>,
-    ) -> EnclaveResult<KeyImageContext> {
+        _untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
+    ) -> Result<Vec<u8>, fog_ledger_enclave::Error> {
         unimplemented!()
     }
-    fn check_key_images_data(
+
+    fn add_key_image_data(
         &self,
-        _resp: CheckKeyImagesResponse,
-        _client: ClientSession,
-    ) -> EnclaveResult<EnclaveMessage<ClientSession>> {
+        _records: Vec<KeyImageData>,
+    ) -> Result<(), fog_ledger_enclave::Error> {
         unimplemented!()
     }
 }

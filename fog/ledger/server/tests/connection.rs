@@ -33,11 +33,14 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
+    thread, time,
 };
 use tempdir::TempDir;
 use url::Url;
 
 const TEST_URL: &str = "http://www.my_url1.com";
+
+const OMAP_CAPACITY: u64 = 128 * 128;
 
 fn setup_watcher_db(logger: Logger) -> (WatcherDB, PathBuf) {
     let url = Url::parse(TEST_URL).unwrap();
@@ -72,13 +75,24 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
-    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(1)], &mut rng);
-    let num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(2)], &mut rng);
+    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng, &mut watcher);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(1)],
+        &mut rng,
+        &mut watcher,
+    );
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(2)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -97,11 +111,14 @@ fn fog_ledger_merkle_proofs_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -207,15 +224,33 @@ fn fog_ledger_key_images_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
+    // Make WatcherDB
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
+
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &keys[0..2], &mut rng);
-    add_block_to_ledger_db(&mut ledger, &recipients, &keys[3..6], &mut rng);
-    let num_blocks = add_block_to_ledger_db(&mut ledger, &recipients, &keys[6..9], &mut rng);
-
-    // Make WatcherDB
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    add_block_to_ledger_db(&mut ledger, &recipients, &[], &mut rng, &mut watcher);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[0..2],
+        &mut rng,
+        &mut watcher,
+    );
+    add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[3..6],
+        &mut rng,
+        &mut watcher,
+    );
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &keys[6..9],
+        &mut rng,
+        &mut watcher,
+    );
 
     // Populate watcher with Signature and Timestamp for block 1
     let url1 = Url::parse(TEST_URL).unwrap();
@@ -250,11 +285,14 @@ fn fog_ledger_key_images_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -287,22 +325,36 @@ fn fog_ledger_key_images_test(logger: Logger) {
         let mut client = FogKeyImageGrpcClient::new(client_uri, verifier, grpc_env, logger);
 
         // Check on key images
-        let response = client
+        let mut response = client
             .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
             .expect("check_key_images failed");
 
-        assert_eq!(response.num_blocks, num_blocks, "Maybe try adding a delay? Or an API to tell when fog ledger is fully initialized and has processed the database");
+        let mut n = 1;
+        // adding a delay to give fog ledger time to fully initialize
+        while response.num_blocks != num_blocks {
+            response = client
+                .check_key_images(&[keys[0], keys[1], keys[3], keys[7], keys[19]])
+                .expect("check_key_images failed");
+
+            thread::sleep(time::Duration::from_secs(10));
+            // panic on the 20th time
+            n += 1; //
+            if n > 20 {
+                panic!("Fog ledger not  fully initialized");
+            }
+        }
+
         // FIXME assert_eq!(response.num_txos, ...);
         assert_eq!(response.results[0].key_image, keys[0]);
         assert_eq!(response.results[0].status(), Ok(Some(1)));
-        assert_eq!(response.results[0].timestamp, 1593798844);
+        assert_eq!(response.results[0].timestamp, 100);
         assert_eq!(
             response.results[0].timestamp_result_code,
             TimestampResultCode::TimestampFound as u32
         );
         assert_eq!(response.results[1].key_image, keys[1]);
         assert_eq!(response.results[1].status(), Ok(Some(1)));
-        assert_eq!(response.results[1].timestamp, 1593798844);
+        assert_eq!(response.results[1].timestamp, 100);
         assert_eq!(
             response.results[1].timestamp_result_code,
             TimestampResultCode::TimestampFound as u32
@@ -311,19 +363,19 @@ fn fog_ledger_key_images_test(logger: Logger) {
         // Check a key_image for a block which will never have signatures & timestamps
         assert_eq!(response.results[2].key_image, keys[3]);
         assert_eq!(response.results[2].status(), Ok(Some(2))); // Spent in block 2
-        assert_eq!(response.results[2].timestamp, u64::MAX);
+        assert_eq!(response.results[2].timestamp, 200);
         assert_eq!(
             response.results[2].timestamp_result_code,
-            TimestampResultCode::Unavailable as u32
+            TimestampResultCode::TimestampFound as u32
         );
 
         // Watcher has only synced 1 block, so timestamp should be behind
         assert_eq!(response.results[3].key_image, keys[7]);
         assert_eq!(response.results[3].status(), Ok(Some(3))); // Spent in block 3
-        assert_eq!(response.results[3].timestamp, u64::MAX);
+        assert_eq!(response.results[3].timestamp, 300);
         assert_eq!(
             response.results[3].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
+            TimestampResultCode::TimestampFound as u32
         );
 
         // Check a key_image that has not been spent
@@ -332,7 +384,7 @@ fn fog_ledger_key_images_test(logger: Logger) {
         assert_eq!(response.results[4].timestamp, u64::MAX);
         assert_eq!(
             response.results[4].timestamp_result_code,
-            TimestampResultCode::BlockIndexOutOfBounds as u32
+            TimestampResultCode::TimestampFound as u32
         );
     }
 
@@ -365,16 +417,23 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &[alice.default_subaddress()], &[], &mut rng);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &[alice.default_subaddress()],
+        &[],
+        &mut rng,
+        &mut watcher,
+    );
     add_block_to_ledger_db(
         &mut ledger,
         &[alice.default_subaddress(), bob.default_subaddress()],
         &[KeyImage::from(1)],
         &mut rng,
+        &mut watcher,
     );
     add_block_to_ledger_db(
         &mut ledger,
@@ -385,9 +444,15 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
         ],
         &[KeyImage::from(2)],
         &mut rng,
+        &mut watcher,
     );
-    let num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(3)], &mut rng);
+    let num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(3)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -406,11 +471,14 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -462,14 +530,14 @@ fn fog_ledger_blocks_api_test(logger: Logger) {
         assert_eq!(result.blocks[0].global_txo_count, 3);
         assert_eq!(
             result.blocks[0].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
+            TimestampResultCode::TimestampFound as u32
         );
         assert_eq!(result.blocks[1].index, 2);
         assert_eq!(result.blocks[1].outputs.len(), 3);
         assert_eq!(result.blocks[1].global_txo_count, 6);
         assert_eq!(
             result.blocks[1].timestamp_result_code,
-            TimestampResultCode::WatcherBehind as u32
+            TimestampResultCode::TimestampFound as u32
         );
         assert_eq!(result.num_blocks, num_blocks);
         assert_eq!(result.global_txo_count, ledger.num_txos().unwrap());
@@ -502,16 +570,23 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
     let db_full_path = ledger_dir.path();
     let mut ledger = generate_ledger_db(db_full_path);
 
-    let (watcher, watcher_dir) = setup_watcher_db(logger.clone());
+    let (mut watcher, watcher_dir) = setup_watcher_db(logger.clone());
 
     // Populate ledger with some data
     // Origin block cannot have key images
-    add_block_to_ledger_db(&mut ledger, &[alice.default_subaddress()], &[], &mut rng);
+    add_block_to_ledger_db(
+        &mut ledger,
+        &[alice.default_subaddress()],
+        &[],
+        &mut rng,
+        &mut watcher,
+    );
     add_block_to_ledger_db(
         &mut ledger,
         &[alice.default_subaddress(), bob.default_subaddress()],
         &[KeyImage::from(1)],
         &mut rng,
+        &mut watcher,
     );
     add_block_to_ledger_db(
         &mut ledger,
@@ -522,9 +597,15 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
         ],
         &[KeyImage::from(2)],
         &mut rng,
+        &mut watcher,
     );
-    let _num_blocks =
-        add_block_to_ledger_db(&mut ledger, &recipients, &[KeyImage::from(3)], &mut rng);
+    let _num_blocks = add_block_to_ledger_db(
+        &mut ledger,
+        &recipients,
+        &[KeyImage::from(3)],
+        &mut rng,
+        &mut watcher,
+    );
 
     {
         // Make LedgerServer
@@ -543,11 +624,14 @@ fn fog_ledger_untrusted_tx_out_api_test(logger: Logger) {
             ias_api_key: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            omap_capacity: OMAP_CAPACITY,
         };
 
         let enclave = LedgerSgxEnclave::new(
             get_enclave_path(fog_ledger_enclave::ENCLAVE_FILE),
             &config.client_responder_id,
+            OMAP_CAPACITY,
+            logger.clone(),
         );
 
         let ra_client =
@@ -636,6 +720,7 @@ fn add_block_to_ledger_db(
     recipients: &[PublicAddress],
     key_images: &[KeyImage],
     rng: &mut (impl CryptoRng + RngCore),
+    watcher: &mut WatcherDB,
 ) -> u64 {
     let value: u64 = 10;
 
@@ -658,7 +743,36 @@ fn add_block_to_ledger_db(
     let num_blocks = ledger_db.num_blocks().expect("failed to get block height");
 
     let new_block;
+
+    // Get timestamp derived from the number of blocks
+    let (timestamp, _timestamp_result_code) = if num_blocks > 0 {
+        (num_blocks * 100, TimestampResultCode::TimestampFound)
+    } else {
+        (u64::MAX, TimestampResultCode::BlockIndexOutOfBounds)
+    };
+
+    // num_blocks is the block_index of the block we are now adding
     if num_blocks > 0 {
+        for src_url in watcher.get_config_urls().unwrap().iter() {
+            let block = Block {
+                // Dummy block - we don't work with blocks in this test framework
+                index: num_blocks,
+                ..Default::default()
+            };
+            let mut block_signature =
+                BlockSignature::from_block_and_keypair(&block, &Ed25519Pair::from_random(rng))
+                    .expect("Could not create block signature from keypair");
+            block_signature.set_signed_at(timestamp);
+            watcher
+                .add_block_signature(
+                    src_url,
+                    num_blocks,
+                    block_signature,
+                    format!("00/{}", num_blocks),
+                )
+                .expect("Could not add block signature");
+        }
+
         let parent = ledger_db
             .get_block(num_blocks - 1)
             .expect("failed to get parent block");

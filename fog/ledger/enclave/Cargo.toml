@@ -19,8 +19,13 @@ mc-sgx-panic-edl = { path = "../../../mobilecoin/sgx/panic-edl" }
 mc-sgx-report-cache-api = { path = "../../../mobilecoin/sgx/report-cache/api" }
 mc-sgx-slog-edl = { path = "../../../mobilecoin/sgx/slog-edl" }
 
+# fog
+fog-types = { path = "../../fog_types" }
 fog-ledger-enclave-api = { path = "./api" }
 fog-ledger-enclave-edl = { path = "./edl" }
+fog-ledger-enclave-measurement = { path = "./measurement" }
+fog-ocall-oram-storage-edl = { path = "../../ocall_oram_storage/edl" }
+fog-ocall-oram-storage-untrusted = { path = "../../ocall_oram_storage/untrusted" }
 
 [build-dependencies]
 mc-util-build-sgx = { path = "../../../mobilecoin/util/build/sgx" }

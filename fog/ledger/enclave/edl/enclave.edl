@@ -5,6 +5,7 @@ enclave {
     from "sgx_debug.edl" import *;
     from "sgx_panic.edl" import *;
     from "sgx_slog.edl" import *;
+    from "oram_storage.edl" import *;
 
     trusted {
         /*

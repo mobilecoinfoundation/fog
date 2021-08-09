@@ -2,17 +2,21 @@
 
 //! MobileCoin Fog Ledger SGX Enclave Untrusted Proxy
 
+#![deny(missing_docs)]
+
+extern crate fog_ocall_oram_storage_untrusted;
+
 pub use fog_ledger_enclave_api::{
-    CheckKeyImagesResponse, EnclaveCall, Error, GetOutputsResponse, KeyImageContext,
-    KeyImageResult, KeyImageResultCode, LedgerEnclave, LedgerEnclaveProxy, OutputContext,
-    OutputResult, Result,
+    CheckKeyImagesResponse, EnclaveCall, Error, GetOutputsResponse, KeyImageData, KeyImageResult,
+    KeyImageResultCode, LedgerEnclave, LedgerEnclaveProxy, OutputContext, OutputResult, Result,
 };
 
+use fog_ledger_enclave_api::UntrustedKeyImageQueryResponse;
 use mc_attest_core::{
     IasNonce, Quote, QuoteNonce, Report, SgxError, TargetInfo, VerificationReport, DEBUG_ENCLAVE,
 };
 use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
-use mc_common::ResponderId;
+use mc_common::{logger::Logger, ResponderId};
 use mc_crypto_keys::X25519Public;
 use mc_enclave_boundary::untrusted::make_variable_length_ecall;
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
@@ -25,11 +29,13 @@ use std::{path, result::Result as StdResult, sync::Arc};
 /// The default filename of the fog ledger's SGX enclave binary.
 pub const ENCLAVE_FILE: &str = "libledger-enclave.signed.so";
 
+/// A clone-able handle to the enclave suitable for use in servers
 #[derive(Clone)]
 pub struct LedgerSgxEnclave {
     eid: sgx_enclave_id_t,
     // Hold a reference counter to the enclave to prevent destruction.
     enclave: Arc<SgxEnclave>,
+    logger: Logger,
 }
 
 impl ReportableEnclave for LedgerSgxEnclave {
@@ -59,7 +65,21 @@ impl ReportableEnclave for LedgerSgxEnclave {
 }
 
 impl LedgerSgxEnclave {
-    pub fn new(enclave_path: path::PathBuf, self_id: &ResponderId) -> LedgerSgxEnclave {
+    /// Create a new sgx ledger enclave
+    ///
+    /// Arguments:
+    /// * enclave_path: The path to the signed enclave .so file
+    /// * self_id: The responder_id to be used when client is connecting to us
+    /// * desired_capacity: The desired capacity in the oblivious map. Must be a
+    ///   power of two. Actual capacity will be ~70% of this. Memory utilization
+    ///   will be about 256 bytes * this + some overhead
+    /// * logger: Logger to use
+    pub fn new(
+        enclave_path: path::PathBuf,
+        self_id: &ResponderId,
+        desired_capacity: u64,
+        logger: Logger,
+    ) -> LedgerSgxEnclave {
         let mut launch_token: sgx_launch_token_t = [0; 1024];
         let mut launch_token_updated: i32 = 0;
         // FIXME: this must be filled in from the build.rs
@@ -83,10 +103,11 @@ impl LedgerSgxEnclave {
         let sgx_enclave = LedgerSgxEnclave {
             eid: enclave.geteid(),
             enclave: Arc::new(enclave),
+            logger: logger.clone(),
         };
 
         sgx_enclave
-            .enclave_init(self_id)
+            .enclave_init(self_id, desired_capacity)
             .unwrap_or_else(|e| panic!("enclave_init({}) failed: {:?}", self_id, e));
 
         sgx_enclave
@@ -105,8 +126,11 @@ impl LedgerSgxEnclave {
 /// Proxy API for talking to the corresponding implementation inside the
 /// enclave.
 impl LedgerEnclave for LedgerSgxEnclave {
-    fn enclave_init(&self, self_id: &ResponderId) -> Result<()> {
-        let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(self_id.clone()))?;
+    fn enclave_init(&self, self_id: &ResponderId, desired_capacity: u64) -> Result<()> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::EnclaveInit(
+            self_id.clone(),
+            desired_capacity,
+        ))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }
@@ -145,18 +169,22 @@ impl LedgerEnclave for LedgerSgxEnclave {
         mc_util_serial::deserialize(&outbuf[..])?
     }
 
-    fn check_key_images(&self, msg: EnclaveMessage<ClientSession>) -> Result<KeyImageContext> {
-        let inbuf = mc_util_serial::serialize(&EnclaveCall::CheckKeyImages(msg))?;
+    fn check_key_images(
+        &self,
+        msg: EnclaveMessage<ClientSession>,
+        untrusted_keyimagequery_response: UntrustedKeyImageQueryResponse,
+    ) -> Result<Vec<u8>> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::CheckKeyImages(
+            msg,
+            untrusted_keyimagequery_response,
+        ))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }
 
-    fn check_key_images_data(
-        &self,
-        resp: CheckKeyImagesResponse,
-        client: ClientSession,
-    ) -> Result<EnclaveMessage<ClientSession>> {
-        let inbuf = mc_util_serial::serialize(&EnclaveCall::CheckKeyImagesData(resp, client))?;
+    // Add a key image data to the oram in the key image
+    fn add_key_image_data(&self, records: Vec<KeyImageData>) -> Result<()> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::AddKeyImageData(records))?;
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }

@@ -9,7 +9,7 @@ use mc_crypto_keys::{CompressedRistrettoPublic, KeyError, RistrettoPrivate, Rist
 use mc_transaction_core::{
     encrypted_fog_hint::{EncryptedFogHint, ENCRYPTED_FOG_HINT_LEN},
     tx::TxOut,
-    Amount, AmountError,
+    Amount, AmountError, EncryptedMemo, MemoError,
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -199,6 +199,10 @@ pub struct TxOutRecord {
     /// data successfully.
     #[prost(fixed32, tag = "8")]
     pub tx_out_amount_commitment_data_crc32: u32,
+
+    /// The encrypted memo bytes of the TxOut
+    #[prost(bytes, tag = "9")]
+    pub tx_out_e_memo_data: Vec<u8>,
 }
 
 impl TxOutRecord {
@@ -216,6 +220,10 @@ impl TxOutRecord {
             tx_out_amount_masked_value: fog_tx_out.amount_masked_value,
             tx_out_target_key_data: fog_tx_out.target_key.as_bytes().to_vec(),
             tx_out_public_key_data: fog_tx_out.public_key.as_bytes().to_vec(),
+            tx_out_e_memo_data: fog_tx_out
+                .e_memo
+                .map(|e_memo| e_memo.into())
+                .unwrap_or_default(),
             tx_out_global_index: meta.global_index,
             block_index: meta.block_index,
             timestamp: meta.timestamp,
@@ -225,32 +233,46 @@ impl TxOutRecord {
     /// Extract a FogTxOut object from the (flattened) TxOutRecord object
     /// Note that this discards some metadata (timestamp, block_index,
     /// global_index).
-    pub fn get_fog_tx_out(&self) -> Result<FogTxOut, KeyError> {
-        // There are two cases: TxOutRecord with full amount data, and TxOutRecord with
-        // only commitment data crc32 and masked value.
-        if self.tx_out_amount_commitment_data.is_empty() {
-            return Ok(FogTxOut {
-                target_key: CompressedRistrettoPublic::try_from(&self.tx_out_target_key_data[..])?,
-                public_key: CompressedRistrettoPublic::try_from(&self.tx_out_public_key_data[..])?,
-                amount_masked_value: self.tx_out_amount_masked_value,
-                amount_commitment_data_crc32: self.tx_out_amount_commitment_data_crc32,
-            });
-        }
-
-        // If we are provided with a commitment, then we should compute crc32 of it and
-        // discard those bytes, in order to unify early to one code path.
-        if self.tx_out_amount_commitment_data.len() != 32 {
-            return Err(KeyError::LengthMismatch(
-                32,
-                self.tx_out_amount_commitment_data.len(),
-            ));
-        }
+    pub fn get_fog_tx_out(&self) -> Result<FogTxOut, FogTxOutError> {
         Ok(FogTxOut {
             target_key: CompressedRistrettoPublic::try_from(&self.tx_out_target_key_data[..])?,
             public_key: CompressedRistrettoPublic::try_from(&self.tx_out_public_key_data[..])?,
             amount_masked_value: self.tx_out_amount_masked_value,
-            amount_commitment_data_crc32: crc32::checksum_ieee(&self.tx_out_amount_commitment_data),
+            amount_commitment_data_crc32: self.get_amount_data_crc32()?,
+            e_memo: self.get_e_memo()?,
         })
+    }
+
+    // Helper: Get the amount data crc32, resolving the two cases (full amount data
+    // and only the crc32)
+    fn get_amount_data_crc32(&self) -> Result<u32, KeyError> {
+        // There are two cases: TxOutRecord with full amount data, and TxOutRecord with
+        // only commitment data crc32 and masked value.
+        if self.tx_out_amount_commitment_data.is_empty() {
+            Ok(self.tx_out_amount_commitment_data_crc32)
+        } else if self.tx_out_amount_commitment_data.len() == 32 {
+            // If we are provided with a commitment, then we should compute crc32 of it and
+            // discard those bytes, in order to unify early to one code path.
+            Ok(crc32::checksum_ieee(&self.tx_out_amount_commitment_data))
+        } else {
+            // This is a malformed record
+            Err(KeyError::LengthMismatch(
+                32,
+                self.tx_out_amount_commitment_data.len(),
+            ))
+        }
+    }
+
+    // Helper: Get the amount data crc32, resolving the two cases (full amount data
+    // and only the crc32)
+    fn get_e_memo(&self) -> Result<Option<EncryptedMemo>, MemoError> {
+        // There are two cases: TxOutRecord with full memo data of the right length,
+        // and no memo data.
+        if self.tx_out_e_memo_data.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(EncryptedMemo::try_from(&self.tx_out_e_memo_data[..])?))
+        }
     }
 }
 
@@ -270,6 +292,9 @@ pub struct FogTxOut {
 
     /// The crc32 of the tx out amount commitment bytes
     pub amount_commitment_data_crc32: u32,
+
+    /// The encrypted memo, if present
+    pub e_memo: Option<EncryptedMemo>,
 }
 
 // Convert a TxOut to a FogTxOut in the efficient way (omitting compressed
@@ -284,6 +309,7 @@ impl core::convert::From<&TxOut> for FogTxOut {
             amount_commitment_data_crc32: crc32::checksum_ieee(
                 src.amount.commitment.point.as_bytes(),
             ),
+            e_memo: src.e_memo.clone(),
         }
     }
 }
@@ -329,6 +355,7 @@ impl FogTxOut {
             target_key: self.target_key,
             public_key: self.public_key,
             e_fog_hint: EncryptedFogHint::from(&[0u8; ENCRYPTED_FOG_HINT_LEN]),
+            e_memo: self.e_memo.clone(),
         })
     }
 }
@@ -342,6 +369,8 @@ pub enum FogTxOutError {
     Amount(AmountError),
     /// An invalid key: {0}
     Key(KeyError),
+    /// An invalid memo: {0}
+    Memo(MemoError),
 }
 
 impl From<AmountError> for FogTxOutError {
@@ -353,6 +382,12 @@ impl From<AmountError> for FogTxOutError {
 impl From<KeyError> for FogTxOutError {
     fn from(src: KeyError) -> Self {
         Self::Key(src)
+    }
+}
+
+impl From<MemoError> for FogTxOutError {
+    fn from(src: MemoError) -> Self {
+        Self::Memo(src)
     }
 }
 

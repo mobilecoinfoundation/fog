@@ -850,6 +850,7 @@ dependencies = [
  "mc-util-serial",
  "prost",
  "rand_core",
+ "subtle",
  "zeroize",
 ]
 
@@ -1262,12 +1263,14 @@ version = "1.1.0"
 name = "mc-transaction-core"
 version = "1.1.0"
 dependencies = [
+ "aes",
  "blake2",
  "bulletproofs",
  "curve25519-dalek",
  "displaydoc",
  "generic-array",
  "hex_fmt",
+ "hkdf",
  "lazy_static",
  "mc-account-keys",
  "mc-common",
@@ -1282,6 +1285,7 @@ dependencies = [
  "prost",
  "rand_core",
  "serde",
+ "sha2",
  "subtle",
  "zeroize",
 ]

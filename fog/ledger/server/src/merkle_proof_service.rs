@@ -250,6 +250,7 @@ mod test {
                 target_key: target_key.into(),
                 public_key: public_key.into(),
                 e_fog_hint: EncryptedFogHint::new(&[7u8; ENCRYPTED_FOG_HINT_LEN]),
+                e_memo: None,
             };
             tx_outs.push(tx_out);
         }

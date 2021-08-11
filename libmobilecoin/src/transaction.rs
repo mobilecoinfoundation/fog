@@ -10,9 +10,9 @@ use mc_transaction_core::{
     onetime_keys::{recover_onetime_private_key, recover_public_subaddress_spend_key},
     ring_signature::KeyImage,
     tx::{TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
-    Amount, CompressedCommitment,
+    Amount, CompressedCommitment, MemoPayload,
 };
-use mc_transaction_std::{InputCredentials, TransactionBuilder};
+use mc_transaction_std::{InputCredentials, RTHMemoBuilder, TransactionBuilder};
 use mc_util_ffi::*;
 
 /* ==== TxOut ==== */
@@ -301,8 +301,12 @@ pub extern "C" fn mc_transaction_builder_create(
                     FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
                         .expect("FogResolver could not be constructed from the provided materials")
                 });
-        let mut transaction_builder = TransactionBuilder::new(fog_resolver);
-        transaction_builder.set_fee(fee);
+        let memo_builder = RTHMemoBuilder::default();
+        // FIXME: Enable recoverable transaction history by configuring memo_builder
+        let mut transaction_builder = TransactionBuilder::new(fog_resolver, memo_builder);
+        transaction_builder
+            .set_fee(fee)
+            .expect("failure not expected");
         transaction_builder.set_tombstone_block(tombstone_block);
         Some(transaction_builder)
     })
@@ -464,6 +468,7 @@ pub extern "C" fn mc_transaction_builder_add_output_with_fog_hint_address(
             amount,
             &recipient_address,
             &fog_hint_address,
+            |_| Ok(MemoPayload::default()),
             &mut rng,
         )?;
 

@@ -4,7 +4,7 @@ use super::{IntoFfi, McError};
 use crate::LibMcError;
 use mc_util_ffi::{FfiOptMutPtr, FfiOptOwnedPtr, FfiOwnedPtr};
 use std::{
-    panic::{catch_unwind, AssertUnwindSafe, UnwindSafe},
+    panic::{catch_unwind, AssertUnwindSafe},
     process::abort,
 };
 
@@ -14,7 +14,7 @@ use std::{
 /// within the closure passed as parameter `f`. This function ensures FFI safety
 /// by catching unwind panics, logging the panic, and returning the
 /// sentinel error value returned by a call to `R::error_value()`.
-pub(crate) fn ffi_boundary<R, I>(f: impl (FnOnce() -> R) + UnwindSafe) -> I
+pub(crate) fn ffi_boundary<R, I>(f: impl (FnOnce() -> R)) -> I
 where
     R: IntoFfi<I>,
 {
@@ -37,7 +37,7 @@ where
 /// value returned by a call to `R::error_value()`.
 pub(crate) fn ffi_boundary_with_error<R, I>(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
-    f: impl (FnOnce() -> Result<R, LibMcError>) + UnwindSafe,
+    f: impl (FnOnce() -> Result<R, LibMcError>),
 ) -> I
 where
     R: IntoFfi<I>,
@@ -52,11 +52,25 @@ where
     })
 }
 
-fn ffi_boundary_impl<R>(
-    f: impl (FnOnce() -> Result<R, LibMcError>) + UnwindSafe,
-) -> Result<R, LibMcError> {
+fn ffi_boundary_impl<R>(f: impl (FnOnce() -> Result<R, LibMcError>)) -> Result<R, LibMcError> {
     // Run f within catch_unwind
-    catch_unwind(f)
+    //
+    // Note: this is using AssertUnwindSafe because some of the TransactionBuilder
+    // types are abstracted behind Box<dyn ... + Send + Sync>, but rust does not
+    // allow such types to be UnwindSafe because they may exhibit interior
+    // mutability. OTOH if we do not put + Send + Sync, then it is illegal to
+    // put TransactionBuilder behind a Mutex, which prevents the android
+    // bindings from building.
+    //
+    // The reason we use Box<dyn + ...> at all is to avoid making everything
+    // a generic parameter of transaction builder, which multiplies the number of
+    // types that might have to have cross-language bindings.
+    //
+    // UnwindSafe is too restrictive -- the goal of UnwindSafe is that if a panic is
+    // caught, we cannot "easily" observe a broken invariant. However, the only
+    // thing we actually need at an ffi boundary is to prevent unwinding across
+    // stackframes into swift etc.
+    catch_unwind(AssertUnwindSafe(f))
         // Return a `LibMcError` if we panic. However, we still need to be mindful of panics while
         // formatting the panic error so that we don't accidentally unwind across the FFI boundary.
         .unwrap_or_else(|panic_error| {
@@ -85,7 +99,7 @@ fn log_error(err: LibMcError) {
     error_handling_ffi_boundary(|| eprintln!("LibMobileCoin Error: {}", err))
 }
 
-fn error_handling_ffi_boundary(f: impl FnOnce() + UnwindSafe) {
+fn error_handling_ffi_boundary(f: impl FnOnce()) {
     let _ = ffi_boundary_impl(|| {
         f();
         Ok(())

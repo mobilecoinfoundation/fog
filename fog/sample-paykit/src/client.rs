@@ -35,7 +35,9 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutMembershipProof},
     BlockIndex,
 };
-use mc_transaction_std::{InputCredentials, TransactionBuilder};
+use mc_transaction_std::{
+    InputCredentials, RTHMemoBuilder, SenderMemoCredential, TransactionBuilder,
+};
 use mc_util_uri::{ConnectionUri, FogUri};
 use rand::Rng;
 
@@ -524,14 +526,19 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
         return Err(Error::RingsForInput(rings.len(), inputs.len()));
     }
 
-    let mut tx_builder = TransactionBuilder::new(fog_resolver);
-    tx_builder.set_fee(fee);
+    let mut memo_builder = RTHMemoBuilder::default();
+    memo_builder.set_sender_credential(SenderMemoCredential::from(source_account_key));
+    memo_builder.enable_destination_memo();
+
+    let mut tx_builder = TransactionBuilder::new(fog_resolver, memo_builder);
+    tx_builder.set_fee(fee)?;
 
     let input_amount = inputs.iter().fold(0, |acc, (txo, _)| acc + txo.value);
-    if (amount + tx_builder.fee) > input_amount {
+    let fee = tx_builder.get_fee();
+    if (amount + fee) > input_amount {
         return Err(Error::InsufficientFunds);
     }
-    let change = input_amount - (amount + tx_builder.fee);
+    let change = input_amount - (amount + fee);
 
     // Unzip each vec of tuples into a tuple of vecs.
     let mut rings_and_proofs: Vec<(Vec<TxOut>, Vec<TxOutMembershipProof>)> = rings

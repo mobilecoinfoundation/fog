@@ -449,10 +449,10 @@ pub extern "C" fn mc_transaction_builder_add_output_with_fog_hint_address(
     out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> FfiOptOwnedPtr<McData> {
-    /// FIXME: The SDK should probably stop binding to this function, I don't
-    /// believe there is legitimate use for this.
-    /// It should bind "add_change_output" instead.
-    /// Please speak to me if you disagree.
+    // FIXME(chris): The SDK should probably stop binding to this function, I don't
+    // believe that there is legitimate use for this.
+    // It should bind "add_change_output" instead.
+    // Please speak to me if you disagree.
     ffi_boundary_with_error(out_error, || {
         let transaction_builder = transaction_builder
             .into_mut()

@@ -11,9 +11,11 @@ name = "test_client"
 path = "src/bin/main.rs"
 
 [dependencies]
+mc-account-keys = { path = "../../mobilecoin/account-keys" }
 mc-common = { path = "../../mobilecoin/common", features = ["log"] }
 mc-crypto-rand = { path = "../../mobilecoin/crypto/rand" }
 mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
+mc-transaction-std = { path = "../../mobilecoin/transaction/std" }
 mc-util-keyfile = { path = "../../mobilecoin/util/keyfile" }
 mc-util-uri = { path = "../../mobilecoin/util/uri" }
 

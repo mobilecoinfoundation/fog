@@ -5,9 +5,9 @@
 use crate::{
     cached_tx_data::{CachedTxData, OwnedTxOut},
     error::{Error, Result},
-    TransactionStatus,
+    MemoHandlerError, TransactionStatus,
 };
-use core::{convert::TryFrom, str::FromStr};
+use core::{convert::TryFrom, result::Result as StdResult, str::FromStr};
 use fog_api::ledger::TxOutResultCode;
 use fog_ledger_connection::{
     FogKeyImageGrpcClient, FogMerkleProofGrpcClient, FogUntrustedLedgerGrpcClient,
@@ -36,7 +36,7 @@ use mc_transaction_core::{
     BlockIndex,
 };
 use mc_transaction_std::{
-    InputCredentials, RTHMemoBuilder, SenderMemoCredential, TransactionBuilder,
+    InputCredentials, MemoType, RTHMemoBuilder, SenderMemoCredential, TransactionBuilder,
 };
 use mc_util_uri::{ConnectionUri, FogUri};
 use rand::Rng;
@@ -79,9 +79,11 @@ impl Client {
         fog_untrusted: FogUntrustedLedgerGrpcClient,
         ring_size: usize,
         account_key: AccountKey,
+        address_book: Vec<PublicAddress>,
         logger: Logger,
     ) -> Self {
-        let tx_data = CachedTxData::new(logger.clone());
+        let tx_data = CachedTxData::new(address_book, logger.clone());
+
         Client {
             consensus_service_conn,
             fog_view,
@@ -151,6 +153,11 @@ impl Client {
     /// Get balance debug print message
     pub fn debug_balance(&mut self) -> String {
         self.tx_data.debug_balance()
+    }
+
+    /// Get the last memo (or validation error) that we recieved from a TxOut
+    pub fn get_last_memo(&mut self) -> &StdResult<Option<MemoType>, MemoHandlerError> {
+        self.tx_data.get_last_memo()
     }
 
     /// Submits a transaction to the MobileCoin network.

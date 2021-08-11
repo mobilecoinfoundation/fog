@@ -1757,9 +1757,11 @@ name = "fog-test-client"
 version = "1.1.0"
 dependencies = [
  "fog-sample-paykit",
+ "mc-account-keys",
  "mc-common",
  "mc-crypto-rand",
  "mc-transaction-core",
+ "mc-transaction-std",
  "mc-util-keyfile",
  "mc-util-uri",
  "more-asserts",

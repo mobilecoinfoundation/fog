@@ -1,9 +1,6 @@
 // Copyright (c) 2018-2021 The MobileCoin Foundation
 
-use crate::{
-    error::{Error, Result, TxOutMatchingError},
-    AccountKey,
-};
+use crate::error::{Error, Result, TxOutMatchingError};
 use core::{
     cmp::{max, min},
     convert::TryFrom,
@@ -17,6 +14,7 @@ use fog_ledger_connection::{
 use fog_types::{view::TxOutRecord, BlockCount};
 use fog_view_connection::FogViewGrpcClient;
 use fog_view_protocol::{FogViewConnection, UserPrivate, UserRngSet};
+use mc_account_keys::{AccountKey, PublicAddress};
 use mc_common::{
     logger::{log, Logger},
     HashMap,
@@ -26,7 +24,11 @@ use mc_transaction_core::{
     get_tx_out_shared_secret, onetime_keys::recover_onetime_private_key, ring_signature::KeyImage,
     tx::TxOut, BlockIndex,
 };
+use mc_transaction_std::MemoType;
 use std::collections::BTreeMap;
+
+mod memo_handler;
+pub use memo_handler::{MemoHandler, MemoHandlerError};
 
 const MAX_INPUTS: usize = mc_transaction_core::constants::MAX_INPUTS as usize;
 
@@ -70,20 +72,28 @@ pub struct CachedTxData {
     /// but might ideally take into account fog view server responses as well.
     /// However, that would require a change that would conflict with SQL PR.
     latest_global_txo_count: u64,
+    /// A memo handler which attempts to decrypt memos and validate them
+    memo_handler: MemoHandler,
     /// A logger object
     logger: Logger,
 }
 
 impl CachedTxData {
-    /// Create a new CachedTxData object, giving it only a logger object.
-    pub fn new(logger: Logger) -> Self {
+    /// Create a new CachedTxData object
+    pub fn new(address_book: Vec<PublicAddress>, logger: Logger) -> Self {
         Self {
             rng_set: UserRngSet::default(),
             owned_tx_outs: Default::default(),
             key_image_data_completeness: BlockCount::MAX,
             latest_global_txo_count: 0,
+            memo_handler: MemoHandler::new(address_book),
             logger,
         }
+    }
+
+    /// Get the last processed memo
+    pub fn get_last_memo(&self) -> &StdResult<Option<MemoType>, MemoHandlerError> {
+        self.memo_handler.get_last_memo()
     }
 
     /// Get the num_blocks value that we can compute balances for.
@@ -301,6 +311,8 @@ impl CachedTxData {
                                 min(self.key_image_data_completeness, as_of);
                         }
                     }
+                    // Handle memo
+                    self.memo_handler.handle_memo(&otxo.tx_out, &account_key);
                 }
                 Err(err) => {
                     errors.push(err);

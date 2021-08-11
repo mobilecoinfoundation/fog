@@ -7,7 +7,6 @@ use mc_common::logger::{log, Logger};
 use mc_ledger_db::{Error as LedgerError, Ledger, LedgerDB};
 use mc_transaction_core::BlockIndex;
 use mc_watcher::watcher_db::WatcherDB;
-use mc_watcher_api::TimestampResultCode;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -127,7 +126,7 @@ impl IngestWorker {
                             }
 
                             // Get the timestamp for the block.
-                            let timestamp = Self::get_watcher_timestamp(
+                            let timestamp = fog_timestamps::watcher::get_watcher_timestamp(
                                 next_block_index,
                                 &watcher,
                                 watcher_timeout,
@@ -143,56 +142,6 @@ impl IngestWorker {
                     }
                 }
             })),
-        }
-    }
-
-    // Get the timestamp from the watcher, or an error code,
-    // using retries if the watcher fell behind
-    fn get_watcher_timestamp(
-        block_index: BlockIndex,
-        watcher: &WatcherDB,
-        watcher_timeout: Duration,
-        logger: &Logger,
-    ) -> u64 {
-        // Timer that tracks how long we have had WatcherBehind error for,
-        // if this exceeds watcher_timeout, we log a warning.
-        let mut watcher_behind_timer = Instant::now();
-        loop {
-            match watcher.get_block_timestamp(block_index) {
-                Ok((ts, res)) => match res {
-                    TimestampResultCode::WatcherBehind => {
-                        if watcher_behind_timer.elapsed() > watcher_timeout {
-                            log::warn!(logger, "watcher is still behind on block index = {} after waiting {} seconds, ingest will be blocked", block_index, watcher_timeout.as_secs());
-                            watcher_behind_timer = Instant::now();
-                        }
-                        std::thread::sleep(Self::POLLING_FREQUENCY);
-                    }
-                    TimestampResultCode::BlockIndexOutOfBounds => {
-                        log::warn!(logger, "block index {} was out of bounds, we should not be scanning it, we will have junk timestamps for it", block_index);
-                        return u64::MAX;
-                    }
-                    TimestampResultCode::Unavailable => {
-                        log::crit!(logger, "watcher configuration is wrong and timestamps will not be available with this configuration. Ingest is blocked at block index {}", block_index);
-                        std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
-                    }
-                    TimestampResultCode::WatcherDatabaseError => {
-                        log::crit!(logger, "The watcher database has an error which prevents us from getting timestamps. Ingest is blocked at block index {}", block_index);
-                        std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
-                    }
-                    TimestampResultCode::TimestampFound => {
-                        return ts;
-                    }
-                },
-                Err(err) => {
-                    log::error!(
-                        logger,
-                        "Could not obtain timestamp for block {} due to error {}, this may mean the watcher is not correctly configured. will retry",
-                        block_index,
-                        err
-                    );
-                    std::thread::sleep(Self::ERROR_RETRY_FREQUENCY);
-                }
-            };
         }
     }
 }

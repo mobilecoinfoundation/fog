@@ -56,6 +56,7 @@ fog-ingest-enclave-api = { path = "../enclave/api" }
 fog-ingest-enclave-measurement = { path = "../enclave/measurement" }
 fog-recovery-db-iface = { path = "../../recovery_db_iface" }
 fog-sql-recovery-db = { path = "../../sql_recovery_db" }
+fog-timestamps = { path = "../../fog_timestamps" }
 fog-types = { path = "../../fog_types" }
 fog-uri = { path = "../../uri" }
 

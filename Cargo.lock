@@ -1346,6 +1346,7 @@ dependencies = [
  "fog-recovery-db-iface",
  "fog-sql-recovery-db",
  "fog-test-infra",
+ "fog-timestamps",
  "fog-types",
  "fog-uri",
  "futures",
@@ -1523,6 +1524,7 @@ dependencies = [
  "fog-ledger-enclave-measurement",
  "fog-ledger-test-infra",
  "fog-test-infra",
+ "fog-timestamps",
  "fog-types",
  "fog-uri",
  "futures",
@@ -1834,6 +1836,16 @@ dependencies = [
  "serde_json",
  "structopt",
  "url",
+]
+
+[[package]]
+name = "fog-timestamps"
+version = "0.1.0"
+dependencies = [
+ "mc-common",
+ "mc-transaction-core",
+ "mc-watcher",
+ "mc-watcher-api",
 ]
 
 [[package]]

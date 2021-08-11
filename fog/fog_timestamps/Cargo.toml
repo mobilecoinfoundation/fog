@@ -1,0 +1,15 @@
+[package]
+name = "fog-timestamps"
+version = "0.1.0"
+authors = ["MobileCoin"]
+edition = "2018"
+license = "GPL-3.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# root
+mc-common = { path = "../../mobilecoin/common", features = ["loggers"] }
+mc-transaction-core = { path = "../../mobilecoin/transaction/core" }
+mc-watcher = { path = "../../mobilecoin/watcher" }
+mc-watcher-api = { path = "../../mobilecoin/watcher/api" }

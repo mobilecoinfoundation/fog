@@ -309,7 +309,7 @@ impl core::convert::From<&TxOut> for FogTxOut {
             amount_commitment_data_crc32: crc32::checksum_ieee(
                 src.amount.commitment.point.as_bytes(),
             ),
-            e_memo: src.e_memo.clone(),
+            e_memo: src.e_memo,
         }
     }
 }
@@ -355,7 +355,7 @@ impl FogTxOut {
             target_key: self.target_key,
             public_key: self.public_key,
             e_fog_hint: EncryptedFogHint::from(&[0u8; ENCRYPTED_FOG_HINT_LEN]),
-            e_memo: self.e_memo.clone(),
+            e_memo: self.e_memo,
         })
     }
 }

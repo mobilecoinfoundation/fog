@@ -1187,6 +1187,10 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_add_1output(
     )
 }
 
+/// FIXME: The SDK should bind to "add_change_output" as well and use this
+/// when creating change outputs, otherwise recoverable transaction history
+/// won't work
+
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_set_1tombstone_1block(
     env: JNIEnv,

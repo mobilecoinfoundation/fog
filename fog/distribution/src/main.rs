@@ -15,7 +15,7 @@ use mc_connection::{
 };
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_fog_report_connection::{Error as ReportConnError, GrpcFogReportConnection};
-use mc_fog_report_validation::FogResolver;
+use mc_fog_report_validation::{FogReportResponses, FogResolver};
 use mc_ledger_db::{Ledger, LedgerDB};
 use mc_transaction_core::{
     constants::MINIMUM_FEE,
@@ -218,49 +218,22 @@ fn main() {
         block_count += 1;
     }
 
+    let env = Arc::new(
+        grpcio::EnvBuilder::new()
+            .name_prefix("FogPubkeyResolver-RPC".to_string())
+            .build(),
+    );
+
+    let conn = GrpcFogReportConnection::new(env, logger.clone());
+    let fog_uri = FogUri::from_str(
+        fog_accounts[0]
+            .default_subaddress()
+            .fog_report_url()
+            .expect("No fog report url"),
+    )
+    .expect("Could not parse fog url");
     // Fetch fog before spawning worker threads
-    let fog_report_responses = {
-        let env = Arc::new(
-            grpcio::EnvBuilder::new()
-                .name_prefix("FogPubkeyResolver-RPC".to_string())
-                .build(),
-        );
-
-        let conn = GrpcFogReportConnection::new(env, logger.clone());
-        let fog_uri = FogUri::from_str(
-            fog_accounts[0]
-                .default_subaddress()
-                .fog_report_url()
-                .expect("No fog report url"),
-        )
-        .expect("Could not parse fog url");
-
-        // Ensure there are fog reports available
-        // XXX: This retry should possibly be in the GrpcFogPubkeyResolver object itself
-        // instead 15'th fibonacci is 987, so the last delay should be ~100
-        // seconds
-        retry(
-            delay::Fibonacci::from_millis(100)
-                .map(delay::jitter)
-                .take(15),
-            || match conn.fetch_fog_reports(core::slice::from_ref(&fog_uri).iter().cloned()) {
-                Ok(responses) => OperationResult::Ok(responses),
-                Err(ReportConnError::Rpc(err)) => {
-                    log::error!(
-                        logger,
-                        "grpc error reaching fog report server, retrying: {}",
-                        err
-                    );
-                    OperationResult::Retry(ReportConnError::Rpc(err))
-                }
-                Err(ReportConnError::NoReports(_)) => {
-                    log::error!(logger, "no fog reports available, retrying");
-                    OperationResult::Retry(ReportConnError::NoReports(fog_uri.clone()))
-                }
-            },
-        )
-        .expect("Could not contact fog report server")
-    };
+    let fog_report_responses = rebuild_fogresolver(&fog_uri, &conn, &logger);
 
     let report_verifier = {
         let mr_signer_verifier = fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
@@ -318,13 +291,45 @@ fn main() {
     thread::sleep(Duration::from_secs(1));
 }
 
+fn rebuild_fogresolver(
+    fog_uri: &FogUri,
+    conn: &GrpcFogReportConnection,
+    logger: &Logger,
+) -> FogReportResponses {
+    // Ensure there are fog reports available
+    // XXX: This retry should possibly be in the GrpcFogPubkeyResolver object itself
+    // instead 15'th fibonacci is 987, so the last delay should be ~100
+    // seconds
+    retry(
+        delay::Fibonacci::from_millis(100)
+            .map(delay::jitter)
+            .take(15),
+        || match conn.fetch_fog_reports(core::slice::from_ref(fog_uri).iter().cloned()) {
+            Ok(responses) => OperationResult::Ok(responses),
+            Err(ReportConnError::Rpc(err)) => {
+                log::error!(
+                    logger,
+                    "grpc error reaching fog report server, retr700/751:ying: {}",
+                    err
+                );
+                OperationResult::Retry(ReportConnError::Rpc(err))
+            }
+            Err(ReportConnError::NoReports(_)) => {
+                log::error!(logger, "no fog reports available, retrying");
+                OperationResult::Retry(ReportConnError::NoReports(fog_uri.clone()))
+            }
+        },
+    )
+    .expect("Could not contact fog report server")
+}
+
 fn worker_thread_entry(
     spendable_txouts_receiver: crossbeam_channel::Receiver<SpendableTxOut>,
     running_threads_sender: crossbeam_channel::Sender<usize>,
     config: Config,
     ledger_db: LedgerDB,
     fog_accounts: Vec<AccountKey>,
-    fog_resolver: FogResolver,
+    mut fog_resolver: FogResolver,
     logger: Logger,
 ) {
     log::info!(logger, "Worker started.");
@@ -355,10 +360,23 @@ fn worker_thread_entry(
 
         // Send to the next fog account
         let to_account = &fog_accounts[txs_created % fog_accounts.len()];
+        let env = Arc::new(
+            grpcio::EnvBuilder::new()
+                .name_prefix("FogPubkeyResolver-RPC".to_string())
+                .build(),
+        );
+
+        let conn = GrpcFogReportConnection::new(env, logger.clone());
+        let fog_uri = FogUri::from_str(
+            fog_accounts[0]
+                .default_subaddress()
+                .fog_report_url()
+                .expect("No fog report url"),
+        )
+        .expect("Could not parse fog url");
         // Sometime transactions could not be submitted before tombstone block passed,
         // so loop until transactions can be submmitted
-        let mut done = false;
-        while !done {
+        loop {
             // Got our inputs, construct transaction.
             let tx = build_tx(
                 &pending_spendable_txouts,
@@ -369,14 +387,31 @@ fn worker_thread_entry(
                 &logger,
             );
 
-            txs_created += 1;
-
             // Submit tx
             if submit_tx(txs_created, &conns, &tx, &config, &logger) {
+                txs_created += 1;
                 let mut map = TX_PUB_KEY_TO_ACCOUNT_KEY.lock().unwrap();
                 map.insert(tx.prefix.outputs[0].public_key, to_account.clone());
-                done = true;
+                break;
+            } else {
+                //each worker thread should build its own FogResolver,
+                //if submit fails, it should trash and rebuild the FogResolver to ensure it has
+                // fresh fog
+                let responses = rebuild_fogresolver(&fog_uri, &conn, &logger);
+
+                let report_verifier = {
+                    let mr_signer_verifier =
+                        fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
+
+                    let mut verifier = Verifier::default();
+                    verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
+                    verifier
+                };
+
+                fog_resolver = FogResolver::new(responses.clone(), &report_verifier)
+                    .expect("Could not get FogResolver");
             }
+            log::trace!(logger, "rebuilding failed tx");
         }
     }
 }

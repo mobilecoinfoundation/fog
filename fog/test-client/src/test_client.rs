@@ -327,7 +327,7 @@ impl TestClient {
             match source_client.get_last_memo() {
                 Ok(Some(memo)) => match memo {
                     MemoType::Destination(memo) => {
-                        assert_eq!(memo.get_total_outlay(), self.transfer_amount);
+                        assert_eq!(memo.get_total_outlay(), self.transfer_amount + fee);
                         assert_eq!(memo.get_fee(), fee);
                         assert_eq!(memo.get_num_recipients(), 1);
                         assert_eq!(

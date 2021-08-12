@@ -366,10 +366,10 @@ impl TestClient {
                     }
                 },
                 Ok(None) => {
-                    panic!("source client didn't find destination memo");
+                    panic!("target client didn't find sender memo");
                 }
                 Err(err) => {
-                    panic!("source client memo error: {}", err);
+                    panic!("target client memo error: {}", err);
                 }
             }
 

@@ -86,7 +86,7 @@ impl CachedTxData {
             owned_tx_outs: Default::default(),
             key_image_data_completeness: BlockCount::MAX,
             latest_global_txo_count: 0,
-            memo_handler: MemoHandler::new(address_book),
+            memo_handler: MemoHandler::new(address_book, logger.clone()),
             logger,
         }
     }

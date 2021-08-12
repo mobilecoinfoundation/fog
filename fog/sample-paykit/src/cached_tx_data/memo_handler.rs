@@ -4,6 +4,7 @@
 
 use displaydoc::Display;
 use mc_account_keys::{AccountKey, AddressHash, PublicAddress, CHANGE_SUBADDRESS_INDEX};
+use mc_common::logger::{log, Logger};
 use mc_crypto_keys::{KeyError, RistrettoPublic};
 use mc_transaction_core::{get_tx_out_shared_secret, subaddress_matches_tx_out, tx::TxOut};
 use mc_transaction_std::{MemoDecodingError, MemoType};
@@ -19,17 +20,19 @@ use std::{collections::HashMap, convert::TryFrom};
 pub struct MemoHandler {
     contacts: HashMap<AddressHash, PublicAddress>,
     last_memo: Result<Option<MemoType>, MemoHandlerError>,
+    logger: Logger,
 }
 
 impl MemoHandler {
     /// Make a new memo handler with a given set of contacts
-    pub fn new(address_book: Vec<PublicAddress>) -> Self {
+    pub fn new(address_book: Vec<PublicAddress>, logger: Logger) -> Self {
         Self {
             contacts: address_book
                 .into_iter()
                 .map(|addr| (AddressHash::from(&addr), addr))
                 .collect(),
             last_memo: Ok(None),
+            logger,
         }
     }
 
@@ -57,6 +60,7 @@ impl MemoHandler {
         let memo_payload = tx_out.decrypt_memo(&shared_secret);
 
         let memo_type = MemoType::try_from(&memo_payload)?;
+        log::info!(self.logger, "Obtained a memo: {:?}", memo_type);
         match memo_type.clone() {
             MemoType::Unused(_) => Ok(None),
             MemoType::AuthenticatedSender(memo) => {

@@ -278,7 +278,6 @@ fn main() {
     // Spawn worker threads
     for i in 0..config.max_threads {
         let spendable_txouts_receiver2 = spendable_txouts_receiver.clone();
-        let spendable_txouts_sender2 = spendable_txouts_sender.clone();
         let running_threads_sender2 = running_threads_sender.clone();
         let config2 = config.clone();
         let ledger_db2 = ledger_db.clone();
@@ -292,7 +291,6 @@ fn main() {
             .spawn(move || {
                 worker_thread_entry(
                     spendable_txouts_receiver2,
-                    spendable_txouts_sender2,
                     running_threads_sender2,
                     config2,
                     ledger_db2,
@@ -322,7 +320,6 @@ fn main() {
 
 fn worker_thread_entry(
     spendable_txouts_receiver: crossbeam_channel::Receiver<SpendableTxOut>,
-    spendable_txouts_sender: crossbeam_channel::Sender<SpendableTxOut>,
     running_threads_sender: crossbeam_channel::Sender<usize>,
     config: Config,
     ledger_db: LedgerDB,
@@ -358,30 +355,28 @@ fn worker_thread_entry(
 
         // Send to the next fog account
         let to_account = &fog_accounts[txs_created % fog_accounts.len()];
+        // Sometime transactions could not be submitted before tombstone block passed,
+        // so loop until transactions can be submmitted
+        let mut done = false;
+        while !done {
+            // Got our inputs, construct transaction.
+            let tx = build_tx(
+                &pending_spendable_txouts,
+                to_account,
+                &config,
+                &ledger_db,
+                fog_resolver.clone(),
+                &logger,
+            );
 
-        // Got our inputs, construct transaction.
-        let tx = build_tx(
-            &pending_spendable_txouts,
-            to_account,
-            &config,
-            &ledger_db,
-            fog_resolver.clone(),
-            &logger,
-        );
+            txs_created += 1;
 
-        txs_created += 1;
-
-        // Submit tx
-        if submit_tx(
-            txs_created,
-            &conns,
-            &tx,
-            &config,
-            &logger,
-            &spendable_txouts_sender,
-        ) {
-            let mut map = TX_PUB_KEY_TO_ACCOUNT_KEY.lock().unwrap();
-            map.insert(tx.prefix.outputs[0].public_key, to_account.clone());
+            // Submit tx
+            if submit_tx(txs_created, &conns, &tx, &config, &logger) {
+                let mut map = TX_PUB_KEY_TO_ACCOUNT_KEY.lock().unwrap();
+                map.insert(tx.prefix.outputs[0].public_key, to_account.clone());
+                done = true;
+            }
         }
     }
 }
@@ -392,7 +387,6 @@ fn submit_tx(
     tx: &Tx,
     config: &Config,
     logger: &Logger,
-    spendable_txouts_sender: &crossbeam_channel::Sender<SpendableTxOut>,
 ) -> bool {
     let max_retries = 30;
     let retry_sleep_duration = Duration::from_millis(1000);
@@ -429,17 +423,10 @@ fn submit_tx(
                     TransactionValidationError::TombstoneBlockExceeded,
                 ) = error
                 {
-                    // Transaction will never succeed since it was built a while ago with old
-                    // tombstone block / older fog report ", Place transaction
-                    // in a queue of transactions to rebuild
-                    log::debug!(
-                        logger,
-                        "Unsuccessfully submitted {:?} (attempt {} / {}). Will rebuild",
-                        counter,
-                        i,
-                        max_retries
-                    );
-                    return rebuild_tx(tx, config, logger, spendable_txouts_sender);
+                    log::warn!(
+                            logger,
+                            "Transaction {:?} could not be submitted before tombstone block passed, giving up", counter);
+                    return false;
                 }
 
                 log::warn!(
@@ -474,123 +461,6 @@ fn submit_tx(
         max_retries
     );
     false
-}
-
-fn rebuild_tx(
-    tx: &Tx,
-    config: &Config,
-    logger: &Logger,
-    spendable_txouts_sender: &crossbeam_channel::Sender<SpendableTxOut>,
-) -> bool {
-    // Read account root_entropies from disk
-    let accounts: Vec<AccountKey> = mc_util_keyfile::keygen::read_default_root_entropies(
-        config.sample_data_dir.join(Path::new("keys")),
-    )
-    .expect("Could not read default root entropies from keys")
-    .iter()
-    .map(AccountKey::from)
-    .collect();
-
-    // Open the ledger_db to process the bootstrapped ledger
-    log::info!(logger, "Loading ledger");
-
-    let ledger_dir = tempdir().unwrap();
-    std::fs::copy(
-        config.sample_data_dir.join("ledger").join("data.mdb"),
-        ledger_dir.path().join("data.mdb"),
-    )
-    .expect("failed copying ledger");
-
-    let ledger_db = LedgerDB::open(ledger_dir.path()).expect("Could not open ledger_db");
-
-    BLOCK_HEIGHT.store(ledger_db.num_blocks().unwrap(), Ordering::SeqCst);
-
-    // Use the maximum fee of all configured consensus nodes
-    FEE.store(
-        get_conns(&config, &logger)
-            .par_iter()
-            .filter_map(|conn| conn.fetch_block_info(empty()).ok())
-            .map(|block_info| block_info.minimum_fee)
-            .max()
-            .unwrap_or(MINIMUM_FEE),
-        Ordering::SeqCst,
-    );
-
-    let transactions = &tx.prefix.outputs;
-    // The number of blocks we've processed so far.
-    let block_count = 0;
-
-    // Load the bootstrapped transactions.
-    log::info!(logger, "Processing transactions");
-    let mut num_transactions_per_account = config.num_transactions_per_account;
-
-    // Only get num_transactions per account for the first block, then assume
-    // future blocks that were bootstrapped are similar
-    if num_transactions_per_account == 0 {
-        num_transactions_per_account =
-            get_num_transactions_per_account(&accounts[0], &transactions, &logger);
-    }
-    log::info!(
-        logger,
-        "Loaded {:?} transactions from block {:?}",
-        transactions.len(),
-        block_count
-    );
-
-    // NOTE: This will start at the same offset per block - we may want just the
-    // first offset
-    let mut account_index = config.account_offset;
-    let mut account = &accounts[account_index];
-    let mut num_per_account_processed = 0;
-    for (index, tx_out) in transactions.iter().enumerate().skip(config.start_offset) {
-        // Makes strong assumption about bootstrapped ledger layout
-        if num_per_account_processed >= num_transactions_per_account {
-            log::trace!(
-                logger,
-                "Moving on to next account {:?} at tx index {:?}",
-                account_index + 1,
-                index
-            );
-            account_index += 1;
-            if account_index >= accounts.len() {
-                log::info!(logger, "Finished processing accounts. If no transactions sent, you may need to re-bootstrap.");
-                break;
-            }
-            account = &accounts[account_index];
-            num_per_account_processed = 0;
-        }
-
-        if config.num_tx_to_send == -1
-            || num_per_account_processed < config.num_tx_to_send.try_into().unwrap()
-        {
-            let public_key = RistrettoPublic::try_from(&tx_out.public_key).unwrap();
-            let shared_secret = get_tx_out_shared_secret(account.view_private_key(), &public_key);
-
-            let (input_amount, _blinding_factor) = tx_out
-                .amount
-                .get_value(&shared_secret)
-                .expect("Malformed amount");
-
-            log::trace!(
-                logger,
-                "(account = {:?}) and (tx_index {:?}) = {}",
-                account_index,
-                index,
-                input_amount,
-            );
-
-            // Push to queue
-            spendable_txouts_sender
-                .send(SpendableTxOut {
-                    tx_out: tx_out.clone(),
-                    amount: input_amount,
-                    from_account_key: account.clone(),
-                })
-                .expect("failed sending to spendable_txouts_sender");
-        }
-        num_per_account_processed += 1;
-    }
-    return false;
 }
 
 fn build_tx(

@@ -418,10 +418,17 @@ fn submit_tx(
                     TransactionValidationError::TombstoneBlockExceeded,
                 ) = error
                 {
-                    log::warn!(
-                            logger,
-                            "Transaction {:?} could not be submitted before tombstone block passed, giving up", counter);
-                    return false;
+                    // Transaction will never succeed since it was built a while ago with old
+                    // tombstone block / older fog report ", Place transaction
+                    // in a queue of transactions to rebuild
+                    log::debug!(
+                        logger,
+                        "Unsuccessfully submitted {:?} (attempt {} / {}). Will rebuild",
+                        counter,
+                        i,
+                        max_retries
+                    );
+                    return rebuild_tx(counter, tx, config, logger);
                 }
 
                 log::warn!(
@@ -456,6 +463,119 @@ fn submit_tx(
         max_retries
     );
     false
+}
+
+fn rebuild_tx(counter: usize, tx: &Tx, config: &Config, logger: &Logger) -> bool {
+    // Read account root_entropies from disk
+    let accounts: Vec<AccountKey> = mc_util_keyfile::keygen::read_default_root_entropies(
+        config.sample_data_dir.join(Path::new("keys")),
+    )
+    .expect("Could not read default root entropies from keys")
+    .iter()
+    .map(AccountKey::from)
+    .collect();
+
+    // Open the ledger_db to process the bootstrapped ledger
+    log::info!(logger, "Loading ledger");
+
+    let ledger_dir = tempdir().unwrap();
+    std::fs::copy(
+        config.sample_data_dir.join("ledger").join("data.mdb"),
+        ledger_dir.path().join("data.mdb"),
+    )
+    .expect("failed copying ledger");
+
+    let ledger_db = LedgerDB::open(ledger_dir.path()).expect("Could not open ledger_db");
+
+    BLOCK_HEIGHT.store(ledger_db.num_blocks().unwrap(), Ordering::SeqCst);
+
+    // Use the maximum fee of all configured consensus nodes
+    FEE.store(
+        get_conns(&config, &logger)
+            .par_iter()
+            .filter_map(|conn| conn.fetch_block_info(empty()).ok())
+            .map(|block_info| block_info.minimum_fee)
+            .max()
+            .unwrap_or(MINIMUM_FEE),
+        Ordering::SeqCst,
+    );
+
+    let transactions = &tx.prefix.outputs;
+    // The number of blocks we've processed so far.
+    let mut block_count = 0;
+
+    // Load the bootstrapped transactions.
+    log::info!(logger, "Processing transactions");
+    let num_transactions_per_account = config.num_transactions_per_account;
+
+    let spendable_txouts_sender = crossbeam_channel::unbounded::<SpendableTxOut>();
+    // Only get num_transactions per account for the first block, then assume
+    // future blocks that were bootstrapped are similar
+    if num_transactions_per_account == 0 {
+        num_transactions_per_account =
+            get_num_transactions_per_account(&accounts[0], &transactions, &logger);
+    }
+    log::info!(
+        logger,
+        "Loaded {:?} transactions from block {:?}",
+        transactions.len(),
+        block_count
+    );
+
+    // NOTE: This will start at the same offset per block - we may want just the
+    // first offset
+    let mut account_index = config.account_offset;
+    let mut account = &accounts[account_index];
+    let mut num_per_account_processed = 0;
+    for (index, tx_out) in transactions.iter().enumerate().skip(config.start_offset) {
+        // Makes strong assumption about bootstrapped ledger layout
+        if num_per_account_processed >= num_transactions_per_account {
+            log::trace!(
+                logger,
+                "Moving on to next account {:?} at tx index {:?}",
+                account_index + 1,
+                index
+            );
+            account_index += 1;
+            if account_index >= accounts.len() {
+                log::info!(logger, "Finished processing accounts. If no transactions sent, you may need to re-bootstrap.");
+                break;
+            }
+            account = &accounts[account_index];
+            num_per_account_processed = 0;
+        }
+
+        if config.num_tx_to_send == -1
+            || num_per_account_processed < config.num_tx_to_send.try_into().unwrap()
+        {
+            let public_key = RistrettoPublic::try_from(&tx_out.public_key).unwrap();
+            let shared_secret = get_tx_out_shared_secret(account.view_private_key(), &public_key);
+
+            let (input_amount, _blinding_factor) = tx_out
+                .amount
+                .get_value(&shared_secret)
+                .expect("Malformed amount");
+
+            log::trace!(
+                logger,
+                "(account = {:?}) and (tx_index {:?}) = {}",
+                account_index,
+                index,
+                input_amount,
+            );
+
+            // Push to queue
+            spendable_txouts_sender
+                .send(SpendableTxOut {
+                    tx_out: tx_out.clone(),
+                    amount: input_amount,
+                    from_account_key: account.clone(),
+                })
+                .expect("failed sending to spendable_txouts_sender");
+        }
+        num_per_account_processed += 1;
+    }
+    return false;
 }
 
 fn build_tx(

@@ -36,7 +36,8 @@ use mc_transaction_core::{
     BlockIndex,
 };
 use mc_transaction_std::{
-    InputCredentials, MemoType, RTHMemoBuilder, SenderMemoCredential, TransactionBuilder,
+    ChangeDestination, InputCredentials, MemoType, RTHMemoBuilder, SenderMemoCredential,
+    TransactionBuilder,
 };
 use mc_util_uri::{ConnectionUri, FogUri};
 use rand::Rng;
@@ -629,16 +630,14 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
         .add_output(amount, target_address, rng)
         .map_err(Error::AddOutput)?;
 
-    if change > 0 {
-        let self_subaddress_for_change = source_account_key.default_subaddress();
+    let change_destination = ChangeDestination::from(source_account_key);
 
-        tx_builder
-            .add_output(change, &self_subaddress_for_change, rng)
-            .map_err(|err| {
-                log::error!(logger, "Could not add change due to {:?}", err);
-                Error::AddOutput(err)
-            })?;
-    }
+    tx_builder
+        .add_change_output(change, &change_destination, rng)
+        .map_err(|err| {
+            log::error!(logger, "Could not add change due to {:?}", err);
+            Error::AddOutput(err)
+        })?;
 
     tx_builder.set_tombstone_block(tombstone_block);
 

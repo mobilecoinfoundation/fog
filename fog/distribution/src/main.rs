@@ -278,6 +278,7 @@ fn main() {
     // Spawn worker threads
     for i in 0..config.max_threads {
         let spendable_txouts_receiver2 = spendable_txouts_receiver.clone();
+        let spendable_txouts_sender2 = spendable_txouts_sender.clone();
         let running_threads_sender2 = running_threads_sender.clone();
         let config2 = config.clone();
         let ledger_db2 = ledger_db.clone();
@@ -291,6 +292,7 @@ fn main() {
             .spawn(move || {
                 worker_thread_entry(
                     spendable_txouts_receiver2,
+                    spendable_txouts_sender2,
                     running_threads_sender2,
                     config2,
                     ledger_db2,
@@ -320,6 +322,7 @@ fn main() {
 
 fn worker_thread_entry(
     spendable_txouts_receiver: crossbeam_channel::Receiver<SpendableTxOut>,
+    spendable_txouts_sender: crossbeam_channel::Sender<SpendableTxOut>,
     running_threads_sender: crossbeam_channel::Sender<usize>,
     config: Config,
     ledger_db: LedgerDB,
@@ -369,7 +372,14 @@ fn worker_thread_entry(
         txs_created += 1;
 
         // Submit tx
-        if submit_tx(txs_created, &conns, &tx, &config, &logger) {
+        if submit_tx(
+            txs_created,
+            &conns,
+            &tx,
+            &config,
+            &logger,
+            &spendable_txouts_sender,
+        ) {
             let mut map = TX_PUB_KEY_TO_ACCOUNT_KEY.lock().unwrap();
             map.insert(tx.prefix.outputs[0].public_key, to_account.clone());
         }
@@ -382,6 +392,7 @@ fn submit_tx(
     tx: &Tx,
     config: &Config,
     logger: &Logger,
+    spendable_txouts_sender: &crossbeam_channel::Sender<SpendableTxOut>,
 ) -> bool {
     let max_retries = 30;
     let retry_sleep_duration = Duration::from_millis(1000);
@@ -428,7 +439,7 @@ fn submit_tx(
                         i,
                         max_retries
                     );
-                    return rebuild_tx(counter, tx, config, logger);
+                    return rebuild_tx(tx, config, logger, spendable_txouts_sender);
                 }
 
                 log::warn!(
@@ -465,7 +476,12 @@ fn submit_tx(
     false
 }
 
-fn rebuild_tx(counter: usize, tx: &Tx, config: &Config, logger: &Logger) -> bool {
+fn rebuild_tx(
+    tx: &Tx,
+    config: &Config,
+    logger: &Logger,
+    spendable_txouts_sender: &crossbeam_channel::Sender<SpendableTxOut>,
+) -> bool {
     // Read account root_entropies from disk
     let accounts: Vec<AccountKey> = mc_util_keyfile::keygen::read_default_root_entropies(
         config.sample_data_dir.join(Path::new("keys")),
@@ -502,13 +518,12 @@ fn rebuild_tx(counter: usize, tx: &Tx, config: &Config, logger: &Logger) -> bool
 
     let transactions = &tx.prefix.outputs;
     // The number of blocks we've processed so far.
-    let mut block_count = 0;
+    let block_count = 0;
 
     // Load the bootstrapped transactions.
     log::info!(logger, "Processing transactions");
-    let num_transactions_per_account = config.num_transactions_per_account;
+    let mut num_transactions_per_account = config.num_transactions_per_account;
 
-    let spendable_txouts_sender = crossbeam_channel::unbounded::<SpendableTxOut>();
     // Only get num_transactions per account for the first block, then assume
     // future blocks that were bootstrapped are similar
     if num_transactions_per_account == 0 {

@@ -224,7 +224,6 @@ fn main() {
             .build(),
     );
 
-    let conn = GrpcFogReportConnection::new(env, logger.clone());
     let fog_uri = FogUri::from_str(
         fog_accounts[0]
             .default_subaddress()
@@ -246,7 +245,8 @@ fn main() {
         let ledger_db2 = ledger_db.clone();
         let fog_accounts2 = fog_accounts.clone();
         let logger2 = logger.new(o!("num" => i));
-        let fog_resolver = rebuild_fogresolver(&fog_uri, &conn, &logger);
+        let env2 = env.clone();
+        let fog_resolver = build_fog_resolver(&fog_uri, &env2, &logger);
 
         thread::Builder::new()
             .name(format!("worker{}", i))
@@ -259,6 +259,7 @@ fn main() {
                     fog_accounts2,
                     fog_resolver,
                     logger2,
+                    env2,
                 )
             })
             .expect("failed starting thread");
@@ -280,16 +281,16 @@ fn main() {
     thread::sleep(Duration::from_secs(1));
 }
 
-fn rebuild_fogresolver(
+fn build_fog_resolver(
     fog_uri: &FogUri,
-    conn: &GrpcFogReportConnection,
+    env: &Arc<grpcio::Environment>,
     logger: &Logger,
 ) -> FogResolver {
     // Ensure there are fog reports available
     // XXX: This retry should possibly be in the GrpcFogPubkeyResolver object itself
     // instead 15'th fibonacci is 987, so the last delay should be ~100
     // seconds
-
+    let conn = GrpcFogReportConnection::new(env.clone(), logger.clone());
     let responses = retry(
         delay::Fibonacci::from_millis(100)
             .map(delay::jitter)
@@ -314,16 +315,15 @@ fn rebuild_fogresolver(
 
     let report_verifier = {
         let mr_signer_verifier = fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
-
         let mut verifier = Verifier::default();
         verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
         verifier
     };
 
     let fog_resolver =
-        FogResolver::new(responses.clone(), &report_verifier).expect("Could not get FogResolver");
+        FogResolver::new(responses, &report_verifier).expect("Could not get FogResolver");
 
-    return fog_resolver;
+    fog_resolver
 }
 
 fn worker_thread_entry(
@@ -334,6 +334,7 @@ fn worker_thread_entry(
     fog_accounts: Vec<AccountKey>,
     mut fog_resolver: FogResolver,
     logger: Logger,
+    env: Arc<grpcio::Environment>,
 ) {
     log::info!(logger, "Worker started.");
     let mut txs_created: usize = 0;
@@ -363,13 +364,6 @@ fn worker_thread_entry(
 
         // Send to the next fog account
         let to_account = &fog_accounts[txs_created % fog_accounts.len()];
-        let env = Arc::new(
-            grpcio::EnvBuilder::new()
-                .name_prefix("FogPubkeyResolver-RPC".to_string())
-                .build(),
-        );
-
-        let conn = GrpcFogReportConnection::new(env, logger.clone());
         let fog_uri = FogUri::from_str(
             fog_accounts[0]
                 .default_subaddress()
@@ -400,7 +394,7 @@ fn worker_thread_entry(
                 //each worker thread should build its own FogResolver,
                 //if submit fails, it should trash and rebuild the FogResolver to ensure it has
                 // fresh fog
-                fog_resolver = rebuild_fogresolver(&fog_uri, &conn, &logger);
+                fog_resolver = build_fog_resolver(&fog_uri, &env, &logger);
             }
             log::trace!(logger, "rebuilding failed tx");
         }

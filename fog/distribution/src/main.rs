@@ -320,10 +320,7 @@ fn build_fog_resolver(
         verifier
     };
 
-    let fog_resolver =
-        FogResolver::new(responses, &report_verifier).expect("Could not get FogResolver");
-
-    fog_resolver
+    FogResolver::new(responses, &report_verifier).expect("Could not get FogResolver")
 }
 
 fn worker_thread_entry(

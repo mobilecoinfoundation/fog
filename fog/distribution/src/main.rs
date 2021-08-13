@@ -15,7 +15,7 @@ use mc_connection::{
 };
 use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPublic};
 use mc_fog_report_connection::{Error as ReportConnError, GrpcFogReportConnection};
-use mc_fog_report_validation::{FogReportResponses, FogResolver};
+use mc_fog_report_validation::FogResolver;
 use mc_ledger_db::{Ledger, LedgerDB};
 use mc_transaction_core::{
     constants::MINIMUM_FEE,
@@ -232,16 +232,6 @@ fn main() {
             .expect("No fog report url"),
     )
     .expect("Could not parse fog url");
-    // Fetch fog before spawning worker threads
-    let fog_report_responses = rebuild_fogresolver(&fog_uri, &conn, &logger);
-
-    let report_verifier = {
-        let mr_signer_verifier = fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
-
-        let mut verifier = Verifier::default();
-        verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
-        verifier
-    };
 
     let (running_threads_sender, running_threads_receiver) =
         crossbeam_channel::unbounded::<usize>();
@@ -256,8 +246,7 @@ fn main() {
         let ledger_db2 = ledger_db.clone();
         let fog_accounts2 = fog_accounts.clone();
         let logger2 = logger.new(o!("num" => i));
-        let fog_resolver = FogResolver::new(fog_report_responses.clone(), &report_verifier)
-            .expect("Could not get FogResolver");
+        let fog_resolver = rebuild_fogresolver(&fog_uri, &conn, &logger);
 
         thread::Builder::new()
             .name(format!("worker{}", i))
@@ -295,12 +284,13 @@ fn rebuild_fogresolver(
     fog_uri: &FogUri,
     conn: &GrpcFogReportConnection,
     logger: &Logger,
-) -> FogReportResponses {
+) -> FogResolver {
     // Ensure there are fog reports available
     // XXX: This retry should possibly be in the GrpcFogPubkeyResolver object itself
     // instead 15'th fibonacci is 987, so the last delay should be ~100
     // seconds
-    retry(
+
+    let responses = retry(
         delay::Fibonacci::from_millis(100)
             .map(delay::jitter)
             .take(15),
@@ -320,7 +310,20 @@ fn rebuild_fogresolver(
             }
         },
     )
-    .expect("Could not contact fog report server")
+    .expect("Could not contact fog report server");
+
+    let report_verifier = {
+        let mr_signer_verifier = fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
+
+        let mut verifier = Verifier::default();
+        verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
+        verifier
+    };
+
+    let fog_resolver =
+        FogResolver::new(responses.clone(), &report_verifier).expect("Could not get FogResolver");
+
+    return fog_resolver;
 }
 
 fn worker_thread_entry(
@@ -397,19 +400,7 @@ fn worker_thread_entry(
                 //each worker thread should build its own FogResolver,
                 //if submit fails, it should trash and rebuild the FogResolver to ensure it has
                 // fresh fog
-                let responses = rebuild_fogresolver(&fog_uri, &conn, &logger);
-
-                let report_verifier = {
-                    let mr_signer_verifier =
-                        fog_ingest_enclave_measurement::get_mr_signer_verifier(None);
-
-                    let mut verifier = Verifier::default();
-                    verifier.debug(DEBUG_ENCLAVE).mr_signer(mr_signer_verifier);
-                    verifier
-                };
-
-                fog_resolver = FogResolver::new(responses.clone(), &report_verifier)
-                    .expect("Could not get FogResolver");
+                fog_resolver = rebuild_fogresolver(&fog_uri, &conn, &logger);
             }
             log::trace!(logger, "rebuilding failed tx");
         }

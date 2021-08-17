@@ -119,8 +119,8 @@ pub enum MemoHandlerError {
     /// Key: {0}
     Key(KeyError),
 
-    /// Memo: {0}
-    Memo(MemoDecodingError),
+    /// Memo Decoding: {0}
+    MemoDecode(MemoDecodingError),
 }
 
 impl From<KeyError> for MemoHandlerError {
@@ -131,6 +131,6 @@ impl From<KeyError> for MemoHandlerError {
 
 impl From<MemoDecodingError> for MemoHandlerError {
     fn from(src: MemoDecodingError) -> Self {
-        Self::Memo(src)
+        Self::MemoDecode(src)
     }
 }

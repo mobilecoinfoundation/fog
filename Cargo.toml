@@ -116,5 +116,10 @@ x25519-dalek = { git = "https://github.com/jcape/x25519-dalek.git", rev = "c0126
 # This version contains iOS build fixes
 cmake = { git = "https://github.com/alexcrichton/cmake-rs", rev = "5f89f90ee5d7789832963bffdb2dcb5939e6199c" }
 
+cc = { git ="https://github.com/eranrund/cc-rs", rev = "e8c8b2f" }
+
 # Overridden since we need a commit that uprevs a bunch of dependencies.
 schnorrkel-og = { git = "https://github.com/jcape/schnorrkel.git", rev = "b90fd446eeaef2996c199138427888afcf972bbd" }
+
+
+#[ring 0.16.20] running "clang" "-O3" "-fPIC" "-g" "-fno-omit-frame-pointer" "--target=x86_64-apple-ios13.0-macabi" "-isysroot" "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk" "-fembed-bitcode" "-I" "include" "-Wall" "-Wextra" "-std=c1x" "-Wbad-function-cast" "-Wnested-externs" "-Wstrict-prototypes" "-pedantic" "-pedantic-errors" "-Wall" "-Wextra" "-Wcast-align" "-Wcast-qual" "-Wconversion" "-Wenum-compare" "-Wfloat-equal" "-Wformat=2" "-Winline" "-Winvalid-pch" "-Wmissing-field-initializers" "-Wmissing-include-dirs" "-Wredundant-decls" "-Wshadow" "-Wsign-compare" "-Wsign-conversion" "-Wundef" "-Wuninitialized" "-Wwrite-strings" "-fno-strict-aliasing" "-fvisibility=hidden" "-fstack-protector" "-g3" "-DNDEBUG" "-c" "-o/Users/eran/Projects/fog/target/x86_64-apple-ios-macabi/release/build/ring-5d4b579f50a32f78/out/montgomery_inv.o" "crypto/fipsmodule/bn/montgomery_inv.c"

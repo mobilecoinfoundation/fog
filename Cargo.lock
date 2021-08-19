@@ -291,8 +291,7 @@ dependencies = [
 [[package]]
 name = "blake2"
 version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a5720225ef5daecf08657f23791354e1685a8c91a4c60c7f3d3b2892f978f4"
+source = "git+https://github.com/jcape/RustCrypto-hashes.git?rev=fc927fb0709b93ace4a5a1f50999a2b679f8c502#fc927fb0709b93ace4a5a1f50999a2b679f8c502"
 dependencies = [
  "crypto-mac 0.8.0",
  "digest",
@@ -360,9 +359,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39092a32794787acd8525ee150305ff051b0aa6cc2abaf193924f5ab05425f39"
 
 [[package]]
-name = "bulletproofs"
-version = "2.0.0"
-source = "git+https://github.com/eranrund/bulletproofs?rev=8a7c9cdd1efafa3ad68cd65676302f925de68373#8a7c9cdd1efafa3ad68cd65676302f925de68373"
+name = "bulletproofs-og"
+version = "3.0.0-pre.0"
+source = "git+https://github.com/jcape/bulletproofs.git?rev=bafd274c1f1cbbac47da815dcd2bbe33c38c43eb#bafd274c1f1cbbac47da815dcd2bbe33c38c43eb"
 dependencies = [
  "byteorder",
  "clear_on_drop",
@@ -422,7 +421,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5d1b4d380e1bab994591a24c2bdd1b054f64b60bef483a8c598c7c345bc3bbe"
 dependencies = [
  "error-chain",
- "semver 0.9.0",
+ "semver",
  "serde",
  "serde_derive",
  "serde_json",
@@ -434,7 +433,7 @@ version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46e3374c604fb39d1a2f35ed5e4a4e30e60d01fab49446e08f1b3e9a90aef202"
 dependencies = [
- "semver 0.9.0",
+ "semver",
  "serde",
  "serde_derive",
  "serde_json",
@@ -446,7 +445,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b9434b9a5aa1450faa3f9cb14ea0e8c53bb5d2b3c1bfd1ab4fc03e9f33fbfb0"
 dependencies = [
- "rustc_version 0.2.3",
+ "rustc_version",
 ]
 
 [[package]]
@@ -470,8 +469,7 @@ dependencies = [
 [[package]]
 name = "cc"
 version = "1.0.66"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c0496836a84f8d0495758516b8621a622beb77c0fed418570e50764093ced48"
+source = "git+https://github.com/eranrund/cc-rs?rev=5b3376a#5b3376a2f8654960186b1c47261e694092954867"
 
 [[package]]
 name = "cesu8"
@@ -606,15 +604,6 @@ checksum = "784ad0fbab4f3e9cef09f20e0aea6000ae08d2cb98ac4c0abc53df18803d702f"
 dependencies = [
  "time 0.2.22",
  "version_check",
-]
-
-[[package]]
-name = "core_io"
-version = "0.1.20210325"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97f8932064288cc79feb4d343a399d353a6f6f001e586ece47fe518a9e8507df"
-dependencies = [
- "rustc_version 0.1.7",
 ]
 
 [[package]]
@@ -825,9 +814,8 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "4.0.0-pre.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78f72b0f5a8f0cc80b7e4b6d98efe1adc0b7b151a618ecd7cd4d18e6d776e31a"
+version = "4.0.0-pre.1"
+source = "git+https://github.com/jcape/curve25519-dalek.git?rev=46d07765b228d43fe910eb6a1769143f8fc366bb#46d07765b228d43fe910eb6a1769143f8fc366bb"
 dependencies = [
  "byteorder",
  "digest",
@@ -975,8 +963,8 @@ dependencies = [
 
 [[package]]
 name = "ed25519-dalek"
-version = "1.0.1"
-source = "git+https://github.com/eranrund/ed25519-dalek.git?rev=484369672f45d776fe13fdd17618aed2f4047909#484369672f45d776fe13fdd17618aed2f4047909"
+version = "2.0.0-pre.0"
+source = "git+https://github.com/jcape/ed25519-dalek.git?rev=5758cffaa08ed191204f3c62d8302152216e4ce5#5758cffaa08ed191204f3c62d8302152216e4ce5"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
@@ -2158,6 +2146,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "genio"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4e26859a808ffa83a83f20c7e3c9366afea91edae637a6ac203051885882dc8"
+dependencies = [
+ "void",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2730,14 +2727,14 @@ checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 [[package]]
 name = "mbedtls"
 version = "0.8.1"
-source = "git+https://github.com/mobilecoinofficial/rust-mbedtls.git?rev=c7fa3f0c737f36af8f437e147131d1f5c8a90b0e#c7fa3f0c737f36af8f437e147131d1f5c8a90b0e"
+source = "git+https://github.com/jcape/rust-mbedtls.git?rev=1cc22203456f5a0f9e06a57d4a4e7a49582f7a90#1cc22203456f5a0f9e06a57d4a4e7a49582f7a90"
 dependencies = [
  "bitflags",
  "byteorder",
  "cc",
  "cfg-if 1.0.0",
  "chrono",
- "core_io",
+ "genio",
  "mbedtls-sys-auto",
  "rs-libc",
  "serde",
@@ -2749,7 +2746,7 @@ dependencies = [
 [[package]]
 name = "mbedtls-sys-auto"
 version = "2.26.1"
-source = "git+https://github.com/mobilecoinofficial/rust-mbedtls.git?rev=c7fa3f0c737f36af8f437e147131d1f5c8a90b0e#c7fa3f0c737f36af8f437e147131d1f5c8a90b0e"
+source = "git+https://github.com/jcape/rust-mbedtls.git?rev=1cc22203456f5a0f9e06a57d4a4e7a49582f7a90#1cc22203456f5a0f9e06a57d4a4e7a49582f7a90"
 dependencies = [
  "bindgen",
  "cc",
@@ -2904,7 +2901,6 @@ dependencies = [
  "hex_fmt",
  "lazy_static",
  "mbedtls",
- "mbedtls-sys-auto",
  "mc-common",
  "mc-crypto-digestible",
  "mc-crypto-rand",
@@ -3231,7 +3227,7 @@ name = "mc-crypto-digestible-signature"
 version = "1.1.0"
 dependencies = [
  "mc-crypto-digestible",
- "schnorrkel",
+ "schnorrkel-og",
  "signature",
 ]
 
@@ -3261,7 +3257,7 @@ dependencies = [
  "mc-util-repr-bytes",
  "rand_core 0.6.2",
  "rand_hc 0.3.0",
- "schnorrkel",
+ "schnorrkel-og",
  "serde",
  "sha2",
  "signature",
@@ -3321,7 +3317,7 @@ dependencies = [
  "merlin",
  "rand_core 0.6.2",
  "rand_hc 0.3.0",
- "schnorrkel",
+ "schnorrkel-og",
 ]
 
 [[package]]
@@ -3766,7 +3762,7 @@ name = "mc-transaction-core"
 version = "1.1.0"
 dependencies = [
  "blake2",
- "bulletproofs",
+ "bulletproofs-og",
  "curve25519-dalek",
  "displaydoc",
  "generic-array",
@@ -4350,9 +4346,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "packed_simd_2"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3278e0492f961fd4ae70909f56b2723a7e8d01a228427294e19cdfdebda89a17"
+checksum = "0e64858a2d3733fdd61adfdd6da89aa202f7ff0e741d2fc7ed1e452ba9dc99d7"
 dependencies = [
  "cfg-if 0.1.10",
  "libm",
@@ -5012,20 +5008,11 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f5376ea5e30ce23c03eb77cbe4962b988deead10910c372b226388b594c084"
-dependencies = [
- "semver 0.1.20",
-]
-
-[[package]]
-name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
- "semver 0.9.0",
+ "semver",
 ]
 
 [[package]]
@@ -5066,9 +5053,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "schnorrkel"
-version = "0.10.1"
-source = "git+https://github.com/mobilecoinofficial/schnorrkel?rev=fa27d0ed32d251a27399a23d3ef69611acb14d56#fa27d0ed32d251a27399a23d3ef69611acb14d56"
+name = "schnorrkel-og"
+version = "0.10.2"
+source = "git+https://github.com/jcape/schnorrkel.git?rev=b90fd446eeaef2996c199138427888afcf972bbd#b90fd446eeaef2996c199138427888afcf972bbd"
 dependencies = [
  "arrayref",
  "arrayvec",
@@ -5107,12 +5094,6 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "0.1.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f410fedcf71af0345d7607d246e7ad15faaadd49d240ee3b24e5dc21a820ac"
-
-[[package]]
-name = "semver"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
@@ -5143,7 +5124,7 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "reqwest",
- "rustc_version 0.2.3",
+ "rustc_version",
  "sentry-types",
  "uname",
  "url",
@@ -5473,7 +5454,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d022496b16281348b52d0e30ae99e01a73d737b2f45d38fed4edf79f9325a1d5"
 dependencies = [
  "discard",
- "rustc_version 0.2.3",
+ "rustc_version",
  "stdweb-derive",
  "stdweb-internal-macros",
  "stdweb-internal-runtime",
@@ -5547,9 +5528,9 @@ dependencies = [
 
 [[package]]
 name = "subtle"
-version = "2.4.0"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e81da0851ada1f3e9d4312c704aa4f8806f0f9d69faaf8df2f3464b4a9437c2"
+checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"
@@ -6183,8 +6164,8 @@ dependencies = [
 
 [[package]]
 name = "x25519-dalek"
-version = "1.1.1"
-source = "git+https://github.com/eranrund/x25519-dalek.git?rev=57c04e5c5aca3551c015167d8176393fbe76dc65#57c04e5c5aca3551c015167d8176393fbe76dc65"
+version = "2.0.0-pre.0"
+source = "git+https://github.com/jcape/x25519-dalek.git?rev=c012698737563a490d1ac9516d29cd6e0bb7319e#c012698737563a490d1ac9516d29cd6e0bb7319e"
 dependencies = [
  "curve25519-dalek",
  "rand_core 0.6.2",
@@ -6231,3 +6212,8 @@ dependencies = [
  "syn 1.0.67",
  "synstructure",
 ]
+
+[[patch.unused]]
+name = "datatest"
+version = "0.6.4"
+source = "git+https://github.com/jcape/datatest.git?rev=04fcb4bf8ccb6b216f8d7769446f47b1a5cd0e66#04fcb4bf8ccb6b216f8d7769446f47b1a5cd0e66"

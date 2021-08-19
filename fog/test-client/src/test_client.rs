@@ -5,7 +5,7 @@
 use crate::error::TestClientError;
 
 use fog_sample_paykit::{AccountKey, Client, ClientBuilder, TransactionStatus, Tx};
-use mc_account_keys::AddressHash;
+use mc_account_keys::ShortAddressHash;
 use mc_common::logger::{log, Logger};
 use mc_crypto_rand::McRng;
 use mc_transaction_core::{
@@ -332,7 +332,7 @@ impl TestClient {
                         assert_eq!(memo.get_num_recipients(), 1);
                         assert_eq!(
                             *memo.get_address_hash(),
-                            AddressHash::from(
+                            ShortAddressHash::from(
                                 &target_client.get_account_key().default_subaddress()
                             )
                         );
@@ -356,7 +356,7 @@ impl TestClient {
                     MemoType::AuthenticatedSender(memo) => {
                         assert_eq!(
                             memo.sender_address_hash(),
-                            AddressHash::from(
+                            ShortAddressHash::from(
                                 &source_client.get_account_key().default_subaddress()
                             )
                         );

@@ -3,7 +3,7 @@
 //! A memo handler object which processes memos, for use in integration tests
 
 use displaydoc::Display;
-use mc_account_keys::{AccountKey, AddressHash, PublicAddress, CHANGE_SUBADDRESS_INDEX};
+use mc_account_keys::{AccountKey, PublicAddress, ShortAddressHash, CHANGE_SUBADDRESS_INDEX};
 use mc_common::logger::{log, Logger};
 use mc_crypto_keys::{KeyError, RistrettoPublic};
 use mc_transaction_core::{get_tx_out_shared_secret, subaddress_matches_tx_out, tx::TxOut};
@@ -18,7 +18,7 @@ use std::{collections::HashMap, convert::TryFrom};
 /// This is useful for test code.
 #[derive(Debug, Clone)]
 pub struct MemoHandler {
-    contacts: HashMap<AddressHash, PublicAddress>,
+    contacts: HashMap<ShortAddressHash, PublicAddress>,
     last_memo: Result<Option<MemoType>, MemoHandlerError>,
     logger: Logger,
 }
@@ -29,7 +29,7 @@ impl MemoHandler {
         Self {
             contacts: address_book
                 .into_iter()
-                .map(|addr| (AddressHash::from(&addr), addr))
+                .map(|addr| (ShortAddressHash::from(&addr), addr))
                 .collect(),
             last_memo: Ok(None),
             logger,

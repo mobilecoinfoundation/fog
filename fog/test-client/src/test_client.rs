@@ -5,12 +5,14 @@
 use crate::error::TestClientError;
 
 use fog_sample_paykit::{AccountKey, Client, ClientBuilder, TransactionStatus, Tx};
+use mc_account_keys::ShortAddressHash;
 use mc_common::logger::{log, Logger};
 use mc_crypto_rand::McRng;
 use mc_transaction_core::{
     constants::{MINIMUM_FEE, RING_SIZE},
     BlockIndex,
 };
+use mc_transaction_std::MemoType;
 use mc_util_uri::ConsensusClientUri;
 use more_asserts::assert_gt;
 use std::{
@@ -78,6 +80,13 @@ impl TestClient {
         // Need at least 2 clients to send transactions to each other.
         assert_gt!(client_count, 1);
 
+        // Build an address book for each client
+        let address_book: Vec<_> = self
+            .account_keys
+            .iter()
+            .map(|x| x.default_subaddress())
+            .collect();
+
         for (i, account_key) in self.account_keys.iter().enumerate() {
             log::debug!(
                 self.logger,
@@ -94,6 +103,7 @@ impl TestClient {
                 self.logger.clone(),
             )
             .ring_size(RING_SIZE)
+            .address_book(address_book.clone())
             .build();
             clients.push(client);
         }
@@ -311,6 +321,57 @@ impl TestClient {
                 transaction_appeared,
                 tgt_balance + self.transfer_amount,
             )?;
+
+            // Ensure source client got a destination memo, as expected for recoverable
+            // transcation history
+            match source_client.get_last_memo() {
+                Ok(Some(memo)) => match memo {
+                    MemoType::Destination(memo) => {
+                        assert_eq!(memo.get_total_outlay(), self.transfer_amount + fee);
+                        assert_eq!(memo.get_fee(), fee);
+                        assert_eq!(memo.get_num_recipients(), 1);
+                        assert_eq!(
+                            *memo.get_address_hash(),
+                            ShortAddressHash::from(
+                                &target_client.get_account_key().default_subaddress()
+                            )
+                        );
+                    }
+                    _ => {
+                        panic!("unexpected memo type")
+                    }
+                },
+                Ok(None) => {
+                    panic!("source client didn't find destination memo");
+                }
+                Err(err) => {
+                    panic!("source client memo error: {}", err);
+                }
+            }
+
+            // Ensure target client got a sender memo, as expected for recoverable
+            // transcation history
+            match target_client.get_last_memo() {
+                Ok(Some(memo)) => match memo {
+                    MemoType::AuthenticatedSender(memo) => {
+                        assert_eq!(
+                            memo.sender_address_hash(),
+                            ShortAddressHash::from(
+                                &source_client.get_account_key().default_subaddress()
+                            )
+                        );
+                    }
+                    _ => {
+                        panic!("unexpected memo type")
+                    }
+                },
+                Ok(None) => {
+                    panic!("target client didn't find sender memo");
+                }
+                Err(err) => {
+                    panic!("target client memo error: {}", err);
+                }
+            }
 
             // Attempt double spend on the last transaction. This is an expensive test.
             if ti == self.transactions - 1 {

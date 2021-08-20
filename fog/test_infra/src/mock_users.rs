@@ -102,7 +102,7 @@ pub fn test_block_to_pairs(test_block: &TestBlock) -> Vec<(UserPrivate, TxOut)> 
     result
 }
 
-/// Make a random transaction targeted at a specific user.
+/// Make a random transaction targeted at a specific user via fog
 pub fn make_random_tx<T: RngCore + CryptoRng>(
     rng: &mut T,
     acct_server_pubkey: &RistrettoPublic,
@@ -115,6 +115,7 @@ pub fn make_random_tx<T: RngCore + CryptoRng>(
         target_key: target_key.into(),
         public_key: public_key.into(),
         e_fog_hint: recipient.encrypt(acct_server_pubkey, rng),
+        e_memo: None,
     }
 }
 

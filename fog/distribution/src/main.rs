@@ -25,7 +25,7 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutMembershipProof},
     validation::TransactionValidationError,
 };
-use mc_transaction_std::{InputCredentials, TransactionBuilder};
+use mc_transaction_std::{EmptyMemoBuilder, InputCredentials, TransactionBuilder};
 use mc_util_uri::FogUri;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use rayon::prelude::*;
@@ -497,9 +497,9 @@ fn build_tx(
     assert_eq!(utxos_with_proofs.len(), rings.len());
 
     // Create tx_builder.
-    let mut tx_builder = TransactionBuilder::new(fog_resolver);
+    let mut tx_builder = TransactionBuilder::new(fog_resolver, EmptyMemoBuilder::default());
 
-    tx_builder.set_fee(FEE.load(Ordering::SeqCst));
+    tx_builder.set_fee(FEE.load(Ordering::SeqCst)).unwrap();
 
     // Unzip each vec of tuples into a tuple of vecs.
     let mut rings_and_proofs: Vec<(Vec<TxOut>, Vec<TxOutMembershipProof>)> = rings

@@ -28,6 +28,7 @@ pub use crate::{
     client_builder::ClientBuilder,
     error::{Error, Result, TxOutMatchingError},
 };
+pub use cached_tx_data::MemoHandlerError;
 pub use mc_account_keys::{AccountKey, PublicAddress};
 pub use mc_crypto_keys::{RistrettoPrivate, RistrettoPublic};
 pub use mc_transaction_core::{

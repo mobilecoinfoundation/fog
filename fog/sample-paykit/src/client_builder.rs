@@ -9,7 +9,7 @@ use fog_ledger_connection::{
 use fog_uri::{FogLedgerUri, FogViewUri};
 use fog_view_connection::FogViewGrpcClient;
 use grpcio::EnvBuilder;
-use mc_account_keys::AccountKey;
+use mc_account_keys::{AccountKey, PublicAddress};
 use mc_attest_core::{Verifier, DEBUG_ENCLAVE};
 use mc_common::logger::{log, o, Logger};
 use mc_connection::{HardcodedCredentialsProvider, ThickClient};
@@ -35,6 +35,9 @@ pub struct ClientBuilder {
 
     // Ledger Server Details
     ledger_server_address: String,
+
+    // Address book
+    address_book: Vec<PublicAddress>,
 }
 
 // FIXME: ledger_server_address should be split into key_image_server and
@@ -55,6 +58,7 @@ impl ClientBuilder {
             ring_size: RING_SIZE,
             fog_view: fog_view_address,
             ledger_server_address,
+            address_book: Default::default(),
         }
     }
 
@@ -62,6 +66,13 @@ impl ClientBuilder {
     pub fn ring_size(self, ring_size: usize) -> Self {
         let mut retval = self;
         retval.ring_size = ring_size;
+        retval
+    }
+
+    /// Sets the address book for the client, used with memos
+    pub fn address_book(self, address_book: Vec<PublicAddress>) -> Self {
+        let mut retval = self;
+        retval.address_book = address_book;
         retval
     }
 
@@ -132,6 +143,7 @@ impl ClientBuilder {
             fog_untrusted,
             self.ring_size,
             self.key.clone(),
+            self.address_book.clone(),
             self.logger.clone(),
         )
     }

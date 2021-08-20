@@ -41,7 +41,7 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
     Amount, CompressedCommitment,
 };
-use mc_transaction_std::{InputCredentials, TransactionBuilder};
+use mc_transaction_std::{InputCredentials, RTHMemoBuilder, TransactionBuilder};
 use mc_util_from_random::FromRandom;
 use mc_util_uri::FogUri;
 use protobuf::Message;
@@ -1072,7 +1072,9 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_init_1jni(
     jni_ffi_call(&env, |env| {
         let fog_resolver: MutexGuard<FogResolver> =
             env.get_rust_field(fog_resolver, RUST_OBJ_FIELD)?;
-        let tx_builder = TransactionBuilder::new(fog_resolver.clone());
+        let memo_builder = RTHMemoBuilder::default();
+        // FIXME: Enable recoverable transaction history by configuring memo_builder
+        let tx_builder = TransactionBuilder::new(fog_resolver.clone(), memo_builder);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, tx_builder)?)
     })
 }
@@ -1185,6 +1187,10 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_add_1output(
     )
 }
 
+/// FIXME: The SDK should bind to "add_change_output" as well and use this
+/// when creating change outputs, otherwise recoverable transaction history
+/// won't work
+
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_set_1tombstone_1block(
     env: JNIEnv,
@@ -1211,7 +1217,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_set_1fee(
         let mut tx_builder: MutexGuard<TransactionBuilder<FogResolver>> =
             env.get_rust_field(obj, RUST_OBJ_FIELD)?;
 
-        tx_builder.set_fee(value as u64);
+        tx_builder.set_fee(value as u64)?;
 
         Ok(())
     })

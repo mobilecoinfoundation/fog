@@ -159,6 +159,7 @@ fn random_output<T: RngCore + CryptoRng>(rng: &mut T) -> Vec<TxOut> {
         target_key: RistrettoPublic::from_random(rng).into(),
         public_key: RistrettoPublic::from_random(rng).into(),
         e_fog_hint: EncryptedFogHint::default(),
+        e_memo: None,
     }]
 }
 

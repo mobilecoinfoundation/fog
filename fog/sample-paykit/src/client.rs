@@ -5,9 +5,9 @@
 use crate::{
     cached_tx_data::{CachedTxData, OwnedTxOut},
     error::{Error, Result},
-    TransactionStatus,
+    MemoHandlerError, TransactionStatus,
 };
-use core::{convert::TryFrom, str::FromStr};
+use core::{convert::TryFrom, result::Result as StdResult, str::FromStr};
 use fog_api::ledger::TxOutResultCode;
 use fog_ledger_connection::{
     FogKeyImageGrpcClient, FogMerkleProofGrpcClient, FogUntrustedLedgerGrpcClient,
@@ -35,7 +35,10 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutMembershipProof},
     BlockIndex,
 };
-use mc_transaction_std::{InputCredentials, TransactionBuilder};
+use mc_transaction_std::{
+    ChangeDestination, InputCredentials, MemoType, RTHMemoBuilder, SenderMemoCredential,
+    TransactionBuilder,
+};
 use mc_util_uri::{ConnectionUri, FogUri};
 use rand::Rng;
 
@@ -77,9 +80,11 @@ impl Client {
         fog_untrusted: FogUntrustedLedgerGrpcClient,
         ring_size: usize,
         account_key: AccountKey,
+        address_book: Vec<PublicAddress>,
         logger: Logger,
     ) -> Self {
-        let tx_data = CachedTxData::new(logger.clone());
+        let tx_data = CachedTxData::new(address_book, logger.clone());
+
         Client {
             consensus_service_conn,
             fog_view,
@@ -149,6 +154,11 @@ impl Client {
     /// Get balance debug print message
     pub fn debug_balance(&mut self) -> String {
         self.tx_data.debug_balance()
+    }
+
+    /// Get the last memo (or validation error) that we recieved from a TxOut
+    pub fn get_last_memo(&mut self) -> &StdResult<Option<MemoType>, MemoHandlerError> {
+        self.tx_data.get_last_memo()
     }
 
     /// Submits a transaction to the MobileCoin network.
@@ -524,14 +534,19 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
         return Err(Error::RingsForInput(rings.len(), inputs.len()));
     }
 
-    let mut tx_builder = TransactionBuilder::new(fog_resolver);
-    tx_builder.set_fee(fee);
+    let mut memo_builder = RTHMemoBuilder::default();
+    memo_builder.set_sender_credential(SenderMemoCredential::from(source_account_key));
+    memo_builder.enable_destination_memo();
+
+    let mut tx_builder = TransactionBuilder::new(fog_resolver, memo_builder);
+    tx_builder.set_fee(fee)?;
 
     let input_amount = inputs.iter().fold(0, |acc, (txo, _)| acc + txo.value);
-    if (amount + tx_builder.fee) > input_amount {
+    let fee = tx_builder.get_fee();
+    if (amount + fee) > input_amount {
         return Err(Error::InsufficientFunds);
     }
-    let change = input_amount - (amount + tx_builder.fee);
+    let change = input_amount - (amount + fee);
 
     // Unzip each vec of tuples into a tuple of vecs.
     let mut rings_and_proofs: Vec<(Vec<TxOut>, Vec<TxOutMembershipProof>)> = rings
@@ -615,16 +630,14 @@ fn build_transaction_helper<T: RngCore + CryptoRng, FPR: FogPubkeyResolver>(
         .add_output(amount, target_address, rng)
         .map_err(Error::AddOutput)?;
 
-    if change > 0 {
-        let self_subaddress_for_change = source_account_key.default_subaddress();
+    let change_destination = ChangeDestination::from(source_account_key);
 
-        tx_builder
-            .add_output(change, &self_subaddress_for_change, rng)
-            .map_err(|err| {
-                log::error!(logger, "Could not add change due to {:?}", err);
-                Error::AddOutput(err)
-            })?;
-    }
+    tx_builder
+        .add_change_output(change, &change_destination, rng)
+        .map_err(|err| {
+            log::error!(logger, "Could not add change due to {:?}", err);
+            Error::AddOutput(err)
+        })?;
 
     tx_builder.set_tombstone_block(tombstone_block);
 

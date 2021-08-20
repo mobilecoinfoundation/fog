@@ -3,6 +3,7 @@
 // Test that fog_types structs match the protos defined in .proto files,
 // by testing that they round-trip through the proto-generated rust types
 
+use core::convert::TryFrom;
 use fog_api::kex_rng;
 use fog_kex_rng::{KexRngPubkey, StoredRng};
 use mc_crypto_keys::RistrettoPublic;
@@ -11,7 +12,7 @@ use mc_transaction_core::{
     encrypted_fog_hint::EncryptedFogHint,
     membership_proofs::Range,
     tx::{TxOut, TxOutMembershipElement, TxOutMembershipHash, TxOutMembershipProof},
-    Amount,
+    Amount, EncryptedMemo,
 };
 use mc_util_from_random::FromRandom;
 use mc_util_test_helper::{run_with_several_seeds, CryptoRng, RngCore};
@@ -437,7 +438,20 @@ impl Sample for TxOut {
             target_key: RistrettoPublic::from_random(rng).into(),
             public_key: RistrettoPublic::from_random(rng).into(),
             e_fog_hint: EncryptedFogHint::fake_onetime_hint(rng),
+            e_memo: Option::<EncryptedMemo>::sample(rng),
         }
+    }
+}
+
+impl Sample for Option<EncryptedMemo> {
+    fn sample<T: RngCore + CryptoRng>(rng: &mut T) -> Self {
+        let x = (rng.next_u32() % 256) as u8;
+        if x & 1 == 1 {
+            return None;
+        }
+
+        let bytes = [x; 46];
+        Some(EncryptedMemo::try_from(&bytes[..]).unwrap())
     }
 }
 

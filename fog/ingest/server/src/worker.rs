@@ -128,7 +128,7 @@ impl IngestWorker {
 
                             // Get the timestamp for the block.
                             let timestamp =
-                                watcher.get_watcher_timestamp(next_block_index, watcher_timeout);
+                                watcher.poll_block_timestamp(next_block_index, watcher_timeout);
 
                             controller.process_next_block(
                                 block_data.block(),

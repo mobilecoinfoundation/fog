@@ -157,7 +157,7 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
                 // Get the timestamp for the block.
                 let timestamp = self
                     .watcher
-                    .get_watcher_timestamp(self.next_block_index, watcher_timeout);
+                    .poll_block_timestamp(self.next_block_index, watcher_timeout);
 
                 let records = block_contents
                     .key_images

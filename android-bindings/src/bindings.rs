@@ -41,7 +41,9 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
     Amount, CompressedCommitment,
 };
-use mc_transaction_std::{InputCredentials, RTHMemoBuilder, TransactionBuilder};
+use mc_transaction_std::{InputCredentials, MemoBuilder, RTHMemoBuilder, TransactionBuilder,
+                         SenderMemoCredential,
+};
 use mc_util_from_random::FromRandom;
 use mc_util_uri::FogUri;
 use protobuf::Message;
@@ -1057,6 +1059,42 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_Transaction_encode(
             Ok(env.byte_array_from_slice(&bytes)?)
         },
     )
+}
+
+/********************************************************************
+ * TxOutMemoBuilder
+ */
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOutMemoBuilder_init_1jni_1with_1sender_1and_1destination_1rth_1memo(
+    env: JNIEnv,
+    obj: JObject,
+    account_key: JObject,
+) {
+    jni_ffi_call(&env, |env| {
+        let account_key: MutexGuard<AccountKey> =
+            env.get_rust_field(account_key, RUST_OBJ_FIELD)?;
+
+        let mut rth_memo_builder: RTHMemoBuilder = RTHMemoBuilder::default();
+        rth_memo_builder.set_sender_credential(SenderMemoCredential::from(&*account_key));
+        rth_memo_builder.enable_destination_memo();
+
+        let memo_builder_box : Box<dyn MemoBuilder + Sync + Send> = Box::new(rth_memo_builder);
+
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, memo_builder_box)?)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOutMemoBuilder_init_1jni_1with_1default_1rth_1memo(
+    env: JNIEnv,
+    obj: JObject,
+) {
+    jni_ffi_call(&env, |env| {
+        let memo_builder_box : Box<dyn MemoBuilder + Sync + Send> =
+            Box::new(RTHMemoBuilder::default());
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, memo_builder_box)?)
+    })
 }
 
 /********************************************************************

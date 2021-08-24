@@ -1106,13 +1106,16 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_init_1jni(
     env: JNIEnv,
     obj: JObject,
     fog_resolver: JObject,
+    memo_builder_box: JObject,
 ) {
     jni_ffi_call(&env, |env| {
         let fog_resolver: MutexGuard<FogResolver> =
             env.get_rust_field(fog_resolver, RUST_OBJ_FIELD)?;
-        let memo_builder = RTHMemoBuilder::default();
-        // FIXME: Enable recoverable transaction history by configuring memo_builder
-        let tx_builder = TransactionBuilder::new(fog_resolver.clone(), memo_builder);
+        let memo_builder_box: Box<dyn MemoBuilder + Send + Sync> =
+            env.take_rust_field(memo_builder_box, RUST_OBJ_FIELD)?;
+
+        let tx_builder =
+            TransactionBuilder::new_with_box(fog_resolver.clone(), memo_builder_box);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, tx_builder)?)
     })
 }

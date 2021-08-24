@@ -127,12 +127,8 @@ impl IngestWorker {
                             }
 
                             // Get the timestamp for the block.
-                            let timestamp = mc_watcher::watcher::get_watcher_timestamp(
-                                next_block_index,
-                                &watcher,
-                                watcher_timeout,
-                                &logger,
-                            );
+                            let timestamp =
+                                watcher.get_watcher_timestamp(next_block_index, watcher_timeout);
 
                             controller.process_next_block(
                                 block_data.block(),

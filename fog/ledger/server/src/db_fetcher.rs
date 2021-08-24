@@ -155,12 +155,9 @@ impl<DB: Ledger, E: LedgerEnclaveProxy + Clone + Send + Sync + 'static> DbFetche
             }
             Ok(block_contents) => {
                 // Get the timestamp for the block.
-                let timestamp = mc_watcher::watcher::get_watcher_timestamp(
-                    self.next_block_index,
-                    &self.watcher,
-                    watcher_timeout,
-                    &self.logger,
-                );
+                let timestamp = self
+                    .watcher
+                    .get_watcher_timestamp(self.next_block_index, watcher_timeout);
 
                 let records = block_contents
                     .key_images

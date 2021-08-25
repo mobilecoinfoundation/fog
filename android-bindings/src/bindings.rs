@@ -18,7 +18,7 @@ use jni::{
     sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray, jshort, jstring, JNI_FALSE},
     JNIEnv,
 };
-use mc_account_keys::{AccountKey, PublicAddress, RootEntropy, RootIdentity};
+use mc_account_keys::{AccountKey, PublicAddress, RootEntropy, RootIdentity, ShortAddressHash };
 use mc_account_keys_slip10::Slip10KeyGenerator;
 use mc_api::printable::PrintableWrapper;
 use mc_attest_ake::{
@@ -612,6 +612,26 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_init_1jni(
         let public_address = PublicAddress::new(&spend_public_key, &view_public_key);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, public_address)?)
     })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_PublicAddress_calculate_1address_1hash_1data(
+    env: JNIEnv,
+    obj: JObject,
+) -> jbyteArray {
+    jni_ffi_call_or(
+        || Ok(JObject::null().into_inner()),
+        &env,
+        |env| {
+            let public_address: MutexGuard<PublicAddress> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            let short_address_hash : ShortAddressHash = ShortAddressHash::from(&*public_address);
+            let hash_data : [u8; 16] = short_address_hash.into();
+
+            Ok(env.byte_array_from_slice(&hash_data)?)
+        },
+    )
 }
 
 /********************************************************************

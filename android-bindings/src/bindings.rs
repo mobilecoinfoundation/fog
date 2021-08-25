@@ -41,8 +41,8 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
     Amount, CompressedCommitment,
 };
-use mc_transaction_std::{InputCredentials, MemoBuilder, RTHMemoBuilder, TransactionBuilder,
-                         SenderMemoCredential,
+use mc_transaction_std::{InputCredentials, ChangeDestination, MemoBuilder, RTHMemoBuilder,
+                         TransactionBuilder, SenderMemoCredential,
 };
 use mc_util_from_random::FromRandom;
 use mc_util_uri::FogUri;
@@ -1228,9 +1228,52 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_add_1output(
     )
 }
 
-/// FIXME: The SDK should bind to "add_change_output" as well and use this
-/// when creating change outputs, otherwise recoverable transaction history
-/// won't work
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_add_1change_1output(
+    env: JNIEnv,
+    obj: JObject,
+    source_account_key: JObject,
+    value: JObject,
+    confirmation_number_out: jbyteArray,
+) -> jlong {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let mut tx_builder: MutexGuard<TransactionBuilder<FogResolver>> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+            let source_account_key: MutexGuard<AccountKey> =
+                env.get_rust_field(source_account_key, RUST_OBJ_FIELD)?;
+
+            let value = jni_big_int_to_u64(&env, value)?;
+            let change_destination : ChangeDestination =
+                ChangeDestination::from(&*source_account_key);
+            let mut rng = McRng::default();
+
+            let (tx_out, confirmation_number) =
+            tx_builder.add_change_output(value, &change_destination, &mut rng)?;
+            if !confirmation_number_out.is_null() {
+                let len = env.get_array_length(confirmation_number_out)?;
+                if len as usize >= confirmation_number.to_vec().len() {
+                    env.set_byte_array_region(
+                        confirmation_number_out,
+                        0,
+                        confirmation_number
+                            .to_vec()
+                            .into_iter()
+                            .map(|u| u as i8)
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    )?;
+                }
+            }
+
+            let mbox = Box::new(Mutex::new(tx_out));
+            let ptr: *mut Mutex<TxOut> = Box::into_raw(mbox);
+            Ok(ptr as jlong)
+    })
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_set_1tombstone_1block(

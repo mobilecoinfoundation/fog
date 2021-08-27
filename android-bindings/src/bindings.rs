@@ -18,7 +18,7 @@ use jni::{
     sys::{jboolean, jbyteArray, jint, jlong, jobject, jobjectArray, jshort, jstring, JNI_FALSE},
     JNIEnv,
 };
-use mc_account_keys::{AccountKey, PublicAddress, RootEntropy, RootIdentity, ShortAddressHash };
+use mc_account_keys::{AccountKey, CHANGE_SUBADDRESS_INDEX, PublicAddress, RootEntropy, RootIdentity, ShortAddressHash };
 use mc_account_keys_slip10::Slip10KeyGenerator;
 use mc_api::printable::PrintableWrapper;
 use mc_attest_ake::{
@@ -30,7 +30,7 @@ use mc_attest_core::{
 };
 use mc_common::ResponderId;
 use mc_crypto_box::{CryptoBox, VersionedCryptoBox};
-use mc_crypto_keys::{RistrettoPrivate, RistrettoPublic, X25519};
+use mc_crypto_keys::{CompressedRistrettoPublic, RistrettoPrivate, RistrettoPublic, X25519};
 use mc_crypto_rand::McRng;
 use mc_fog_report_validation::{FogReportResponses, FogResolver};
 use mc_fog_types::{Report, ReportResponse};
@@ -41,8 +41,9 @@ use mc_transaction_core::{
     tx::{Tx, TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
     Amount, CompressedCommitment,
 };
-use mc_transaction_std::{InputCredentials, ChangeDestination, MemoBuilder, RTHMemoBuilder,
-                         TransactionBuilder, SenderMemoCredential,
+use mc_transaction_std::{AuthenticatedSenderMemo, DestinationMemo, InputCredentials,
+                         ChangeDestination, MemoBuilder, RTHMemoBuilder, TransactionBuilder,
+                         SenderMemoCredential,
 };
 use mc_util_from_random::FromRandom;
 use mc_util_uri::FogUri;
@@ -947,6 +948,190 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_AccountKey_get_1public_1address
             let mbox = Box::new(Mutex::new(account_key.default_subaddress()));
             let ptr: *mut Mutex<PublicAddress> = Box::into_raw(mbox);
             Ok(ptr as jlong)
+        },
+    )
+}
+
+/********************************************************************
+ * AuthenticatedSenderMemo
+ */
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_SenderMemo_init_1jni_1from_1memo_1data(
+    env: JNIEnv,
+    obj: JObject,
+    memo_data: jbyteArray,
+) {
+    jni_ffi_call(&env, |env| {
+        let memo_data = <[u8; 44]>::try_from(&env.convert_byte_array(memo_data)?[..])?;
+        let authenticated_sender_memo: AuthenticatedSenderMemo =
+            AuthenticatedSenderMemo::from(&memo_data);
+
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, authenticated_sender_memo)?)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_SenderMemo_is_1valid(
+    env: JNIEnv,
+    obj: JObject,
+    sender_public_addresss: JObject,
+    receiving_subaddress_view_private_key: JObject,
+    tx_out_public_key: JObject,
+) -> jboolean {
+    jni_ffi_call_or(
+        || Ok(JNI_FALSE),
+        &env,
+        |env| {
+            let authenticated_sender_memo: MutexGuard<AuthenticatedSenderMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            let sender_public_address: MutexGuard<PublicAddress> =
+                env.get_rust_field(sender_public_addresss, RUST_OBJ_FIELD)?;
+            let receiving_subaddress_view_private_key: MutexGuard<RistrettoPrivate> =
+                env.get_rust_field(receiving_subaddress_view_private_key, RUST_OBJ_FIELD)?;
+            let tx_out_public_key: MutexGuard<RistrettoPublic> =
+                env.get_rust_field(tx_out_public_key, RUST_OBJ_FIELD)?;
+
+            let tx_out_public_key_compressed = CompressedRistrettoPublic::from(&*tx_out_public_key);
+
+            Ok(authenticated_sender_memo.validate(&*sender_public_address,
+                                                  &*receiving_subaddress_view_private_key,
+                                                  &tx_out_public_key_compressed).unwrap_u8())
+        },
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_SenderMemo_get_1address_1hash_1data(
+    env: JNIEnv,
+    obj: JObject,
+) -> jbyteArray {
+    jni_ffi_call_or(
+        || Ok(JObject::null().into_inner()),
+        &env,
+        |env| {
+            let authenticated_sender_memo : MutexGuard<AuthenticatedSenderMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            let short_address_hash : ShortAddressHash = authenticated_sender_memo.sender_address_hash();
+            let hash_data : [u8; 16] = short_address_hash.into();
+            Ok(env.byte_array_from_slice(&hash_data)?)
+        },
+    )
+}
+
+/********************************************************************
+ * DestinationMemo
+ */
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_init_1jni_1from_1memo_1data(
+    env: JNIEnv,
+    obj: JObject,
+    memo_data: jbyteArray,
+) {
+    jni_ffi_call(&env, |env| {
+        let memo_data = <[u8; 44]>::try_from(&env.convert_byte_array(memo_data)?[..])?;
+        let destination_memo: DestinationMemo =
+            DestinationMemo::from(&memo_data);
+
+        Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, destination_memo)?)
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_is_1valid(
+    env: JNIEnv,
+    account_key: JObject,
+    tx_out: JObject,
+) -> jboolean {
+    jni_ffi_call_or(
+        || Ok(JNI_FALSE),
+        &env,
+        |env| {
+            let account_key: MutexGuard<AccountKey> =
+                env.get_rust_field(account_key, RUST_OBJ_FIELD)?;
+            let tx_out: MutexGuard<TxOut> =
+                env.get_rust_field(tx_out, RUST_OBJ_FIELD)?;
+
+            Ok(mc_transaction_core::subaddress_matches_tx_out(
+                &*account_key,
+                CHANGE_SUBADDRESS_INDEX,
+                &*tx_out
+            )? as u8)
+        },
+    )
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_get_1address_1hash_1data(
+    env: JNIEnv,
+    obj: JObject,
+) -> jbyteArray {
+    jni_ffi_call_or(
+        || Ok(JObject::null().into_inner()),
+        &env,
+        |env| {
+            let destination_memo : MutexGuard<DestinationMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            let short_address_hash : &ShortAddressHash =
+                destination_memo.get_address_hash();
+            let hash_data : [u8; 16] = <[u8; 16]>::from(short_address_hash.clone());
+            Ok(env.byte_array_from_slice(&hash_data)?)
+        },
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_get_1number_1of_1recipients(
+    env: JNIEnv,
+    obj: JObject,
+) -> jshort {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let destination_memo : MutexGuard<DestinationMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            // number_of_recipients is a u8 and jshort is an i16. This is fine
+            // because number_of_recipients will never be negative.
+            Ok(destination_memo.get_num_recipients() as jshort)
+        },
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_get_1fee(
+    env: JNIEnv,
+    obj: JObject,
+) -> jlong {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let destination_memo : MutexGuard<DestinationMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            Ok(destination_memo.get_fee() as jlong)
+        },
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_get_1total_1outlay(
+    env: JNIEnv,
+    obj: JObject,
+) -> jlong {
+    jni_ffi_call_or(
+        || Ok(0),
+        &env,
+        |env| {
+            let destination_memo : MutexGuard<DestinationMemo> =
+                env.get_rust_field(obj, RUST_OBJ_FIELD)?;
+
+            Ok(destination_memo.get_total_outlay() as jlong)
         },
     )
 }

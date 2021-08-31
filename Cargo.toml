@@ -116,8 +116,6 @@ x25519-dalek = { git = "https://github.com/jcape/x25519-dalek.git", rev = "c0126
 # This version contains iOS build fixes
 cmake = { git = "https://github.com/alexcrichton/cmake-rs", rev = "5f89f90ee5d7789832963bffdb2dcb5939e6199c" }
 
-cc = { git ="https://github.com/eranrund/cc-rs", rev = "e8c8b2f" }
-
 # Overridden since we need a commit that uprevs a bunch of dependencies.
 schnorrkel-og = { git = "https://github.com/jcape/schnorrkel.git", rev = "b90fd446eeaef2996c199138427888afcf972bbd" }
 

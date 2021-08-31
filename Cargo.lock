@@ -468,8 +468,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.66"
-source = "git+https://github.com/eranrund/cc-rs?rev=5b3376a#5b3376a2f8654960186b1c47261e694092954867"
+version = "1.0.70"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d26a6ce4b6a484fa3edb70f7efa6fc430fd2b87285fe8b84304fd0936faa0dc0"
 
 [[package]]
 name = "cesu8"
@@ -2901,6 +2902,7 @@ dependencies = [
  "hex_fmt",
  "lazy_static",
  "mbedtls",
+ "mbedtls-sys-auto",
  "mc-common",
  "mc-crypto-digestible",
  "mc-crypto-rand",

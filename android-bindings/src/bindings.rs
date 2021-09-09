@@ -10,16 +10,11 @@ use crate::{
     error::McError,
     ffi::{jni_big_int_to_u64, jni_ffi_call, jni_ffi_call_or, RUST_OBJ_FIELD},
 };
-extern crate android_logger;
-use log::Level;
-use android_logger::Config;
 
 use aes_gcm::Aes256Gcm;
 use bip39::{Language, Mnemonic};
 use core::convert::TryFrom;
 use fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, VersionedKexRng};
-//TODO Delete
-use hex;
 use generic_array::{
     typenum::U46, 
     GenericArray,
@@ -81,8 +76,6 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_RistrettoPrivate_init_1jni(
     jni_ffi_call(&env, |env| {
         let key_bytes = env.convert_byte_array(bytes)?;
         let key = RistrettoPrivate::try_from(&key_bytes[..])?;
-        android_logger::init_once(Config::default().with_min_level(Level::Trace));
-        debug!("[SAMDEALY] rust private key: {:p}", &key);
 
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, key)?)
     })
@@ -774,7 +767,6 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_AccountKey_init_1jni(
             fog_authority_spki,
         );
 
-        debug!("[SAMDEALY] rust account_key memory address: {:p}", &account_key);
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, account_key)?)
     })
 }
@@ -1056,6 +1048,7 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_init_1jni_1from
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_is_1valid(
     env: JNIEnv,
+    _obj: JObject,
     account_key: JObject,
     tx_out: JObject,
 ) -> jboolean {
@@ -1063,25 +1056,16 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_DestinationMemo_is_1valid(
         || Ok(JNI_FALSE),
         &env,
         |env| {
-            //android_logger::init_once(Config::default().with_min_level(Level::Trace));
             let account_key: MutexGuard<AccountKey> =
                 env.get_rust_field(account_key, RUST_OBJ_FIELD)?;
             let tx_out: MutexGuard<TxOut> =
                 env.get_rust_field(tx_out, RUST_OBJ_FIELD)?;
 
-         //   debug!("[SAMDEALY] rust is_valid account_key: {}", hex::encode(mc_util_serial::encode(&*account_key)));
-            debug!("[SAMDEALY] rust is_valid account_key memory address: {:p}", &*account_key);
-
-            debug!("[SAMDEALY] rust is_valid tx_out: {}", hex::encode(mc_util_serial::encode(&*tx_out)));
-            debug!("[SAMDEALY] rust is_valid tx_out memory address: {:p}", &*tx_out);
-
-         //   Ok(CHANGE_SUBADDRESS_INDEX as u8)
-
-            // Ok(mc_transaction_core::subaddress_matches_tx_out(
-            //    &*account_key,
-            //    CHANGE_SUBADDRESS_INDEX,
-            //    &*tx_out
-            //)? as u8)
+            Ok(mc_transaction_core::subaddress_matches_tx_out(
+                &*account_key,
+                CHANGE_SUBADDRESS_INDEX,
+                &*tx_out
+            )? as u8)
         },
     )
 }
@@ -1171,11 +1155,8 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TxOut_init_1from_1protobuf_1byt
     bytes: jbyteArray,
 ) {
     jni_ffi_call(&env, |env| {
-        android_logger::init_once(Config::default().with_min_level(Level::Trace));
         let protobuf_bytes = env.convert_byte_array(bytes)?;
         let tx_out: TxOut = mc_util_serial::decode(&protobuf_bytes)?;
-        debug!("[SAMDEALY] rust init_from_protobuf_bytes tx_out : {}", hex::encode(mc_util_serial::encode(&tx_out)));
-        debug!("[SAMDEALY] rust init_from_protobuf_bytes tx_out memory address: {:p}", &tx_out);
 
         Ok(env.set_rust_field(obj, RUST_OBJ_FIELD, tx_out)?)
     })
@@ -1411,7 +1392,6 @@ pub unsafe extern "C" fn Java_com_mobilecoin_lib_TransactionBuilder_add_1input(
     jni_ffi_call(&env, |env| {
         let mut tx_builder: MutexGuard<TransactionBuilder<FogResolver>> =
             env.get_rust_field(obj, RUST_OBJ_FIELD)?;
-        debug!("[SAMDEALY] rust private key: {:p}", &*view_private_key);
         let ring: Vec<TxOut> = (0..env.get_array_length(ring)?)
             .map(|index| {
                 let obj = env.get_object_array_element(ring, index)?;

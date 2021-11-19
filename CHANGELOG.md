@@ -7,6 +7,17 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 
+## [1.1.1] - 2021-11-18
+
+### Changed
+
+ - Fog view returns PERMISSION_DENIED instead of INTERNAL_ERROR on attestation errors,
+   matching the other attested services. (This caused bugs on clients would not
+   reattest in this case.)
+ - Fog ingest is refactored so that it updates the report cache less frequently.
+ - Fog distro (an internal testing tool) rebuilds and resubmits transactions
+   that fail due to tombstone block errors.
+
 ## [1.1.0] - 2021-06-03
 
 ### Added

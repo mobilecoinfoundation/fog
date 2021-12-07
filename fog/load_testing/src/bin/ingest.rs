@@ -181,6 +181,7 @@ fn load_test(ingest_server_binary: &Path, test_params: TestParams, logger: Logge
             .args(&["--watcher-db", &watcher_db_path.path().to_str().unwrap()])
             .args(&["--client-listen-uri", &client_listen_uri.to_string()])
             .args(&["--peer-listen-uri", &peer_listen_uri.to_string()])
+            .args(&["--peers", &format!("insecure-igp://{}", local_node_id)])
             .args(&["--ias-spid", &"0".repeat(32)])
             .args(&["--ias-api-key", &"0".repeat(32)])
             .args(&["--local-node-id", &local_node_id.to_string()])

@@ -2,6 +2,7 @@
 
 //! Configuration parameters for the Fog Ingest Node
 
+use fog_sql_recovery_db::SqlRecoveryDbConnectionConfig;
 use fog_uri::{FogIngestUri, IngestPeerUri};
 use mc_attest_core::ProviderId;
 use mc_common::ResponderId;
@@ -92,6 +93,10 @@ pub struct IngestConfig {
     /// State file, defaults to ~/.mc-fog-ingest-state
     #[structopt(long)]
     pub state_file: Option<PathBuf>,
+
+    /// Postgres config
+    #[structopt(flatten)]
+    pub postgres_config: SqlRecoveryDbConnectionConfig,
 }
 
 /// Converts a string containing number of seconds to a Duration object.

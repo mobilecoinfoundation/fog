@@ -41,7 +41,9 @@ use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_transaction_core::Block;
 use prost::Message;
 use proto_types::ProtoIngestedBlockData;
-use std::time::Duration;
+use serde::Serialize;
+use std::{str::FromStr, time::Duration};
+use structopt::StructOpt;
 
 pub use error::Error;
 
@@ -53,6 +55,44 @@ pub const SQL_MAX_PARAMS: usize = 65000;
 
 /// Maximal number of rows to insert in one batch.
 pub const SQL_MAX_ROWS: usize = 5000;
+
+/// SQL recovery DB connection configuration parameters
+#[derive(Debug, Clone, StructOpt, Serialize)]
+pub struct SqlRecoveryDbConnectionConfig {
+    /// The idle timeout used by the connection pool.
+    /// If set, connections will be closed after sitting idle for at most 30
+    /// seconds beyond this duration. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
+    #[structopt(long, env, default_value = "60", parse(try_from_str=parse_duration_in_seconds))]
+    postgres_idle_timeout: Duration,
+
+    /// The maximum lifetime of connections in the pool.
+    /// If set, connections will be closed after existing for at most 30 seconds
+    /// beyond this duration. If a connection reaches its maximum lifetime
+    /// while checked out it will be closed when it is returned to the pool. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
+    #[structopt(long, env, default_value = "120", parse(try_from_str=parse_duration_in_seconds))]
+    postgres_max_lifetime: Duration,
+
+    /// Sets the connection timeout used by the pool.
+    /// The pool will wait this long for a connection to become available before
+    /// returning an error. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
+    #[structopt(long, env, default_value = "5", parse(try_from_str=parse_duration_in_seconds))]
+    postgres_connection_timeout: Duration,
+
+    /// The maximum number of connections managed by the pool.
+    #[structopt(long, env, default_value = "1")]
+    postgres_max_connections: u32,
+}
+
+impl Default for SqlRecoveryDbConnectionConfig {
+    fn default() -> Self {
+        Self {
+            postgres_idle_timeout: Duration::from_secs(60),
+            postgres_max_lifetime: Duration::from_secs(120),
+            postgres_connection_timeout: Duration::from_secs(5),
+            postgres_max_connections: 1,
+        }
+    }
+}
 
 /// SQL-backed recovery database.
 #[derive(Clone)]
@@ -67,17 +107,19 @@ impl SqlRecoveryDb {
         Self { pool, logger }
     }
 
-    /// Create a new instance using a database URL. This will create a
-    /// connection pool of size 1. The benefit of doing this is that the
-    /// pool takes care of automatically reconnecting to the database if the
-    /// connection dies.
-    pub fn new_from_url(database_url: &str, logger: Logger) -> Result<Self, Error> {
+    /// Create a new instance using a database URL,
+    /// and connection parameters. The parameters have sane defaults.
+    pub fn new_from_url(
+        database_url: &str,
+        config: SqlRecoveryDbConnectionConfig,
+        logger: Logger,
+    ) -> Result<Self, Error> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
-            .max_size(1)
-            .idle_timeout(Some(Duration::from_secs(60)))
-            .max_lifetime(Some(Duration::from_secs(120)))
-            .connection_timeout(Duration::from_secs(5))
+            .max_size(config.postgres_max_connections)
+            .idle_timeout(Some(config.postgres_idle_timeout))
+            .max_lifetime(Some(config.postgres_max_lifetime))
+            .connection_timeout(config.postgres_connection_timeout)
             .test_on_check_out(true)
             .build(manager)?;
         Ok(Self::new(pool, logger))
@@ -1036,6 +1078,11 @@ impl ReportDb for SqlRecoveryDb {
         .execute(&conn)?;
         Ok(())
     }
+}
+
+/// Converts a string containing number of seconds to a Duration object.
+fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntError> {
+    Ok(Duration::from_secs(u64::from_str(src)?))
 }
 
 #[cfg(test)]

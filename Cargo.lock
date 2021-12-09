@@ -1714,6 +1714,8 @@ dependencies = [
  "r2d2",
  "rand 0.8.3",
  "rand_core 0.6.2",
+ "serde",
+ "structopt",
  "tempdir",
 ]
 

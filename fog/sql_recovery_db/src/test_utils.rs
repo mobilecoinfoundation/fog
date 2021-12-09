@@ -62,7 +62,7 @@ impl SqlRecoveryDbTestContext {
     }
 
     pub fn get_db_instance(&self) -> SqlRecoveryDb {
-        SqlRecoveryDb::new_from_url(&self.db_url(), self.logger.clone())
+        SqlRecoveryDb::new_from_url(&self.db_url(), Default::default(), self.logger.clone())
             .expect("failed creating new SqlRecoveryDb")
     }
 

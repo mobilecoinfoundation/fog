@@ -2,6 +2,7 @@
 
 //! Configuration parameters for the MobileCoin Fog View Node
 
+use fog_sql_recovery_db::SqlRecoveryDbConnectionConfig;
 use fog_uri::FogViewUri;
 use mc_attest_core::ProviderId;
 use mc_common::ResponderId;
@@ -45,6 +46,10 @@ pub struct MobileAcctViewConfig {
     /// hours).
     #[structopt(long, default_value = "86400", parse(try_from_str=parse_duration_in_seconds))]
     pub client_auth_token_max_lifetime: Duration,
+
+    /// Postgres config
+    #[structopt(flatten)]
+    pub postgres_config: SqlRecoveryDbConnectionConfig,
 }
 
 /// Converts a string containing number of seconds to a Duration object.

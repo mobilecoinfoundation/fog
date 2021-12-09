@@ -3,6 +3,7 @@
 //! Configuration parameters for ReportServer
 
 use displaydoc::Display;
+use fog_sql_recovery_db::SqlRecoveryDbConnectionConfig;
 use mc_crypto_keys::{DistinguishedEncoding, Ed25519Pair, Ed25519Private, Ed25519Public, KeyError};
 use mc_crypto_x509_utils::{ChainError, X509CertificateChain, X509CertificateIter};
 use mc_util_uri::{AdminUri, FogUri};
@@ -31,6 +32,10 @@ pub struct Config {
     /// The path to the signing key.
     #[structopt(long, parse(from_os_str))]
     pub signing_key: PathBuf,
+
+    /// Postgres config
+    #[structopt(flatten)]
+    pub postgres_config: SqlRecoveryDbConnectionConfig,
 }
 
 /// An enumeration of errors which can occur while reading configuration from

@@ -379,7 +379,7 @@ where
                 "We were asked to process the wrong block"
             );
 
-            log::debug!(
+            log::info!(
                 self.logger,
                 "Now ingesting block #{:?} (id = {:?})",
                 block.index,
@@ -432,7 +432,7 @@ where
             let mut iid = state.get_ingest_invocation_id();
 
             if iid.is_none() {
-                log::debug!(self.logger, "Now creating ingest invocation id");
+                log::info!(self.logger, "Now creating ingest invocation id");
                 iid = Some(
                     self.recovery_db
                         .new_ingest_invocation(
@@ -457,6 +457,7 @@ where
 
         // tx_rows are records containing tx outs, encrypted for the users.
         // there is typically (and at most) one tx row per tx out that comes in.
+        log::info!(self.logger, "Now passing tx data to enclave");
         let mut tx_rows = Vec::with_capacity(block_contents.outputs.len());
         for chunk in block_contents.outputs.chunks(self.config.max_transactions) {
             log::trace!(self.logger, "Chunk of {}", chunk.len());
@@ -523,7 +524,7 @@ where
             );
         }
 
-        log::info!(self.logger, "add_block_data");
+        log::info!(self.logger, "adding block data to sql");
 
         // Commit all the new data to the database,
         // and set num_blocks_processed to block.index + 1
@@ -586,7 +587,7 @@ where
             }
         }
 
-        log::info!(&self.logger, "Finished ingesting block #{:?}", block.index);
+        log::info!(self.logger, "Finished ingesting block #{:?}", block.index);
         counters::LAST_PROCESSED_BLOCK_INDEX.set(block.index as i64);
         counters::BLOCKS_PROCESSED_COUNT.inc();
 
@@ -1106,7 +1107,7 @@ where
                 report
             } else {
                 // Hmm, let's try refreshing the enclave cache
-                log::debug!(
+                log::info!(
                     self.logger,
                     "Refreshing enclave report cache after mismatch detected"
                 );
@@ -1147,6 +1148,7 @@ where
         };
         let report_id = self.config.fog_report_id.as_ref();
 
+        log::info!(self.logger, "publishing report to sql");
         self.recovery_db
             .set_report(ingress_public_key, report_id, &report_data)
             .map(|x| {

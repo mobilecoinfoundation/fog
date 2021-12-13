@@ -7,6 +7,11 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 
+## [1.1.2] - 2021-12-13
+
+- Fog ingest, view, report have configurable timeouts for SQL connections
+- More informative logging for fog ingest
+
 ## [1.1.1] - 2021-11-18
 
 ### Changed

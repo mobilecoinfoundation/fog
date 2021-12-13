@@ -418,7 +418,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -432,7 +432,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-api"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "displaydoc",
  "fog-types",
@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-edl"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "cargo-emit",
  "mc-util-build-script",
@@ -458,7 +458,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ledger-enclave-impl"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "fog-ledger-enclave-api",
  "fog-types",
@@ -473,7 +473,7 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -645,7 +645,7 @@ dependencies = [
 
 [[package]]
 name = "ledger_enclave_trusted"
-version = "1.1.1"
+version = "1.1.2-pre0"
 dependencies = [
  "cargo-emit",
  "fog-ledger-enclave-api",

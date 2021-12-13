@@ -68,6 +68,7 @@ fn get_test_environment(
             admin_listen_uri: Default::default(),
             client_auth_token_secret: None,
             client_auth_token_max_lifetime: Default::default(),
+            postgres_config: Default::default(),
         };
 
         let enclave = SgxViewEnclave::new(

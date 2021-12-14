@@ -6,6 +6,7 @@ import "external.proto";
 import "fog_common.proto";
 
 package fog_ledger;
+option go_package = "mobilecoin/api";
 
 ////
 // Merkle proofs
@@ -170,14 +171,14 @@ message BlockRequest {
 
 message BlockResponse {
     /// The block data returned by the server
-    repeated Block blocks = 1;
+    repeated BlockData blocks = 1;
     /// The total number of blocks in the ledger at the time the request is evaluated
     uint64 num_blocks = 2;
     /// The total number of Txos in the ledger at the time the request is evaluated
     uint64 global_txo_count = 3;
 }
 
-message Block {
+message BlockData {
     /// The index of the block in the blockchain
     uint64 index = 1;
     /// The cumulative number of Txos in the blockchain, including this block

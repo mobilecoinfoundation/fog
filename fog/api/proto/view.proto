@@ -3,6 +3,7 @@
 syntax = "proto3";
 
 package fog_view;
+option go_package = "mobilecoin/api";
 
 import "attest.proto";
 import "external.proto";

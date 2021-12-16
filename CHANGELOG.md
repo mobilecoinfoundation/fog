@@ -7,10 +7,12 @@ The crates in this repository do not adhere to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 
-## [1.1.2] - 2021-12-13
+## [1.1.2] - 2021-12-16
 
 - Fog ingest, view, report have configurable timeouts for SQL connections
 - More informative logging for fog ingest
+- Avoid log spam due to PERMISSION_DENIED and other events that don't require action
+- Go grpc gateway was moved to this repo
 
 ## [1.1.1] - 2021-11-18
 

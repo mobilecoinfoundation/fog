@@ -22,29 +22,28 @@ use diesel::{
     prelude::*,
     r2d2::{ConnectionManager, Pool},
 };
-use mc_attest_core::VerificationReport;
-use mc_common::{
-    logger::{log, Logger},
-    HashMap,
-};
-use mc_crypto_keys::CompressedRistrettoPublic;
 use fog_kex_rng::KexRngPubkey;
 use fog_recovery_db_iface::{
     AddBlockDataStatus, FogUserEvent, IngestInvocationId, IngressPublicKeyRecord,
-    IngressPublicKeyStatus, RecoveryDb, RecoveryDbError, ReportData,
-    ReportDb,
+    IngressPublicKeyStatus, RecoveryDb, RecoveryDbError, ReportData, ReportDb,
 };
 use fog_types::{
     common::BlockRange,
     view::{TxOutSearchResult, TxOutSearchResultCode},
     ETxOutRecord,
 };
+use mc_attest_core::VerificationReport;
+use mc_common::{
+    logger::{log, Logger},
+    HashMap,
+};
+use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_transaction_core::Block;
 use prost::Message;
 use proto_types::ProtoIngestedBlockData;
 use retry::{delay, Error as RetryError, OperationResult};
 use serde::Serialize;
-use std::{time::Duration, str::FromStr};
+use std::{str::FromStr, time::Duration};
 use structopt::StructOpt;
 
 pub use error::Error;
@@ -1161,9 +1160,7 @@ impl RecoveryDb for SqlRecoveryDb {
         start_block_at_least: u64,
     ) -> Result<Vec<IngressPublicKeyRecord>, Self::Error> {
         our_retry(self.get_retries(), || {
-            self.get_ingress_key_records_retriable(
-                start_block_at_least,
-            )
+            self.get_ingress_key_records_retriable(start_block_at_least)
         })
     }
 
@@ -1441,9 +1438,9 @@ fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntEr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fog_test_infra::db_tests::{random_block, random_kex_rng_pubkey};
     use mc_common::logger::{log, test_with_logger, Logger};
     use mc_crypto_keys::RistrettoPublic;
-    use fog_test_infra::db_tests::{random_block, random_kex_rng_pubkey};
     use mc_util_from_random::FromRandom;
     use rand::{rngs::StdRng, SeedableRng};
     use std::{collections::HashSet, iter::FromIterator};

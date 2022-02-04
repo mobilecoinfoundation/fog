@@ -25,7 +25,7 @@ use diesel::{
 use fog_kex_rng::KexRngPubkey;
 use fog_recovery_db_iface::{
     AddBlockDataStatus, FogUserEvent, IngestInvocationId, IngressPublicKeyRecord,
-    IngressPublicKeyStatus, RecoveryDb, ReportData, ReportDb,
+    IngressPublicKeyStatus, RecoveryDb, RecoveryDbError, ReportData, ReportDb,
 };
 use fog_types::{
     common::BlockRange,
@@ -41,6 +41,7 @@ use mc_crypto_keys::CompressedRistrettoPublic;
 use mc_transaction_core::Block;
 use prost::Message;
 use proto_types::ProtoIngestedBlockData;
+use retry::{delay, Error as RetryError, OperationResult};
 use serde::Serialize;
 use std::{str::FromStr, time::Duration};
 use structopt::StructOpt;
@@ -63,24 +64,34 @@ pub struct SqlRecoveryDbConnectionConfig {
     /// If set, connections will be closed after sitting idle for at most 30
     /// seconds beyond this duration. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
     #[structopt(long, env, default_value = "60", parse(try_from_str=parse_duration_in_seconds))]
-    postgres_idle_timeout: Duration,
+    pub postgres_idle_timeout: Duration,
 
     /// The maximum lifetime of connections in the pool.
     /// If set, connections will be closed after existing for at most 30 seconds
     /// beyond this duration. If a connection reaches its maximum lifetime
     /// while checked out it will be closed when it is returned to the pool. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
     #[structopt(long, env, default_value = "120", parse(try_from_str=parse_duration_in_seconds))]
-    postgres_max_lifetime: Duration,
+    pub postgres_max_lifetime: Duration,
 
     /// Sets the connection timeout used by the pool.
     /// The pool will wait this long for a connection to become available before
     /// returning an error. (https://docs.diesel.rs/diesel/r2d2/struct.Builder.html)
     #[structopt(long, env, default_value = "5", parse(try_from_str=parse_duration_in_seconds))]
-    postgres_connection_timeout: Duration,
+    pub postgres_connection_timeout: Duration,
 
     /// The maximum number of connections managed by the pool.
     #[structopt(long, env, default_value = "1")]
-    postgres_max_connections: u32,
+    pub postgres_max_connections: u32,
+
+    /// How many times to retry when we get retriable errors (connection /
+    /// diesel errors)
+    #[structopt(long, env, default_value = "3")]
+    pub postgres_retry_count: usize,
+
+    /// How long to back off (milliseconds) when we get retriable errors
+    /// (connection / diesel errors)
+    #[structopt(long, env, default_value = "20")]
+    pub postgres_retry_millis: u64,
 }
 
 impl Default for SqlRecoveryDbConnectionConfig {
@@ -90,6 +101,8 @@ impl Default for SqlRecoveryDbConnectionConfig {
             postgres_max_lifetime: Duration::from_secs(120),
             postgres_connection_timeout: Duration::from_secs(5),
             postgres_max_connections: 1,
+            postgres_retry_count: 3,
+            postgres_retry_millis: 20,
         }
     }
 }
@@ -98,13 +111,22 @@ impl Default for SqlRecoveryDbConnectionConfig {
 #[derive(Clone)]
 pub struct SqlRecoveryDb {
     pool: Pool<ConnectionManager<PgConnection>>,
+    config: SqlRecoveryDbConnectionConfig,
     logger: Logger,
 }
 
 impl SqlRecoveryDb {
     /// Create a new instance using a pre-existing connection pool.
-    pub fn new(pool: Pool<ConnectionManager<PgConnection>>, logger: Logger) -> Self {
-        Self { pool, logger }
+    fn new(
+        pool: Pool<ConnectionManager<PgConnection>>,
+        config: SqlRecoveryDbConnectionConfig,
+        logger: Logger,
+    ) -> Self {
+        Self {
+            pool,
+            config,
+            logger,
+        }
     }
 
     /// Create a new instance using a database URL,
@@ -122,7 +144,15 @@ impl SqlRecoveryDb {
             .connection_timeout(config.postgres_connection_timeout)
             .test_on_check_out(true)
             .build(manager)?;
-        Ok(Self::new(pool, logger))
+        Ok(Self::new(pool, config, logger))
+    }
+
+    // Helper function for retries config
+    fn get_retries(&self) -> Box<dyn Iterator<Item = Duration>> {
+        Box::new(
+            delay::Fixed::from_millis(self.config.postgres_retry_millis)
+                .take(self.config.postgres_retry_count),
+        )
     }
 
     /// Mark a given ingest invocation as decommissioned.
@@ -222,13 +252,20 @@ impl SqlRecoveryDb {
             )))
         }
     }
-}
 
-/// See trait `fog_recovery_db_iface::RecoveryDb` for documentation.
-impl RecoveryDb for SqlRecoveryDb {
-    type Error = Error;
+    fn get_highest_known_block_index_impl(conn: &PgConnection) -> Result<Option<u64>, Error> {
+        Ok(schema::ingested_blocks::dsl::ingested_blocks
+            .select(diesel::dsl::max(schema::ingested_blocks::dsl::block_number))
+            .first::<Option<i64>>(conn)?
+            .map(|val| val as u64))
+    }
 
-    fn get_ingress_key_status(
+    ////
+    // RecoveryDb functions that are meant to be retriable (don't take a conn as
+    // argument)
+    ////
+
+    fn get_ingress_key_status_retriable(
         &self,
         key: &CompressedRistrettoPublic,
     ) -> Result<Option<IngressPublicKeyStatus>, Error> {
@@ -236,7 +273,7 @@ impl RecoveryDb for SqlRecoveryDb {
         self.get_ingress_key_status_impl(&conn, key)
     }
 
-    fn new_ingress_key(
+    fn new_ingress_key_retriable(
         &self,
         key: &CompressedRistrettoPublic,
         start_block: u64,
@@ -258,7 +295,7 @@ impl RecoveryDb for SqlRecoveryDb {
         Ok(inserted_row_count > 0)
     }
 
-    fn retire_ingress_key(
+    fn retire_ingress_key_retriable(
         &self,
         key: &CompressedRistrettoPublic,
         set_retired: bool,
@@ -273,7 +310,7 @@ impl RecoveryDb for SqlRecoveryDb {
         Ok(())
     }
 
-    fn get_last_scanned_block_index(
+    fn get_last_scanned_block_index_retriable(
         &self,
         key: &CompressedRistrettoPublic,
     ) -> Result<Option<u64>, Error> {
@@ -290,7 +327,7 @@ impl RecoveryDb for SqlRecoveryDb {
         Ok(maybe_index.map(|val| val as u64))
     }
 
-    fn get_ingress_key_records(
+    fn get_ingress_key_records_retriable(
         &self,
         start_block_at_least: u64,
     ) -> Result<Vec<IngressPublicKeyRecord>, Error> {
@@ -348,7 +385,7 @@ impl RecoveryDb for SqlRecoveryDb {
             .collect())
     }
 
-    fn new_ingest_invocation(
+    fn new_ingest_invocation_retriable(
         &self,
         prev_ingest_invocation_id: Option<IngestInvocationId>,
         ingress_public_key: &CompressedRistrettoPublic,
@@ -392,9 +429,9 @@ impl RecoveryDb for SqlRecoveryDb {
         })
     }
 
-    fn get_ingestable_ranges(
+    fn get_ingestable_ranges_retriable(
         &self,
-    ) -> Result<Vec<fog_recovery_db_iface::IngestableRange>, Self::Error> {
+    ) -> Result<Vec<fog_recovery_db_iface::IngestableRange>, Error> {
         let conn = self.pool.get()?;
 
         // For each ingest invocation we are aware of get its id, start block, is
@@ -435,10 +472,10 @@ impl RecoveryDb for SqlRecoveryDb {
     /// Arguments:
     /// * ingest_invocation_id: The unique ingest invocation id that has been
     ///   retired
-    fn decommission_ingest_invocation(
+    fn decommission_ingest_invocation_retriable(
         &self,
         ingest_invocation_id: &IngestInvocationId,
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), Error> {
         let conn = self.pool.get()?;
 
         conn.build_transaction()
@@ -446,19 +483,19 @@ impl RecoveryDb for SqlRecoveryDb {
             .run(|| self.decommission_ingest_invocation_impl(&conn, ingest_invocation_id))
     }
 
-    fn add_block_data(
+    fn add_block_data_retriable(
         &self,
         ingest_invocation_id: &IngestInvocationId,
         block: &Block,
         block_signature_timestamp: u64,
         txs: &[fog_types::ETxOutRecord],
-    ) -> Result<AddBlockDataStatus, Self::Error> {
+    ) -> Result<AddBlockDataStatus, Error> {
         let conn = self.pool.get()?;
 
         match conn
             .build_transaction()
             .read_write()
-            .run(|| -> Result<(), Self::Error> {
+            .run(|| -> Result<(), Error> {
                 // Get ingress pubkey of this ingest invocation id, which is also stored in the
                 // ingested_block record
                 //
@@ -509,7 +546,7 @@ impl RecoveryDb for SqlRecoveryDb {
             // of an error This makes it a little easier for the caller to access this
             // information without making custom traits for interrogating generic
             // errors.
-            Err(Self::Error::Orm(diesel::result::Error::DatabaseError(
+            Err(Error::Orm(diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::UniqueViolation,
                 _,
             ))) => Ok(AddBlockDataStatus {
@@ -519,10 +556,10 @@ impl RecoveryDb for SqlRecoveryDb {
         }
     }
 
-    fn report_lost_ingress_key(
+    fn report_lost_ingress_key_retriable(
         &self,
         lost_ingress_key: CompressedRistrettoPublic,
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), Error> {
         let conn = self.pool.get()?;
 
         conn.build_transaction().read_write().run(|| {
@@ -591,15 +628,15 @@ impl RecoveryDb for SqlRecoveryDb {
         })
     }
 
-    fn get_missed_block_ranges(&self) -> Result<Vec<BlockRange>, Self::Error> {
+    fn get_missed_block_ranges_retriable(&self) -> Result<Vec<BlockRange>, Error> {
         let conn = self.pool.get()?;
         self.get_missed_block_ranges_impl(&conn)
     }
 
-    fn search_user_events(
+    fn search_user_events_retriable(
         &self,
         start_from_user_event_id: i64,
-    ) -> Result<(Vec<FogUserEvent>, i64), Self::Error> {
+    ) -> Result<(Vec<FogUserEvent>, i64), Error> {
         // Early return if start_from_user_event_id is max
         if start_from_user_event_id == i64::MAX {
             return Ok((Default::default(), i64::MAX));
@@ -770,11 +807,11 @@ impl RecoveryDb for SqlRecoveryDb {
     /// Returns:
     /// * Exactly one TxOutSearchResult object for every search key, or an
     ///   internal database error description.
-    fn get_tx_outs(
+    fn get_tx_outs_retriable(
         &self,
         start_block: u64,
         search_keys: &[Vec<u8>],
-    ) -> Result<Vec<TxOutSearchResult>, Self::Error> {
+    ) -> Result<Vec<TxOutSearchResult>, Error> {
         let conn = self.pool.get()?;
 
         let query = schema::ingested_blocks::dsl::ingested_blocks
@@ -810,10 +847,10 @@ impl RecoveryDb for SqlRecoveryDb {
     }
 
     /// Mark a given ingest invocation as still being alive.
-    fn update_last_active_at(
+    fn update_last_active_at_retriable(
         &self,
         ingest_invocation_id: &IngestInvocationId,
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), Error> {
         let conn = self.pool.get()?;
         self.update_last_active_at_impl(&conn, ingest_invocation_id)
     }
@@ -828,11 +865,11 @@ impl RecoveryDb for SqlRecoveryDb {
     /// Returns:
     /// * The ETxOutRecord's from when this block was added, or None if the
     ///   block doesn't exist yet or, an error
-    fn get_tx_outs_by_block_and_key(
+    fn get_tx_outs_by_block_and_key_retriable(
         &self,
         ingress_key: CompressedRistrettoPublic,
         block_index: u64,
-    ) -> Result<Option<Vec<ETxOutRecord>>, Self::Error> {
+    ) -> Result<Option<Vec<ETxOutRecord>>, Error> {
         let conn = self.pool.get()?;
 
         let key_bytes: &[u8] = ingress_key.as_ref();
@@ -857,11 +894,11 @@ impl RecoveryDb for SqlRecoveryDb {
 
     /// Get iid that produced data for given ingress key and a given block
     /// index.
-    fn get_invocation_id_by_block_and_key(
+    fn get_invocation_id_by_block_and_key_retriable(
         &self,
         ingress_key: CompressedRistrettoPublic,
         block_index: u64,
-    ) -> Result<Option<IngestInvocationId>, Self::Error> {
+    ) -> Result<Option<IngestInvocationId>, Error> {
         let conn = self.pool.get()?;
 
         let key_bytes: &[u8] = ingress_key.as_ref();
@@ -892,10 +929,10 @@ impl RecoveryDb for SqlRecoveryDb {
     /// * Some(cumulative_txo_count) if the block was found in the database,
     ///   None if it wasn't, or
     /// an error if the query failed.
-    fn get_cumulative_txo_count_for_block(
+    fn get_cumulative_txo_count_for_block_retriable(
         &self,
         block_index: u64,
-    ) -> Result<Option<u64>, Self::Error> {
+    ) -> Result<Option<u64>, Error> {
         let conn = self.pool.get()?;
 
         let query = schema::ingested_blocks::dsl::ingested_blocks
@@ -929,10 +966,10 @@ impl RecoveryDb for SqlRecoveryDb {
     /// * Some(cumulative_txo_count) if the block was found in the database,
     ///   None if it wasn't, or
     /// an error if the query failed.
-    fn get_block_signature_timestamp_for_block(
+    fn get_block_signature_timestamp_for_block_retriable(
         &self,
         block_index: u64,
-    ) -> Result<Option<u64>, Self::Error> {
+    ) -> Result<Option<u64>, Error> {
         let conn = self.pool.get()?;
 
         let query = schema::ingested_blocks::dsl::ingested_blocks
@@ -944,21 +981,17 @@ impl RecoveryDb for SqlRecoveryDb {
     }
 
     /// Get the highest block index for which we have any data at all.
-    fn get_highest_known_block_index(&self) -> Result<Option<u64>, Self::Error> {
+    fn get_highest_known_block_index_retriable(&self) -> Result<Option<u64>, Error> {
         let conn = self.pool.get()?;
-
-        Ok(schema::ingested_blocks::dsl::ingested_blocks
-            .select(diesel::dsl::max(schema::ingested_blocks::dsl::block_number))
-            .first::<Option<i64>>(&conn)?
-            .map(|val| val as u64))
+        SqlRecoveryDb::get_highest_known_block_index_impl(&conn)
     }
-}
 
-/// See trait `fog_recovery_db_iface::ReportDb` for documentation.
-impl ReportDb for SqlRecoveryDb {
-    type Error = Error;
+    ////
+    // ReportDb functions that are meant to be retriable (don't take a conn as
+    // argument)
+    ////
 
-    fn get_all_reports(&self) -> Result<Vec<(String, ReportData)>, Self::Error> {
+    fn get_all_reports_retriable(&self) -> Result<Vec<(String, ReportData)>, Error> {
         let conn = self.pool.get()?;
 
         let query = schema::reports::dsl::reports
@@ -988,16 +1021,17 @@ impl ReportDb for SqlRecoveryDb {
     }
 
     /// Set report data associated with a given report id.
-    fn set_report(
+    fn set_report_retriable(
         &self,
         ingress_key: &CompressedRistrettoPublic,
         report_id: &str,
         data: &ReportData,
-    ) -> Result<IngressPublicKeyStatus, Self::Error> {
+    ) -> Result<IngressPublicKeyStatus, Error> {
         let conn = self.pool.get()?;
 
-        conn.build_transaction().read_write().run(
-            || -> Result<IngressPublicKeyStatus, Self::Error> {
+        conn.build_transaction()
+            .read_write()
+            .run(|| -> Result<IngressPublicKeyStatus, Error> {
                 // First, try to update the pubkey_expiry value on this ingress key, only
                 // allowing it to increase, and only if it is not retired
                 let result: IngressPublicKeyStatus = {
@@ -1065,18 +1099,334 @@ impl ReportDb for SqlRecoveryDb {
                     ))
                     .execute(&conn)?;
                 Ok(result)
-            },
-        )
+            })
     }
 
     /// Remove report data associated with a given report id.
-    fn remove_report(&self, report_id: &str) -> Result<(), Self::Error> {
+    fn remove_report_retriable(&self, report_id: &str) -> Result<(), Error> {
         let conn = self.pool.get()?;
         diesel::delete(
             schema::reports::dsl::reports.filter(schema::reports::dsl::fog_report_id.eq(report_id)),
         )
         .execute(&conn)?;
         Ok(())
+    }
+}
+
+/// See trait `fog_recovery_db_iface::RecoveryDb` for documentation.
+impl RecoveryDb for SqlRecoveryDb {
+    type Error = Error;
+
+    fn get_ingress_key_status(
+        &self,
+        key: &CompressedRistrettoPublic,
+    ) -> Result<Option<IngressPublicKeyStatus>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_ingress_key_status_retriable(key)
+        })
+    }
+
+    fn new_ingress_key(
+        &self,
+        key: &CompressedRistrettoPublic,
+        start_block_count: u64,
+    ) -> Result<bool, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.new_ingress_key_retriable(key, start_block_count)
+        })
+    }
+
+    fn retire_ingress_key(
+        &self,
+        key: &CompressedRistrettoPublic,
+        set_retired: bool,
+    ) -> Result<(), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.retire_ingress_key_retriable(key, set_retired)
+        })
+    }
+
+    fn get_last_scanned_block_index(
+        &self,
+        key: &CompressedRistrettoPublic,
+    ) -> Result<Option<u64>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_last_scanned_block_index_retriable(key)
+        })
+    }
+
+    fn get_ingress_key_records(
+        &self,
+        start_block_at_least: u64,
+    ) -> Result<Vec<IngressPublicKeyRecord>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_ingress_key_records_retriable(start_block_at_least)
+        })
+    }
+
+    fn new_ingest_invocation(
+        &self,
+        prev_ingest_invocation_id: Option<IngestInvocationId>,
+        ingress_public_key: &CompressedRistrettoPublic,
+        egress_public_key: &KexRngPubkey,
+        start_block: u64,
+    ) -> Result<IngestInvocationId, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.new_ingest_invocation_retriable(
+                prev_ingest_invocation_id,
+                ingress_public_key,
+                egress_public_key,
+                start_block,
+            )
+        })
+    }
+
+    fn get_ingestable_ranges(
+        &self,
+    ) -> Result<Vec<fog_recovery_db_iface::IngestableRange>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_ingestable_ranges_retriable()
+        })
+    }
+
+    /// Decommission a given ingest invocation.
+    ///
+    /// This should be done when a given ingest enclave goes down or is retired.
+    ///
+    /// Arguments:
+    /// * ingest_invocation_id: The unique ingest invocation id that has been
+    ///   retired
+    fn decommission_ingest_invocation(
+        &self,
+        ingest_invocation_id: &IngestInvocationId,
+    ) -> Result<(), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.decommission_ingest_invocation_retriable(ingest_invocation_id)
+        })
+    }
+
+    fn add_block_data(
+        &self,
+        ingest_invocation_id: &IngestInvocationId,
+        block: &Block,
+        block_signature_timestamp: u64,
+        txs: &[fog_types::ETxOutRecord],
+    ) -> Result<AddBlockDataStatus, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.add_block_data_retriable(
+                ingest_invocation_id,
+                block,
+                block_signature_timestamp,
+                txs,
+            )
+        })
+    }
+
+    fn report_lost_ingress_key(
+        &self,
+        lost_ingress_key: CompressedRistrettoPublic,
+    ) -> Result<(), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.report_lost_ingress_key_retriable(lost_ingress_key)
+        })
+    }
+
+    fn get_missed_block_ranges(&self) -> Result<Vec<BlockRange>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_missed_block_ranges_retriable()
+        })
+    }
+
+    fn search_user_events(
+        &self,
+        start_from_user_event_id: i64,
+    ) -> Result<(Vec<FogUserEvent>, i64), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.search_user_events_retriable(start_from_user_event_id)
+        })
+    }
+
+    /// Get any TxOutSearchResults corresponding to given search keys.
+    /// Nonzero start_block can be provided as an optimization opportunity.
+    ///
+    /// Note: This is still supported for some tests, but it is VERY SLOW.
+    /// We no longer have an index for ETxOutRecords by search key in the SQL
+    /// directly. This should not be used except in tests.
+    ///
+    /// Arguments:
+    /// * start_block: A lower bound on where we will search. This can often be
+    ///   provided by the user in order to limit the scope of the search and
+    ///   reduce load on the servers.
+    /// * search_keys: A list of fog tx_out search keys to search for.
+    ///
+    /// Returns:
+    /// * Exactly one TxOutSearchResult object for every search key, or an
+    ///   internal database error description.
+    fn get_tx_outs(
+        &self,
+        start_block: u64,
+        search_keys: &[Vec<u8>],
+    ) -> Result<Vec<TxOutSearchResult>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_tx_outs_retriable(start_block, search_keys)
+        })
+    }
+
+    /// Mark a given ingest invocation as still being alive.
+    fn update_last_active_at(
+        &self,
+        ingest_invocation_id: &IngestInvocationId,
+    ) -> Result<(), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.update_last_active_at_retriable(ingest_invocation_id)
+        })
+    }
+
+    /// Get any ETxOutRecords produced by a given ingress key for a given
+    /// block index.
+    ///
+    /// Arguments:
+    /// * ingress_key: The ingress key we need ETxOutRecords from
+    /// * block_index: The block we need ETxOutRecords from
+    ///
+    /// Returns:
+    /// * The ETxOutRecord's from when this block was added, or None if the
+    ///   block doesn't exist yet or, an error
+    fn get_tx_outs_by_block_and_key(
+        &self,
+        ingress_key: CompressedRistrettoPublic,
+        block_index: u64,
+    ) -> Result<Option<Vec<ETxOutRecord>>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_tx_outs_by_block_and_key_retriable(ingress_key, block_index)
+        })
+    }
+
+    /// Get iid that produced data for given ingress key and a given block
+    /// index.
+    fn get_invocation_id_by_block_and_key(
+        &self,
+        ingress_key: CompressedRistrettoPublic,
+        block_index: u64,
+    ) -> Result<Option<IngestInvocationId>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_invocation_id_by_block_and_key_retriable(ingress_key, block_index)
+        })
+    }
+
+    /// Get the cumulative txo count for a given block number.
+    ///
+    /// Arguments:
+    /// * block_index: The block we need cumulative_txo_count for.
+    ///
+    /// Returns:
+    /// * Some(cumulative_txo_count) if the block was found in the database,
+    ///   None if it wasn't, or
+    /// an error if the query failed.
+    fn get_cumulative_txo_count_for_block(
+        &self,
+        block_index: u64,
+    ) -> Result<Option<u64>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_cumulative_txo_count_for_block_retriable(block_index)
+        })
+    }
+
+    /// Get the block signature timestamp for a given block number.
+    /// Note that it is unspecified which timestamp we use if there are multiple
+    /// timestamps.
+    ///
+    /// Arguments:
+    /// * block_index: The block we need timestamp for.
+    ///
+    /// Returns:
+    /// * Some(cumulative_txo_count) if the block was found in the database,
+    ///   None if it wasn't, or
+    /// an error if the query failed.
+    fn get_block_signature_timestamp_for_block(
+        &self,
+        block_index: u64,
+    ) -> Result<Option<u64>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_block_signature_timestamp_for_block_retriable(block_index)
+        })
+    }
+
+    /// Get the highest block index for which we have any data at all.
+    fn get_highest_known_block_index(&self) -> Result<Option<u64>, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.get_highest_known_block_index_retriable()
+        })
+    }
+}
+
+/// See trait `fog_recovery_db_iface::ReportDb` for documentation.
+impl ReportDb for SqlRecoveryDb {
+    type Error = Error;
+
+    fn get_all_reports(&self) -> Result<Vec<(String, ReportData)>, Self::Error> {
+        our_retry(self.get_retries(), || self.get_all_reports_retriable())
+    }
+
+    /// Set report data associated with a given report id.
+    fn set_report(
+        &self,
+        ingress_key: &CompressedRistrettoPublic,
+        report_id: &str,
+        data: &ReportData,
+    ) -> Result<IngressPublicKeyStatus, Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.set_report_retriable(ingress_key, report_id, data)
+        })
+    }
+
+    /// Remove report data associated with a given report id.
+    fn remove_report(&self, report_id: &str) -> Result<(), Self::Error> {
+        our_retry(self.get_retries(), || {
+            self.remove_report_retriable(report_id)
+        })
+    }
+}
+
+// Helper for using the retry crate's retry function
+//
+// The retry crate has From<Result<R, E>> for OperationResult, but this does
+// not check if E is retriable, it just always assumes it is.
+// https://docs.rs/retry/latest/src/retry/opresult.rs.html#32-39
+//
+// The retry::retry function will implicitly use this conversion unless you
+// explicitly map things to OperationResult, which is kind of a footgun.
+//
+// This version only works with our Error, but actually tests if it is retriable
+//
+// We also unpack the RetryError object which has a useless variant
+//
+// Note: We may want to move this to a util crate or something, but if we do
+// then there would need to be a common trait for "should_retry()" errors.
+fn our_retry<I, O, R>(iterable: I, mut operation: O) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Duration>,
+    O: FnMut() -> Result<R, Error>,
+{
+    retry::retry(iterable, || match operation() {
+        Ok(ok) => OperationResult::Ok(ok),
+        Err(err) => {
+            if err.should_retry() {
+                OperationResult::Retry(err)
+            } else {
+                OperationResult::Err(err)
+            }
+        }
+    })
+    .map_err(unpack_retry_error)
+}
+
+fn unpack_retry_error(src: RetryError<Error>) -> Error {
+    match src {
+        RetryError::Operation { error, .. } => error,
+        RetryError::Internal(_) => {
+            panic!("This is unreachable, see https://github.com/jimmycuadra/retry/issues/38")
+        }
     }
 }
 
@@ -1088,7 +1438,7 @@ fn parse_duration_in_seconds(src: &str) -> Result<Duration, std::num::ParseIntEr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fog_test_infra::db_tests::random_kex_rng_pubkey;
+    use fog_test_infra::db_tests::{random_block, random_kex_rng_pubkey};
     use mc_common::logger::{log, test_with_logger, Logger};
     use mc_crypto_keys::RistrettoPublic;
     use mc_util_from_random::FromRandom;
@@ -1191,8 +1541,7 @@ mod tests {
 
         // Add an ingested block and see that last_ingested_block gets updated.
         for block_index in 123..130 {
-            let (block, records) =
-                fog_test_infra::db_tests::random_block(&mut rng, block_index, 10);
+            let (block, records) = random_block(&mut rng, block_index, 10);
 
             db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
 
@@ -1408,10 +1757,10 @@ mod tests {
             .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 15)
             .unwrap();
 
-        let (block1, mut records1) = fog_test_infra::db_tests::random_block(&mut rng, 20, 10);
+        let (block1, mut records1) = random_block(&mut rng, 20, 10);
         records1.sort_by_key(|rec| rec.search_key.clone()); // this makes comparing tests result predictable.
 
-        let (block2, mut records2) = fog_test_infra::db_tests::random_block(&mut rng, 21, 15);
+        let (block2, mut records2) = random_block(&mut rng, 21, 15);
         records2.sort_by_key(|rec| rec.search_key.clone()); // this makes comparing tests result predictable.
 
         // Get the last_active_at of the two ingest invocations so we could compare to
@@ -1688,12 +2037,10 @@ mod tests {
 
         let first_block_index = 10;
 
-        let (block1, records1) =
-            fog_test_infra::db_tests::random_block(&mut rng, first_block_index, 10);
+        let (block1, records1) = random_block(&mut rng, first_block_index, 10);
         db.add_block_data(&invoc_id, &block1, 0, &records1).unwrap();
 
-        let (block2, records2) =
-            fog_test_infra::db_tests::random_block(&mut rng, first_block_index + 1, 10);
+        let (block2, records2) = random_block(&mut rng, first_block_index + 1, 10);
         db.add_block_data(&invoc_id, &block2, 0, &records2).unwrap();
 
         // Search for non-existent keys, all should be NotFound
@@ -1873,11 +2220,11 @@ mod tests {
             .new_ingest_invocation(None, &ingress_key, &random_kex_rng_pubkey(&mut rng), 123)
             .unwrap();
 
-        let (block1, records1) = fog_test_infra::db_tests::random_block(&mut rng, 122, 10);
+        let (block1, records1) = random_block(&mut rng, 122, 10);
         db.add_block_data(&invoc_id1, &block1, 0, &records1)
             .unwrap();
 
-        let (block2, records2) = fog_test_infra::db_tests::random_block(&mut rng, 123, 10);
+        let (block2, records2) = random_block(&mut rng, 123, 10);
         db.add_block_data(&invoc_id2, &block2, 0, &records2)
             .unwrap();
 
@@ -1925,22 +2272,22 @@ mod tests {
 
         assert_eq!(db.get_highest_known_block_index().unwrap(), None);
 
-        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 123, 10);
+        let (block, records) = random_block(&mut rng, 123, 10);
         db.add_block_data(&invoc_id1, &block, 0, &records).unwrap();
 
         assert_eq!(db.get_highest_known_block_index().unwrap(), Some(123));
 
-        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 122, 10);
+        let (block, records) = random_block(&mut rng, 122, 10);
         db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
 
         assert_eq!(db.get_highest_known_block_index().unwrap(), Some(123));
 
-        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 125, 10);
+        let (block, records) = random_block(&mut rng, 125, 10);
         db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
 
         assert_eq!(db.get_highest_known_block_index().unwrap(), Some(125));
 
-        let (block, records) = fog_test_infra::db_tests::random_block(&mut rng, 120, 10);
+        let (block, records) = random_block(&mut rng, 120, 10);
         db.add_block_data(&invoc_id2, &block, 0, &records).unwrap();
 
         assert_eq!(db.get_highest_known_block_index().unwrap(), Some(125));

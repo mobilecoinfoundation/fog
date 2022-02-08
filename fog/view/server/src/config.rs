@@ -50,6 +50,15 @@ pub struct MobileAcctViewConfig {
     /// Postgres config
     #[structopt(flatten)]
     pub postgres_config: SqlRecoveryDbConnectionConfig,
+
+    /// OMAP capacity. Must be a power of two.
+    /// The capacity (of ETxOutRecords) of the Oblivious Map that this enclave
+    /// will create. Total memory usage should be about 256 * this value, +
+    /// some overhead, and about 70% of the capacity won't be usable due to
+    /// hash table overflow. So the *number of tx outs* the enclave can support
+    /// is about 70% times this.
+    #[structopt(long, default_value = "1048576", env)]
+    pub omap_capacity: u64,
 }
 
 /// Converts a string containing number of seconds to a Duration object.

@@ -1,6 +1,6 @@
 [package]
 name = "generate_test_foundation_key"
-version = "1.1.3-pre0"
+version = "1.1.3"
 authors = ["MobileCoin"]
 edition = "2018"
 license = "GPL-3.0"

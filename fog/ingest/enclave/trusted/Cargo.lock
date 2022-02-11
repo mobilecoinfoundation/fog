@@ -469,7 +469,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-api"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "displaydoc",
  "fog-kex-rng",
@@ -486,7 +486,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-edl"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "cargo-emit",
  "mc-util-build-script",
@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "fog-ingest-enclave-impl"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "aligned-cmov",
  "fog-ingest-enclave-api",
@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "fog-kex-rng"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -537,14 +537,14 @@ dependencies = [
 
 [[package]]
 name = "fog-ocall-oram-storage-edl"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "cargo-emit",
 ]
 
 [[package]]
 name = "fog-ocall-oram-storage-trusted"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "aes-ctr",
  "aligned-cmov",
@@ -560,7 +560,7 @@ dependencies = [
 
 [[package]]
 name = "fog-recovery-db-iface"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "displaydoc",
  "fog-kex-rng",
@@ -574,7 +574,7 @@ dependencies = [
 
 [[package]]
 name = "fog-types"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "blake2",
  "displaydoc",
@@ -713,7 +713,7 @@ dependencies = [
 
 [[package]]
 name = "ingest_enclave_trusted"
-version = "1.1.3-pre0"
+version = "1.1.3"
 dependencies = [
  "cargo-emit",
  "fog-ingest-enclave-api",
